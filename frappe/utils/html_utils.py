@@ -1,6 +1,7 @@
 import json
 import re
 
+import nh3
 from bleach_allowlist import bleach_allowlist
 
 import frappe
@@ -18,12 +19,10 @@ EMOJI_PATTERN = re.compile(
 
 
 def clean_html(html):
-	import bleach
-
 	if not isinstance(html, str):
 		return html
 
-	return bleach.clean(
+	return nh3.clean(
 		clean_script_and_style(html),
 		tags={
 			"div",
@@ -43,56 +42,49 @@ def clean_html(html):
 			"td",
 			"tr",
 		},
-		attributes=[],
-		strip=True,
 		strip_comments=True,
 	)
 
 
 def clean_email_html(html):
-	import bleach
-	from bleach.css_sanitizer import CSSSanitizer
-
 	if not isinstance(html, str):
 		return html
 
-	css_sanitizer = CSSSanitizer(
-		allowed_css_properties=[
-			"color",
-			"border-color",
-			"width",
-			"height",
-			"max-width",
-			"background-color",
-			"border-collapse",
-			"border-radius",
-			"border",
-			"border-top",
-			"border-bottom",
-			"border-left",
-			"border-right",
-			"margin",
-			"margin-top",
-			"margin-bottom",
-			"margin-left",
-			"margin-right",
-			"padding",
-			"padding-top",
-			"padding-bottom",
-			"padding-left",
-			"padding-right",
-			"font-size",
-			"font-weight",
-			"font-family",
-			"text-decoration",
-			"line-height",
-			"text-align",
-			"vertical-align",
-			"display",
-		]
-	)
+	allowed_css_properties = {
+		"color",
+		"border-color",
+		"width",
+		"height",
+		"max-width",
+		"background-color",
+		"border-collapse",
+		"border-radius",
+		"border",
+		"border-top",
+		"border-bottom",
+		"border-left",
+		"border-right",
+		"margin",
+		"margin-top",
+		"margin-bottom",
+		"margin-left",
+		"margin-right",
+		"padding",
+		"padding-top",
+		"padding-bottom",
+		"padding-left",
+		"padding-right",
+		"font-size",
+		"font-weight",
+		"font-family",
+		"text-decoration",
+		"line-height",
+		"text-align",
+		"vertical-align",
+		"display",
+	}
 
-	return bleach.clean(
+	return nh3.clean(
 		clean_script_and_style(html),
 		tags={
 			"div",
@@ -124,10 +116,8 @@ def clean_email_html(html):
 			"button",
 			"img",
 		},
-		attributes=["border", "colspan", "rowspan", "src", "href", "style", "id"],
-		css_sanitizer=css_sanitizer,
-		protocols=["cid", "http", "https", "mailto", "data", "tel"],
-		strip=True,
+		attributes={"*": {"border", "colspan", "rowspan", "src", "href", "style", "id"}},
+		filter_style_properties=allowed_css_properties,
 		strip_comments=True,
 	)
 
@@ -145,12 +135,11 @@ def clean_script_and_style(html):
 def sanitize_html(html, linkify=False, always_sanitize=False):
 	"""
 	Sanitize HTML tags, attributes and style to prevent XSS attacks
-	Based on bleach clean, bleach whitelist and html5lib's Sanitizer defaults
+	Based on nh3 clean (formerly bleach clean), bleach whitelist and html5lib's
+	Sanitizer defaults
 
 	Does not sanitize JSON unless explicitly specified, as it could lead to future problems
 	"""
-	import bleach
-	from bleach.css_sanitizer import CSSSanitizer
 	from bs4 import BeautifulSoup
 
 	if not isinstance(html, str):
@@ -164,28 +153,21 @@ def sanitize_html(html, linkify=False, always_sanitize=False):
 			return html
 
 	tags = (
-		acceptable_elements
-		+ svg_elements
-		+ mathml_elements
-		+ ["html", "head", "meta", "link", "body", "style", "o:p"]
+		acceptable_elements.union(svg_elements)
+		.union(mathml_elements)
+		.union(["html", "head", "meta", "link", "body", "o:p"])
 	)
 
-	def attributes_filter(tag, name, value):
-		if name.startswith("data-"):
-			return True
-		return name in acceptable_attributes
-
-	attributes = {"*": attributes_filter, "svg": svg_attributes}
-	css_sanitizer = CSSSanitizer(allowed_css_properties=bleach_allowlist.all_styles)
+	attributes = {"*": acceptable_attributes, "svg": svg_attributes}
 
 	# returns html with escaped tags, escaped orphan >, <, etc.
-	escaped_html = bleach.clean(
+	escaped_html = nh3.clean(
 		html,
 		tags=tags,
 		attributes=attributes,
-		css_sanitizer=css_sanitizer,
+		generic_attribute_prefixes={"data-"},
 		strip_comments=False,
-		protocols={"cid", "http", "https", "mailto", "tel"},
+		filter_style_properties=set(bleach_allowlist.all_styles),
 	)
 
 	return escaped_html

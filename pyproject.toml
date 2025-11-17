@@ -34,7 +34,10 @@ dependencies = [
     "Whoosh~=2.7.4",
     "beautifulsoup4~=4.13.5",
     "bleach-allowlist~=1.0.3",
+<<<<<<< HEAD
     "bleach~=6.3.0",
+=======
+>>>>>>> 4ad934719b (chore: Replace bleach HTML sanitiser for nh3)
     "chardet~=5.2.0",
     "croniter~=6.0.0",
     "cryptography~=46.0.3",
@@ -46,6 +49,7 @@ dependencies = [
     "ldap3~=2.9.1",
     "markdown2~=2.5.4",
     "MarkupSafe~=3.0.3",
+    "nh3>=0.3.2",
     "num2words~=0.5.14",
     "oauthlib~=3.3.1",
     "openpyxl~=3.1.5",
