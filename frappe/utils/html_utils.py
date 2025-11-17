@@ -207,7 +207,7 @@ def unescape_html(value):
 
 
 # adapted from https://raw.githubusercontent.com/html5lib/html5lib-python/4aa79f113e7486c7ec5d15a6e1777bfe546d3259/html5lib/sanitizer.py
-acceptable_elements = [
+acceptable_elements = {
 	"a",
 	"abbr",
 	"acronym",
@@ -309,9 +309,9 @@ acceptable_elements = [
 	"ul",
 	"var",
 	"video",
-]
+}
 
-mathml_elements = [
+mathml_elements = {
 	"maction",
 	"math",
 	"merror",
@@ -339,9 +339,9 @@ mathml_elements = [
 	"munder",
 	"munderover",
 	"none",
-]
+}
 
-svg_elements = [
+svg_elements = {
 	"a",
 	"animate",
 	"animateColor",
@@ -377,9 +377,9 @@ svg_elements = [
 	"title",
 	"tspan",
 	"use",
-]
+}
 
-acceptable_attributes = [
+acceptable_attributes = {
 	"abbr",
 	"accept",
 	"accept-charset",
@@ -540,15 +540,12 @@ acceptable_attributes = [
 	"itemtype",
 	"itemid",
 	"itemref",
-	"datetime",
 	"data-is-group",
-]
+}
 
-mathml_attributes = [
+mathml_attributes = {
 	"actiontype",
 	"align",
-	"columnalign",
-	"columnalign",
 	"columnalign",
 	"columnlines",
 	"columnspacing",
@@ -568,12 +565,9 @@ mathml_attributes = [
 	"mathbackground",
 	"mathcolor",
 	"mathvariant",
-	"mathvariant",
 	"maxsize",
 	"minsize",
 	"other",
-	"rowalign",
-	"rowalign",
 	"rowalign",
 	"rowlines",
 	"rowspacing",
@@ -584,15 +578,14 @@ mathml_attributes = [
 	"separator",
 	"stretchy",
 	"width",
-	"width",
 	"xlink:href",
 	"xlink:show",
 	"xlink:type",
 	"xmlns",
 	"xmlns:xlink",
-]
+}
 
-svg_attributes = [
+svg_attributes = {
 	"accent-height",
 	"accumulate",
 	"additive",
@@ -735,4 +728,4 @@ svg_attributes = [
 	"y1",
 	"y2",
 	"zoomAndPan",
-]
+}
