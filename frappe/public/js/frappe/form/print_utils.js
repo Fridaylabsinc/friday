@@ -95,7 +95,9 @@ frappe.ui.get_print_settings = function (
 				settings.letter_head_name = null;
 			} else {
 				const letter_head_name =
-					settings.letter_head || settings.letter_head_name || print_settings.letter_head;
+					settings.letter_head ||
+					settings.letter_head_name ||
+					print_settings.letter_head;
 				if (letter_head_name) {
 					settings.letter_head_name = letter_head_name;
 					settings.letter_head = frappe.boot.letter_heads[letter_head_name];
