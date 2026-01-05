@@ -599,6 +599,7 @@ class DesktopIconGrid {
 		$.extend(this, opts);
 		this.init();
 	}
+	static folder_count = 0;
 	init() {
 		this.icons = [];
 		this.icons_html = [];
@@ -613,13 +614,12 @@ class DesktopIconGrid {
 		this.prepare();
 		this.make();
 		frappe.desktop_grids.push(this);
-		this.folder_count = 0;
 	}
 	add_folder() {
-		this.folder_count++;
+		DesktopIconGrid.folder_count++;
 		let icon = frappe.model.get_new_doc("Desktop Icon");
 		icon.icon_type = "Folder";
-		icon.label = `Untitled ${this.folder_count}`;
+		icon.label = `Untitled ${DesktopIconGrid.folder_count}`;
 		icon.idx = 100000;
 		frappe.new_desktop_icons.push(icon);
 		frappe.new_icons.push(icon);
