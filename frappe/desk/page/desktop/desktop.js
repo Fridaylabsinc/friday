@@ -320,12 +320,13 @@ class DesktopPage {
 		this.edit_mode = false;
 		$(".desktop-icon").not(".folder-icon .desktop-icon").removeClass("desktop-edit-mode");
 		$(".desktop-wrapper").removeAttr("data-mode");
+		$(".add-new-icon").remove();
+		this.desktop_pane.hide();
 		if (action === "cancel") {
 			frappe.new_desktop_icons = null;
 			this.sync_layout();
 			return;
 		}
-
 		// submit
 		save_desktop(frappe.new_desktop_icons);
 	}
