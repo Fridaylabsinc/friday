@@ -131,6 +131,18 @@ function save_desktop(icons) {
 			frappe.pages["desktop"].desktop_page.sync_layout();
 		}
 	);
+	if (frappe.new_icons.length) {
+		frappe.model.user_settings.get("Desktop Icon").then((user_settings) => {
+			frappe.model.user_settings.save(
+				"Desktop Icon",
+				"icons_to_create",
+				JSON.stringify(frappe.new_icons),
+				(r) => {
+					frappe.pages["desktop"].desktop_page.sync_layout();
+				}
+			);
+		});
+	}
 }
 
 function reset_to_default() {
@@ -180,7 +192,7 @@ class DesktopPage {
 		this.hidden_icons = [];
 		this.folders = [];
 		const icon_map = {};
-		frappe.desktop_icons = this.get_saved_layout() || frappe.boot.desktop_icons;
+		frappe.desktop_icons = frappe.desktop_icons || frappe.boot.desktop_icons;
 		let icons = this.edit_mode ? frappe.new_desktop_icons : frappe.desktop_icons;
 		const all_icons = icons.filter((icon) => {
 			if (icon.hidden != 1) {
@@ -341,22 +353,23 @@ class DesktopPage {
 	}
 	add_new_icons_to_grid() {
 		let grid = $($(".desktop-container .icons").get(0));
-		let desktop_icon = `<div class="desktop-icon desktop-edit-mode add-new-icon" title="Add New Icon">
+		this.add_new_icon = `<div class="desktop-icon desktop-edit-mode add-new-icon" title="Add New Icon">
 		 ${frappe.utils.icon("plus", "lg")}
 		 New Icon
 		 </div>`;
-		grid.append(desktop_icon);
+		grid.append(this.add_new_icon);
 		$(".add-new-icon").on("click", function () {
 			frappe.ui.form.make_quick_entry(
 				"Desktop Icon",
 				function (icon) {
 					frappe.new_desktop_icons.push(icon);
-					frappe.new_icons.push(icon.name);
+					frappe.new_icons.push(icon);
 					frappe.pages["desktop"].desktop_page.update();
 				},
 				"",
 				"",
 				null,
+				true,
 				true
 			);
 		});
@@ -367,6 +380,7 @@ class DesktopPage {
 		this.$edit_button.find(".discard").on("click", function () {
 			me.stop_editing_layout("cancel");
 			me.delete_new_icons();
+			$($(".desktop-container .icons").get(0)).find(".add-new-icon").remove();
 		});
 		this.$edit_button.find(".save").on("click", function () {
 			me.stop_editing_layout("submit");
@@ -380,8 +394,7 @@ class DesktopPage {
 	}
 
 	delete_new_icons() {
-		const bulk_operations = new frappe.ui.BulkOperations({ doctype: "Desktop Icon" });
-		bulk_operations.delete(frappe.new_icons);
+		frappe.new_icons = [];
 	}
 
 	setup_avatar() {

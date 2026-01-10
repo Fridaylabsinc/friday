@@ -554,3 +554,5 @@ add_to_apps_screen = [
 		"route": app_home,
 	}
 ]
+
+sync_user_settings = {"Desktop Icon": "frappe.desk.doctype.desktop_icon.desktop_icon.create_user_icons"}

@@ -282,4 +282,20 @@ def create_desktop_icons():
 
 
 def create_user_icons(user, data):
-	print("Hello")
+	user_settings = json.loads(data)
+	new_icons = user_settings.get("icons_to_create")
+	if new_icons:
+		new_icons = json.loads(user_settings.get("icons_to_create"))
+		if new_icons:
+			for icon in new_icons:
+				try:
+					desktop_icon = frappe.new_doc("Desktop Icon")
+					desktop_icon.update(icon)
+					desktop_icon.owner = user
+					desktop_icon.save()
+				except Exception as e:
+					frappe.log_error("Error in syncing icons", e)
+			user_settings.pop("icons_to_create", None)
+			frappe.cache.hset("_user_settings", f"{'Desktop Icon'}::{user}", json.dumps(user_settings))
+			return json.dumps(user_settings)
+	return data
