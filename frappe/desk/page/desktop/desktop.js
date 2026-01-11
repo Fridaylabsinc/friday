@@ -122,31 +122,29 @@ function get_desktop_icon_by_idx(idx, parent_icon) {
 
 function save_desktop(icons) {
 	// saving in localStorage;
-	frappe.model.user_settings.save(
-		"Desktop Icon",
-		"desktop_layout",
-		JSON.stringify(icons),
-		(r) => {
-			frappe.toast("Desktop Saved");
-			frappe.pages["desktop"].desktop_page.sync_layout();
-		}
-	);
-	if (frappe.new_icons.length) {
-		frappe.model.user_settings.get("Desktop Icon").then((user_settings) => {
-			frappe.model.user_settings.save(
-				"Desktop Icon",
-				"icons_to_create",
-				JSON.stringify(frappe.new_icons),
-				(r) => {
-					frappe.pages["desktop"].desktop_page.sync_layout();
-				}
-			);
+	frappe.model.user_settings
+		.save("Desktop Icon", "desktop_layout", JSON.stringify(icons))
+		.then((r) => {
+			if (frappe.new_icons.length) {
+				frappe.model.user_settings.get("Desktop Icon").then((user_settings) => {
+					frappe.model.user_settings
+						.save("Desktop Icon", "icons_to_create", JSON.stringify(frappe.new_icons))
+						.then((r) => {
+							frappe.pages["desktop"].desktop_page.sync_layout();
+							frappe.toast("Desktop Saved");
+							frappe.pages["desktop"].desktop_page.sync_layout();
+						});
+				});
+			} else {
+				frappe.toast("Desktop Saved");
+				frappe.pages["desktop"].desktop_page.sync_layout();
+			}
 		});
-	}
 }
 
 function reset_to_default() {
-	frappe.model.user_settings.save("Desktop Icon", "desktop_layout", "");
+	frappe.model.user_settings.save("Desktop Icon", "icons_to_create", null);
+	frappe.model.user_settings.save("Desktop Icon", "desktop_layout", null);
 }
 
 function toggle_icons(icons) {
