@@ -234,7 +234,7 @@
 }
 .modal-body .icons{
     margin-top: 0px;
-    place-self: start;
+    place-self: anchor-center;
     & .desktop-icon{
         height: 126px;
         width: 127px;
@@ -395,7 +395,9 @@
   }
 
     .desktop-modal-body {
-        width: 90vw;
+        width: calc(100vw - 20px);
+        padding-left: 0px !important;
+        padding-right: 0px !important;
         > .icons-container {
             width: 100%;
             overflow: hidden !important;
@@ -404,10 +406,8 @@
             padding: 0;
 
             > .icons {
-                position: relative;
-                right: 6%;
-                column-gap: 4px;
-                row-gap: 8px;
+                column-gap: 6px;
+                row-gap: 6px;
 
                 @media screen and (max-width: 380px) {
                 --desktop-icon-container: 100px;
@@ -463,4 +463,7 @@
 [data-theme="dark"] .desktop-edit:hover{
 	opacity: 0.8;
 	transition: opacity 0.3s;
+}
+.desktop-navbar-modal-search:hover{
+    outline: 1px solid var(--surface-gray-3);
 }
