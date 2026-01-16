@@ -332,7 +332,7 @@ frappe.ui.Sidebar = class Sidebar {
 	}
 	setup_notifications() {
 		if (frappe.boot.desk_settings.notifications && frappe.session.user !== "Guest") {
-			this.notifications = new frappe.ui.Notifications();
+			this.notifications = new frappe.ui.Notifications({ full_height: true });
 		}
 	}
 	add_item(container, item) {
