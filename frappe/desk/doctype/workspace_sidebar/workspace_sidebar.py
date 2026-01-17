@@ -339,7 +339,7 @@ def choose_top_doctypes(doctype_names):
 		try:
 			doctype_count_map = {}
 			for doctype in doctype_names:
-				if not is_single_doctype(doctype):
+				if not is_single_doctype(doctype) and not frappe.get_meta(doctype).is_virtual:
 					doctype_count_map[doctype] = frappe.db.count(doctype)
 			top_doctypes = [
 				name
