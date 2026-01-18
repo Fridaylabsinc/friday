@@ -700,7 +700,7 @@ class DesktopIconGrid {
 		});
 	}
 	remove_label_tooltip() {
-		$('[data-toggle="tooltip"]').tooltip("dispose");
+		$('[data-toggle="tooltip"]').tooltip("disable");
 	}
 	setup_reordering(grid) {
 		const me = this;
