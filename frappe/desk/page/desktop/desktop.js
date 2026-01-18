@@ -316,7 +316,7 @@ class DesktopPage {
 		this.desktop_pane.hide();
 		if (action === "cancel") {
 			frappe.new_desktop_icons = null;
-			this.sync_layout();
+			this.update();
 			return;
 		}
 		// submit
