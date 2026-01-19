@@ -797,7 +797,7 @@ frappe.views.ListView = class ListView extends frappe.views.BaseList {
 	get_left_html(doc) {
 		let left_html = "";
 		const mobile_field_columns = this.columns.filter(
-			col => col.type === "Field" && col.df?.fieldname
+			(col) => col.type === "Field" && col.df?.fieldname
 		);
 		let has_value_in_second_column = true;
 		if (mobile_field_columns.length > 1) {
