@@ -142,7 +142,7 @@ frappe.ui.form.MultiSelectDialog = class MultiSelectDialog {
 	setup_results() {
 		this.$parent = $(this.dialog.body);
 		this.$wrapper = this.dialog.fields_dict.results_area.$wrapper
-			.append(`<div class="results mt-1 mb-3"
+			.append(`<div class="results mt-2 mb-3"
 			style="border: 1px solid #d1d8dd; border-radius: 3px; height: 300px; overflow: auto;"></div>`);
 
 		this.$results = this.$wrapper.find(".results");
