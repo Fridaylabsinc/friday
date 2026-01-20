@@ -5,6 +5,9 @@
 	display: inline-flex;
 	align-items: center;
 }
+.list-row-col .indicator-pill {
+  max-width: 150px;
+}
 
 .indicator::before {
 	content: "";
