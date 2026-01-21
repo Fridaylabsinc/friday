@@ -109,13 +109,6 @@ def search_widget(
 	if filters is None:
 		filters = {}
 
-	if for_link_validation:
-		as_dict = False
-		# for custom queries, we don't mutate filters
-		# we have to rely on txt
-		# we want to match "A" with "A" only and not "A1", "BA" etc.
-		page_length = PAGE_LENGTH_FOR_LINK_VALIDATION
-
 	if query:  # Query = custom search query i.e. python function
 		try:
 			is_whitelisted(frappe.get_attr(query))
