@@ -359,8 +359,8 @@ def build_for_autosuggest(res: list[tuple], doctype: str) -> list[LinkSearchResu
 			results.append(autosuggest_row)
 	else:
 		for item in res:
-			value = _(item[0]) if meta.translated_doctype else item[0]
-			results.append({"value": item[0], "description": to_string(item[1:]), "label": value})
+			label = _(item[0]) if meta.translated_doctype else item[0]
+			results.append({"value": item[0], "description": to_string(item[1:]), "label": label})
 
 	return results
 
