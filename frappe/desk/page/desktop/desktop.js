@@ -755,9 +755,8 @@ class DesktopIcon {
 				modal.show();
 			});
 			if (this.icon_type == "App") {
-				$($(this.icon_caption_area).children()[1]).html(
-					__(`${this.child_icons.length} Workspaces`)
-				);
+				let content = `${this.child_icons.length} Workspaces`;
+				$($(this.icon_caption_area).children()[1]).html(__(content));
 			}
 		} else {
 			this.icon.attr("href", this.icon_route);
