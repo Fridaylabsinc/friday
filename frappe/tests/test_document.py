@@ -266,7 +266,6 @@ class TestDocument(IntegrationTestCase):
 
 		# script
 		xss = '<script>alert("XSS")</script>'
-		escaped_xss = xss.replace("<", "&lt;").replace(">", "&gt;")
 		d.subject += xss
 		d.save()
 		d.reload()
