@@ -1154,8 +1154,10 @@ from {tables}
 
 		active_child_tables = []
 		if len(self.tables) > 1:  # only if query has multiple tables involved
+			main_table_name = f"tab{self.doctype}"
 			for table_name in self.tables:
-				if table_name != f"`tab{self.doctype}`":
+				clean_name = table_name.replace("`", "").replace('"', "")
+				if clean_name != main_table_name:
 					active_child_tables.append(table_name)
 
 		if permission_script_name := get_server_script_map().get("permission_query", {}).get(self.doctype):
