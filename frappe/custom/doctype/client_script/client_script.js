@@ -10,13 +10,11 @@ frappe.ui.form.on("Client Script", {
 	refresh(frm) {
 		if (frm.doc.dt && frm.doc.script) {
 			frm.add_custom_button(__("Go to {0}", [frm.doc.dt]), () => {
-				frappe.db.get_value("DocType", frm.doc.dt, "issingle").then((r) => {
-					if (r && r.message && r.message.issingle) {
-						frappe.set_route("Form", frm.doc.dt);
-					} else {
-						frappe.set_route("List", frm.doc.dt);
-					}
-				});
+				if (frappe.model.is_single(frm.doc.dt)) {
+					frappe.set_route("Form", frm.doc.dt);
+				} else {
+					frappe.set_route("List", frm.doc.dt);
+				}
 			});
 		}
 
