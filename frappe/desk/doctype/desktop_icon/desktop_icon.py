@@ -80,6 +80,10 @@ class DesktopIcon(Document):
 			os.remove(file_path)
 
 	def is_permitted(self, bootinfo):
+		# perform a permission check based on roles table (desktop icons)
+		allowed_roles = [d.role for d in self.get("roles") or []]
+		if allowed_roles and not set(allowed_roles).intersection(frappe.get_roles()):
+			return False
 		if self.icon_type == "Folder":
 			return True
 		elif self.icon_type == "App":
