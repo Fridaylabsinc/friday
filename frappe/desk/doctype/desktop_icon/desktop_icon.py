@@ -47,29 +47,30 @@ class DesktopIcon(Document):
 	def on_trash(self):
 		clear_desktop_icons_cache()
 		if frappe.conf.developer_mode and self.standard and self.app:
-			self.delete_desktop_icon_file()
+			delete_desktop_icon_file(self.app, self.label)
 
 	def check_for_restrict_removal(self):
 		if self.restrict_removal:
 			frappe.throw(_("Cannot delete Desktop Icon '{0}' as it is restricted").format(self.label))
 
 	def on_update(self):
+		self.export_desktop_icon()
+
+	def after_rename(self, old, new, merge):
+		delete_desktop_icon_file(self.app, old)
+		self.export_desktop_icon()
+
+	def export_desktop_icon(self):
 		allow_export = (
 			self.standard and self.app and not frappe.flags.in_import and frappe.conf.developer_mode
 		)
 		if allow_export:
-			self.export_desktop_icon()
-
-	def export_desktop_icon(self):
-		folder_path = create_directory_on_app_path("desktop_icon", self.app)
-		file_path = os.path.join(folder_path, f"{frappe.scrub(self.label)}.json")
-		doc_export = self.as_dict(no_nulls=True, no_private_properties=True)
-		strip_default_fields(self, doc_export)
-		# if self.parent_icon:
-		# 	print(self.parent_icon)
-		# 	doc_export["parent_icon"] = frappe.db.get_value("Desktop Icon", self.parent_icon, "label")
-		with open(file_path, "w+") as icon_file_doc:
-			icon_file_doc.write(frappe.as_json(doc_export) + "\n")
+			folder_path = create_directory_on_app_path("desktop_icon", self.app)
+			file_path = os.path.join(folder_path, f"{frappe.scrub(self.label)}.json")
+			doc_export = self.as_dict(no_nulls=True, no_private_properties=True)
+			strip_default_fields(self, doc_export)
+			with open(file_path, "w+") as icon_file_doc:
+				icon_file_doc.write(frappe.as_json(doc_export) + "\n")
 
 	def delete_desktop_icon_file(self):
 		folder_path = create_directory_on_app_path("desktop_icon", self.app)
@@ -123,6 +124,13 @@ class DesktopIcon(Document):
 
 	def after_insert(self):
 		clear_desktop_icons_cache()
+
+
+def delete_desktop_icon_file(app, label):
+	folder_path = create_directory_on_app_path("desktop_icon", app)
+	file_path = os.path.join(folder_path, f"{frappe.scrub(label)}.json")
+	if os.path.exists(file_path):
+		os.remove(file_path)
 
 
 def get_workspace_names(workspaces):
