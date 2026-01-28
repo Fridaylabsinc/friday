@@ -26,17 +26,9 @@ dependencies = [
     "PyQRCode~=1.2.1",
     "PyYAML~=6.0.3",
     "RestrictedPython~=8.1",
-<<<<<<< HEAD
-<<<<<<< HEAD
     "WeasyPrint==68.0",
     # we don't use tinycss2 directly, but pinned to ensure compatibility with WeasyPrint and bleach
     "tinycss2~=1.5.1,<1.6",
-=======
-    "WeasyPrint>=68.0",
->>>>>>> deb4ae4e65 (fix(security): require WeasyPrint >= 68.0 to address CVE-2025-68616)
-=======
-    "WeasyPrint==66.0",
->>>>>>> d4293fd3e7 (Revert "fix(security): require WeasyPrint >= 68.0 to address CVE-2025-68616")
     "pydyf==0.12.1",
     "Werkzeug==3.1.5",
     "Whoosh~=2.7.4",
