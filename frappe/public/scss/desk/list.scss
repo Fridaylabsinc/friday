@@ -1,6 +1,7 @@
 .layout-main-section-wrapper:not(.disable-scrolling) {
 	.frappe-list {
 		.result-container {
+			overflow: auto;
 			.result {
 				min-width: 100%;
 				width: auto;
