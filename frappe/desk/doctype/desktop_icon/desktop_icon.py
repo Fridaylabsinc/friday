@@ -211,8 +211,8 @@ def get_desktop_icons(user=None, bootinfo=None):
 				if icon.is_permitted(bootinfo):
 					permitted_icons.append(s)
 
-				if not s.parent_icon:
-					permitted_parent_labels.add(s.label)
+					if not s.parent_icon:
+						permitted_parent_labels.add(s.label)
 
 		user_icons = [
 			s for s in permitted_icons if not s.parent_icon or s.parent_icon in permitted_parent_labels
