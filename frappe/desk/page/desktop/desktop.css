@@ -141,14 +141,13 @@
     text-wrap: nowrap;
     display: flex;
     justify-content: space-between;
-    width: 95px;
+    width: 120px;
     height: 35px;
     flex-direction: column;
 }
 .icon-title{
     font-weight: var(--weight-semibold);
     font-size: var(--text-md);
-    max-width: 95px;
     overflow: hidden;
 	text-overflow: ellipsis;
 	white-space: nowrap;
