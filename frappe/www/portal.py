@@ -14,7 +14,7 @@ def get_context(context, **dict_params):
 	if doctype:
 		meta = frappe.get_meta(doctype)
 		if frappe.session.user == "Guest" and not meta.allow_guest_to_view:
-			return
+			frappe.throw(_("Login to view"), frappe.PermissionError)
 		context.meta = meta
 		context.update(get_list_context(context, doctype) or {})
 		context.update(get(**frappe.local.form_dict))
