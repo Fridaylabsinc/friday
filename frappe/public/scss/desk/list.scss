@@ -98,14 +98,14 @@
 
 	&:hover:not(.list-row-head) {
 		background-color: var(--highlight-color);
-
-		.level-right {
-			box-shadow: -5px 0px 5px var(--highlight-color);
-		}
 	}
 
 	&:hover .level-right {
 		background-color: var(--highlight-color);
+	}
+
+	&:last-child {
+		border-bottom: 0px;
 	}
 }
 
@@ -144,6 +144,12 @@
 	transition: color 0.2s;
 	-webkit-transition: color 0.2s;
 	@include get_textstyle("base", "regular");
+
+	&:hover:not(.list-row-head) {
+		.level-right {
+			box-shadow: -5px 0px 5px var(--highlight-color);
+		}
+	}
 
 	.level-left {
 		flex: 4;
@@ -235,7 +241,6 @@
 	}
 	.level-right {
 		background-color: var(--subtle-fg);
-		border-radius: var(--border-radius);
 		height: var(--list-row-height);
 		border-left: none;
 		&:hover {
