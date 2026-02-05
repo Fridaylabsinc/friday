@@ -1,8 +1,10 @@
-<div class="d-inline-flex flex-column px-2 py-2" style="background-color: var(--surface-modal); box-shadow: var(--shadow-sm); gap: 12px; border-radius: 12px;">
-    <div class="flex">
-        {%= frappe.utils.icon(card.icon) %}
-        <div class="sidebar-card-title">{{ card.title }}</div>
+<div class="sidebar-card d-inline-flex flex-column px-2 py-2" style="background-color: var(--surface-modal); box-shadow: var(--shadow-sm); gap: 12px; border-radius: 12px;">
+    <div>
+        <div class="card-title-container">
+            {%= frappe.utils.icon(card.icon, "sm", "", "", "card-icon") %}
+            <div class="sidebar-card-title">{{ card.title }}</div>
+        </div>
+        <div class="sidebar-card-description">{{ card.message }}</div>
     </div>
-    <div class="sidebar-card-description">{{ card.message }}</div>
-    <button class="btn btn-info">{{ card.primary_action_label }}</button>
+    <button class="sidebar-card-button btn">{{ frappe.utils.icon(card.primary_action_icon, "sm", "", "", "", true) }}{{ card.primary_action_label }}</button>
 </div>

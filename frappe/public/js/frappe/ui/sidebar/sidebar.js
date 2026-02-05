@@ -111,9 +111,9 @@ frappe.ui.Sidebar = class Sidebar {
 	add_sidebar_card() {
 		let card = new frappe.ui.SidebarCard({
 			title: "Trial ends in 3 days",
-			icon: "zap",
+			icon: "info",
 			message: "Upgrade to Pro to unlock more features",
-			parent: this.wrapper.find(".body-sidebar-bottom"),
+			parent: this.wrapper.find(".body-sidebar-cards"),
 			primary_action_icon: "zap",
 			primary_action_label: "Upgrade",
 			primary_action: () => {},
