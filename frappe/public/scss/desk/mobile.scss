@@ -320,6 +320,9 @@ body {
 }
 
 @media (max-width: 480px) {
+	.mobile-id-filter .form-group {
+		width: 150px;
+	}
 	body[data-route^="Form"] {
 		.navbar-breadcrumbs {
 			max-width: 165px;
