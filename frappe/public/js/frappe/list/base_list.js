@@ -660,6 +660,9 @@ class FilterArea {
 		list_view.page.page_form.addClass("flex-column");
 		this.$filter_list_wrapper.addClass("justify-between p-0");
 
+		// added this to manage spaceing between filter and sorf area
+		this.$filter_list_wrapper.find(".filter-selector").css("margin", "0 0 0 auto");
+
 		$(`<button class="filter-toggle btn btn-default btn-sm filter-button">
 					<span class="filter-icon button-icon">
 						${frappe.utils.icon("funnel-plus")}
