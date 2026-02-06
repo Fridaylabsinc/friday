@@ -233,16 +233,24 @@ frappe.ui.form.ControlInput = class ControlInput extends frappe.ui.form.Control 
 				.on("click", (event) => {
 					event.preventDefault();
 					me.$info_card.html("");
-					let card = new frappe.ui.SidebarCard({
-						// title: "Trial ends in 3 days",
-						// icon: "info",
+					let card_args = {
 						message: me.df.description,
 						parent: me.$info_card,
-						// primary_action_icon: "zap",
-						// primary_action_label: "Upgrade",
 						close_button: true,
-						// primary_action: () => {},
-					});
+					};
+					if (me.df.documentation_url) {
+						card_args.primary_action_label = "Read More";
+						card_args.primary_action_suffix_icon = "square-arrow-out-up-right";
+						card_args.primary_action = function () {
+							window.open(me.df.documentation_url);
+						};
+						$(":root").css({
+							"--sidebar-card-button-bg-color": "var(--surface-gray-2)",
+							"--sidebar-card-button-color": "var(--ink-gray-7)",
+							"--sidebar-card-button-outline": "var(--ink-gray-7)",
+						});
+					}
+					let card = new frappe.ui.SidebarCard(card_args);
 					if (me.info_card_display) {
 						me.info_card_display = false;
 						me.$info_card.removeAttr("data-show");

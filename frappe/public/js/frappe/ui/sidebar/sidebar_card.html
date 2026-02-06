@@ -18,6 +18,14 @@
          </div>
     {% } %}
     {% if(card.primary_action_label) { %}
-    <button class="sidebar-card-button btn">{{ frappe.utils.icon(card.primary_action_icon, "sm", "", "", "", true) }}{{ card.primary_action_label }}</button>
+    <button class="sidebar-card-button btn">
+        {% if (card.primary_action_icon) %}
+            {{ frappe.utils.icon(card.primary_action_icon, "sm", "", "", "", true) }}
+        {% } %}
+        {{ card.primary_action_label }}
+        {% if card.primary_action_suffix_icon %}
+            {{ frappe.utils.icon(card.primary_action_suffix_icon, "sm", "", "", "", true) }}
+        {% endif %}
+    </button>
     {% } %}
 </div>
