@@ -612,9 +612,8 @@ export default class GridRow {
 									value='${cint(d.columns) || docfield.columns}'
 									data-fieldname='${docfield.fieldname}' style='background-color: var(--modal-bg); display: inline'>
 							</div>
-							<div class='col-2' title='${__("Sticky")}'>
+							<div class='col-2 sticky-col-container' title='${__("Sticky")}' >
 								<input type='checkbox' class='form-control sticky-column'
-									style='margin-top: 8px'
 									${d.sticky ? "checked" : ""}
 									data-fieldname='${d.fieldname}' style='background-color: var(--modal-bg); display: inline'>
 							</div>

@@ -302,7 +302,7 @@
 		}
 
 		textarea {
-			height: 39px !important;
+			height: 43px !important;
 		}
 
 		.form-control,
@@ -387,7 +387,7 @@
 	.data-row {
 		div[data-fieldname="options"],
 		div[data-fieldtype="Text Editor"] {
-			height: 40px;
+			height: auto;
 		}
 	}
 	.grid-static-col {
@@ -842,6 +842,12 @@
 
 .grid-scroll-bar-rows {
 	height: 100%;
+}
+
+.sticky-col-container {
+	display: flex;
+	justify-content: center;
+	align-items: center;
 }
 
 @media (max-width: map-get($grid-breakpoints, "md")) {
