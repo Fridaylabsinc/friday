@@ -1061,7 +1061,7 @@ export default class GridRow {
 			.on("focusin", function (event) {
 				if (is_focused) return;
 				is_focused = true;
-				if (df.fieldtype === "Link" || df.fieldtype === "Dynamic Link") {
+				if (["Link", "Dynamic Link", "Autocomplete"].includes(df.fieldtype)) {
 					frappe.utils.sleep(300).then(() => {
 						let $dropdown = $(this).find(".awesomplete > ul:first-of-type");
 						let $grid_field = $dropdown.closest(".grid-field");
