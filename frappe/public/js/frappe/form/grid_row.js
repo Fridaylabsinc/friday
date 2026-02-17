@@ -1084,7 +1084,8 @@ export default class GridRow {
 								position: "absolute",
 								top: `${top_difference + 10}px`,
 								left: `${left_difference}px`,
-								width: "250px",
+								minWidth: "250px",
+								width: `${element_position.width}px`,
 							});
 						}
 					});
