@@ -246,6 +246,7 @@ class DesktopPage {
 	make() {
 		this.page.page_head.hide();
 		$(this.page.body).empty();
+		this.awesomebar_setup = false;
 		$(frappe.render_template("desktop")).appendTo(this.page.body);
 		if (!this.data) {
 			this.data = JSON.parse($("#desktop-layout").text());
