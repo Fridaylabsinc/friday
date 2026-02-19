@@ -138,7 +138,13 @@ w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 		self.assertEqual(message, processed_message)
 
 	def test_sendmail_inline_images_parameter_respected(self):
-		"""Test that inline_images parameter works through sendmail."""
+		"""
+		Test that inline_images parameter works through sendmail.
+		Earlier this was ignored and the image was read from disk instead of using the provided content.
+		The way to check this is essentially checking if the image is embedded with cid:
+		<img src="cid:content_id" ...> -> Correct behavior
+		If the image is not embedded with cid: -> Incorrect behavior
+		"""
 
 		test_image_content = b"FAKE_PNG_BINARY_CONTENT_FOR_TESTING"
 
@@ -151,7 +157,7 @@ w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 			}
 		]
 
-		# Use QueueBuilder directly (what sendmail uses internally)
+		# use QueueBuilder to send the email (sendmail uses this internally)
 		from frappe.email.doctype.email_queue.email_queue import QueueBuilder
 
 		builder = QueueBuilder(
@@ -162,11 +168,9 @@ w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 			inline_images=inline_images,
 		)
 
-		# Get the email content that would be sent
 		mail = builder.prepare_email_content()
 		email_string = mail.as_string()
 
-		# Assertions
 		self.assertIn("cid:", email_string)
 		self.assertNotIn('embed="files/nonexistent_test_image.png"', email_string)
 
