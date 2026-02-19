@@ -137,6 +137,39 @@ w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 		""".format(inline_images[0].get("content_id"))
 		self.assertEqual(message, processed_message)
 
+	def test_sendmail_inline_images_parameter_respected(self):
+		"""Test that inline_images parameter works through sendmail."""
+
+		test_image_content = b"FAKE_PNG_BINARY_CONTENT_FOR_TESTING"
+
+		html_content = '<div><img embed="files/nonexistent_test_image.png" alt="Logo"></div>'
+
+		inline_images = [
+			{
+				"filename": "files/nonexistent_test_image.png",
+				"filecontent": test_image_content,
+			}
+		]
+
+		# Use QueueBuilder directly (what sendmail uses internally)
+		from frappe.email.doctype.email_queue.email_queue import QueueBuilder
+
+		builder = QueueBuilder(
+			recipients=["test@example.com"],
+			sender="me@example.com",
+			subject="Test Inline Images",
+			message=html_content,
+			inline_images=inline_images,
+		)
+
+		# Get the email content that would be sent
+		mail = builder.prepare_email_content()
+		email_string = mail.as_string()
+
+		# Assertions
+		self.assertIn("cid:", email_string)
+		self.assertNotIn('embed="files/nonexistent_test_image.png"', email_string)
+
 	def test_inline_styling(self):
 		html = """
 <h3>Hi John</h3>
