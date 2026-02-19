@@ -176,8 +176,7 @@ class DesktopPage {
 		this.desktop_menu_items = [];
 	}
 	update() {
-		this.make(this.page);
-		this.setup();
+		this.make();
 	}
 	prepare() {
 		this.apps_icons = [];
@@ -266,8 +265,8 @@ class DesktopPage {
 		if (this.edit_mode) {
 			this.start_editing_layout();
 		}
+		this.setup();
 	}
-
 	setup() {
 		$(document).trigger("desktop_screen", { desktop: this });
 		this.setup_avatar();
