@@ -5,6 +5,10 @@ frappe.provide("frappe.ui");
 frappe.ui.SidebarCard = class SidebarCard {
 	constructor(opts) {
 		Object.assign(this, opts);
+		this.alignment_style_map = {
+			right: "flex-end",
+			left: "flex-start",
+		};
 		this.make(opts);
 		this.setup();
 		this.display = false;
@@ -31,10 +35,16 @@ frappe.ui.SidebarCard = class SidebarCard {
 				],
 			});
 		}
+		if (this.outline) {
+			this.card.addClass("card-outline");
+			this.card.removeClass("px-2 py-2");
+		}
 		this.card.prependTo(this.parent);
+		this.set_button_alignment();
 	}
 	setup() {
 		this.setup_primary_action();
+		this.setup_close_button();
 	}
 	toggle() {
 		if (this.display) {
@@ -59,12 +69,27 @@ frappe.ui.SidebarCard = class SidebarCard {
 			me.primary_action(event);
 		});
 	}
+	setup_close_button() {
+		const me = this;
+		if (this.close_button) {
+			this.card.find(".close-button").on("click", function () {
+				me.toggle();
+			});
+		}
+	}
 	set_styles() {
 		if (this.styles) {
 			const $root = $(":root");
 			for (const [variable, value] of Object.entries(this.styles)) {
 				$root.css(`--${variable}`, value);
 			}
+		}
+	}
+	set_button_alignment() {
+		if (this.primary_button_alignment) {
+			this.card
+				.find(".sidebar-card-actions")
+				.css("justifyContent", this.alignment_style_map[this.primary_button_alignment]);
 		}
 	}
 };
