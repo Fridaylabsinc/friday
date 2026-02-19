@@ -58,26 +58,6 @@ $(document).ready(function () {
 			});
 		}
 	});
-	$(document).on("sidebar_setup", function (event, data) {
-		let sidebar = data.sidebar;
-		let sidebar_card_args = {
-			title: card_args.title,
-			icon: "info",
-			message: card_args.message,
-		};
-		isFCUser = true;
-		if (isFCUser) {
-			$.extend(sidebar_card_args, {
-				primary_action_label: "Upgrade",
-				primary_action_icon: "zap",
-				primary_button_width: "full",
-				primary_action: () => {
-					openFrappeCloudDashboard();
-				},
-			});
-		}
-		sidebar.add_card(sidebar_card_args);
-	});
 });
 
 function setErrorMessage(message) {
