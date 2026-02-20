@@ -19,13 +19,23 @@ frappe.ui.FieldGroup = class FieldGroup extends frappe.ui.form.Layout {
 	}
 
 	resolve_date_default_keywords(def_value, fieldtype) {
-		if (def_value == "Today" && fieldtype == "Date") {
+		if (!def_value) return def_value;
+
+		def_value = def_value.toLowerCase();
+
+		if (def_value == "today" && fieldtype == "Date") {
 			return frappe.datetime.get_today();
-		} else if (def_value == "Now" && fieldtype == "Datetime") {
-			return frappe.datetime.now_datetime();
-		} else if (def_value == "Now" && fieldtype == "Time") {
-			return frappe.datetime.now_time();
 		}
+
+		if (def_value == "now") {
+			if (fieldtype == "Datetime") {
+				return frappe.datetime.now_datetime();
+			}
+			if (fieldtype == "Time") {
+				return frappe.datetime.now_time();
+			}
+		}
+
 		return def_value;
 	}
 
