@@ -1475,15 +1475,13 @@ def logger(
 
 
 def get_desk_link(doctype, name, show_title_with_name=False, open_in_new_tab=False):
-	from urllib.parse import quote
+	from frappe.desk.utils import slug
+	from frappe.utils.data import quoted
 
 	meta = get_meta(doctype)
 	title = get_value(doctype, name, meta.get_title_field())
 
 	target_attr = ' target="_blank"' if open_in_new_tab else ""
-
-	# encode for href
-	encoded_name = quote(name)
 
 	if show_title_with_name and name != title:
 		html = '<a href="/desk/{doctype}/{encoded_name}"{target} style="font-weight: bold;">{doctype_local} {name}: {title_local}</a>'
@@ -1491,9 +1489,9 @@ def get_desk_link(doctype, name, show_title_with_name=False, open_in_new_tab=Fal
 		html = '<a href="/desk/{doctype}/{encoded_name}"{target} style="font-weight: bold;">{doctype_local} {title_local}</a>'
 
 	return html.format(
-		doctype=frappe.scrub(doctype),
+		doctype=quoted(slug(doctype)),
 		name=name,
-		encoded_name=encoded_name,
+		encoded_name=quoted(name),
 		doctype_local=_(doctype),
 		title_local=_(title),
 		target=target_attr,
