@@ -18,6 +18,17 @@ frappe.ui.FieldGroup = class FieldGroup extends frappe.ui.form.Layout {
 		}
 	}
 
+	resolve_date_default_keywords(def_value, fieldtype) {
+		if (def_value == "Today" && fieldtype == "Date") {
+			return frappe.datetime.get_today();
+		} else if (def_value == "Now" && fieldtype == "Datetime") {
+			return frappe.datetime.now_datetime();
+		} else if (def_value == "Now" && fieldtype == "Time") {
+			return frappe.datetime.now_time();
+		}
+		return def_value;
+	}
+
 	make() {
 		let me = this;
 		if (this.fields) {
@@ -33,13 +44,7 @@ frappe.ui.FieldGroup = class FieldGroup extends frappe.ui.form.Layout {
 				)
 					return;
 
-				if (def_value == "Today" && field.df["fieldtype"] == "Date") {
-					def_value = frappe.datetime.get_today();
-				} else if (def_value == "Now" && field.df["fieldtype"] == "Datetime") {
-					def_value = frappe.datetime.now_datetime();
-				} else if (def_value == "Now" && field.df["fieldtype"] == "Time") {
-					def_value = frappe.datetime.now_time();
-				}
+				def_value = me.resolve_date_default_keywords(def_value, field.df.fieldtype);
 
 				field.set_input(def_value);
 				// if default and has depends_on, render its fields.
