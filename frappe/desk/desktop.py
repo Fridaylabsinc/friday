@@ -488,7 +488,9 @@ def get_workspace_sidebar_items():
 		pages.extend(private_pages)
 
 	if len(pages) == 0:
-		pages.append(next((x for x in all_pages if x["title"] == "Welcome Workspace"), None))
+		welcome_workspace = next((x for x in all_pages if x["title"] == "Welcome Workspace"), None)
+		if welcome_workspace:
+			pages.append(welcome_workspace)
 
 	return {
 		"pages": pages,
