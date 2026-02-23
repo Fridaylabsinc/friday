@@ -559,36 +559,42 @@ class Email:
 			except Exception:
 				return part.get_payload()
 
-	def get_attachment(self, part):
+	def get_attachment(self, part) -> None:
 		# charset = self.get_charset(part)
 		fcontent = part.get_payload(decode=True)
 
-		if fcontent:
-			content_type = part.get_content_type()
-			fname = part.get_filename()
-			if fname:
-				try:
-					fname = fname.replace("\n", " ").replace("\r", "")
-					fname = cstr(decode_header(fname)[0][0])
-				except Exception:
-					fname = get_random_filename(content_type=content_type)
-			else:
-				fname = get_random_filename(content_type=content_type)
-			# Don't clobber existing filename
-			while fname in self.cid_map:
-				fname = get_random_filename(content_type=content_type)
+		if not fcontent:
+			return
 
-			self.attachments.append(
-				{
-					"content_type": content_type,
-					"fname": fname,
-					"fcontent": fcontent,
-				}
-			)
+		attachment_limit = cint(self.email_account.attachment_limit)
+		if attachment_limit and len(fcontent) > attachment_limit * 1024 * 1024:
+			return  # skip attachments that are larger than the specified limit
 
-			cid = (cstr(part.get("Content-Id")) or "").strip("><")
-			if cid:
-				self.cid_map[fname] = cid
+		content_type = part.get_content_type()
+		fname = part.get_filename()
+		if fname:
+			try:
+				fname = fname.replace("\n", " ").replace("\r", "")
+				fname = cstr(decode_header(fname)[0][0])
+			except Exception:
+				fname = get_random_filename(content_type=content_type)
+		else:
+			fname = get_random_filename(content_type=content_type)
+		# Don't clobber existing filename
+		while fname in self.cid_map:
+			fname = get_random_filename(content_type=content_type)
+
+		self.attachments.append(
+			{
+				"content_type": content_type,
+				"fname": fname,
+				"fcontent": fcontent,
+			}
+		)
+
+		cid = (cstr(part.get("Content-Id")) or "").strip("><")
+		if cid:
+			self.cid_map[fname] = cid
 
 	def save_attachments_in_doc(self, doc):
 		"""Save email attachments in given document."""
@@ -636,11 +642,11 @@ class InboundMail(Email):
 	"""Class representation of incoming mail along with mail handlers."""
 
 	def __init__(self, content, email_account, uid=None, seen_status=None, append_to=None):
-		super().__init__(content)
 		self.email_account = email_account
 		self.uid = uid or -1
 		self.append_to = append_to
 		self.seen_status = seen_status or 0
+		super().__init__(content)
 
 		# System documents related to this mail
 		self._parent_email_queue = None
