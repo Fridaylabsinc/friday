@@ -782,6 +782,7 @@ frappe.ui.form.Form = class FrappeForm {
 		this.show_submit_message();
 		this.clear_custom_buttons();
 		this.show_web_link();
+		this.show_report_bug_link();
 		this.show_workflow_read_only_banner();
 	}
 
@@ -1276,6 +1277,17 @@ frappe.ui.form.Form = class FrappeForm {
 			if (this.doc.__onload.published) {
 				this.add_web_link("/" + this.doc.route);
 			}
+		}
+	}
+
+	show_report_bug_link() {
+		if (this.meta.beta) {
+			this.add_web_link(
+				"https://github.com/frappe/" +
+					frappe.boot.module_app[frappe.scrub(this.meta.module)] +
+					"/issues/new",
+				__("Report bug")
+			);
 		}
 	}
 
