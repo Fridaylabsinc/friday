@@ -116,7 +116,6 @@ frappe.ui.form.Sidebar = class {
 	make_like() {
 		this.like_wrapper = this.sidebar.find(".liked-by");
 		this.like_icon = this.sidebar.find(".liked-by .like-icon");
-		this.like_count = this.sidebar.find(".liked-by .like-count");
 		frappe.ui.setup_like_popover(this.sidebar.find(".form-stats-likes"), ".like-icon");
 
 		this.like_icon.on("click", () => {
@@ -139,8 +138,6 @@ frappe.ui.form.Sidebar = class {
 			.toggleClass("liked", liked)
 			.attr("data-doctype", this.frm.doctype)
 			.attr("data-name", this.frm.doc.name);
-
-		this.like_count && this.like_count.text(JSON.parse(this.frm.doc._liked_by || "[]").length);
 	}
 
 	refresh_web_view_count() {

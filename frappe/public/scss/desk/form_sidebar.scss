@@ -222,7 +222,8 @@
 	}
 
 	.form-stats-likes {
-		gap: 8px;
+		gap: 2px;
+		margin-top: -2px;
 		.form-print {
 			button:hover {
 				background: var(--btn-default-hover-bg);
@@ -495,17 +496,43 @@ body[data-route^="Form"] {
 	}
 }
 
+.liked-by {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	width: 28px;
+	height: 28px;
+}
+
 .liked-by-popover {
+	max-width: 240px;
+	border-radius: var(--border-radius-md);
+	box-shadow: var(--shadow-md);
+	overflow: hidden;
+
 	.popover-body {
-		min-height: 30px;
 		padding: 0px;
+
+		.liked-by-popover-summary {
+			padding: 4px 10px;
+			margin: 0;
+			color: var(--text-muted);
+			border-bottom: 1px solid var(--subtle-accent);
+			@include get_textstyle("sm", "regular");
+		}
 
 		ul.list-unstyled {
 			margin-bottom: 0px;
+			padding: 4px;
 
 			li {
-				padding: var(--padding-xs) var(--padding-sm);
-				margin: 2px;
+				display: flex;
+				align-items: center;
+				gap: var(--padding-xs);
+				padding: var(--padding-xs);
+				margin: 0;
+				border-radius: var(--border-radius-sm);
+				cursor: pointer;
 
 				&:hover {
 					background-color: var(--fg-hover-color);
