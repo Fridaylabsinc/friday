@@ -221,9 +221,13 @@
 		}
 	}
 
+	.form-title-text {
+		// to match the actions button height for center alignment
+		line-height: 28px;
+	}
+
 	.form-stats-likes {
 		gap: 2px;
-		margin-top: -2px;
 		.form-print {
 			button:hover {
 				background: var(--btn-default-hover-bg);
