@@ -78,26 +78,49 @@ frappe.ui.Sidebar = class Sidebar {
 		}
 	}
 
-	setup_onboarding() {
-		let me = this;
-		this.$onboarding = this.wrapper.find(".user_onboarding");
+	remove_onboarding_wrapper() {
 		this.$onboarding.empty();
 		this.wrapper.find(".onboarding-sidebar").removeClass("hidden");
+	}
 
-		if (this.sidebar_data && this.sidebar_data.module_onboarding) {
+	setup_onboarding() {
+		let me = this;
+		this.$onboarding = this.wrapper.find(".user-onboarding");
+
+		if (!this.sidebar_data || !this.sidebar_data.module_onboarding) {
+			this.remove_onboarding_wrapper();
+			return;
+		}
+
+		let module_name = this.sidebar_data.module_onboarding;
+
+		if (this?.onboarding_widget[module_name]) {
+			return;
+		}
+
+		this.remove_onboarding_wrapper();
+		if (module_name) {
+			if (
+				this?.onboarding_widget[module_name] &&
+				this.onboarding_widget[module_name].hide_panel
+			) {
+				return;
+			}
+
 			return frappe
 				.call({
 					method: "frappe.desk.desktop.get_onboarding_data",
 					args: {
 						// send sorted min requirements to increase chance of cache hit
-						module: this.sidebar_data.module_onboarding,
+						module: module_name,
 					},
 					type: "GET",
 				})
 				.then((data) => {
 					if (data.message?.length > 0) {
 						let onboarding_data = data.message[0];
-						me.onboarding_widget = new frappe.ui.UserOnboarding({
+						me.onboarding_widget = {};
+						me.onboarding_widget[module_name] = new frappe.ui.UserOnboarding({
 							title: onboarding_data.title,
 							steps: onboarding_data.items,
 							wrapper: me.$onboarding,
@@ -133,6 +156,10 @@ frappe.ui.Sidebar = class Sidebar {
 		this.workspace_sidebar_items = updated_items;
 	}
 	setup(workspace_title) {
+		if (!this.onboarding_widget) {
+			this.onboarding_widget = {};
+		}
+
 		$(document).trigger("sidebar_setup", { sidebar: this });
 		this.sidebar_title = workspace_title;
 		this.check_for_private_workspace(workspace_title);
@@ -146,6 +173,10 @@ frappe.ui.Sidebar = class Sidebar {
 		this.setup_onboarding();
 
 		this.wrapper.find(".onboarding-sidebar").click(() => {
+			if (this.sidebar_data?.module_onboarding) {
+				delete this.onboarding_widget[this.sidebar_data.module_onboarding];
+			}
+
 			this.setup_onboarding();
 		});
 	}

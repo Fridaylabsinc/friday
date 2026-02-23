@@ -109,8 +109,8 @@ import "./frappe/utils/dashboard_utils.js";
 import "./frappe/ui/chart.js";
 import "./frappe/ui/datatable.js";
 import "./frappe/ui/driver.js";
-import "./frappe/ui/user_onboarding/user_onboarding.bundle.js";
 import "./frappe/scanner";
 
 import "./frappe/ui/address_autocomplete/autocomplete_dialog.js";
 import "./frappe/ui/desktop_icon.html";
+import "./frappe/ui/user_onboarding/user_onboarding.bundle.js";

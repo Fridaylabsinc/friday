@@ -8,6 +8,7 @@ class UserOnboarding {
 		this.$wrapper = $(wrapper);
 		this.header_icon = header_icon;
 		this.init();
+		this.hide_panel = false;
 	}
 
 	init() {
@@ -16,6 +17,7 @@ class UserOnboarding {
 		let title = this.title || __("Welcome to Frappe!");
 		let onboarding_checklist = this.steps || [];
 		let header_icon = this.header_icon;
+		let me = this;
 
 		const app = createApp({
 			components: { OnboardingPanel },
@@ -41,7 +43,10 @@ class UserOnboarding {
 							"",
 							"var(--green)"
 						),
-						"onUpdate:modelValue": (v) => (showPanel.value = v),
+						"onUpdate:modelValue": (v) => {
+							showPanel.value = v;
+							me.hide_panel = !v;
+						},
 					});
 			},
 		});
@@ -80,23 +85,6 @@ function addStyles() {
 		margin-bottom: 6px;
 	}
 
-	.onb-header-left {
-		display: flex;
-		align-items: center;
-		gap: 8px;
-	}
-
-	.onb-header-icon {
-		width: 24px;
-		height: 24px;
-	}
-
-	.onb-header-title {
-		margin: 0;
-		font-size: 20px;
-		font-weight: 600;
-	}
-
 	.onb-header-actions button {
 		border: none;
 		background: transparent;
@@ -108,19 +96,24 @@ function addStyles() {
 		display: flex;
 		align-items: center;
 		gap: 8px;
-		flex: 1;              /* takes remaining space */
-		min-width: 0;         /* allows truncation */
+		flex: 1;
+		min-width: 0;
 	  }
-
-	.onb-step-title {
-		display: flex;
-		align-items: center;
-		gap: 8px;
-	}
 
 	.onb-step-icon {
 		margin-bottom: 2px;
 		align-items: center;
+	}
+
+	.text-base {
+		font-size: 14px;
+		line-spacing: 1.15;
+		letter-spacing: 0.02em;
+		color: #050505;
+	}
+
+	.font-medium {
+		font-weight: 600;
 	}
 
 	.onb-step-text {
@@ -128,22 +121,6 @@ function addStyles() {
 		margin-top: 2px;
 		text-align: left;
 		font-size: 14px;
-	}
-
-	.onb-progress {
-		height: 6px;
-		background: #eee;
-		border-radius: 4px;
-		margin: 12px 0;
-	}
-
-	.onb-progress-label {
-		display: flex;
-		justify-content: space-between;
-		align-items: center;
-		font-size: 13px;
-		color: #6b7280;
-		margin-top: 6px;
 	}
 
 	.onb-skip {
@@ -154,12 +131,6 @@ function addStyles() {
 
 	.onb-skip:hover {
 		color: #111827;
-	}
-
-	.onboarding-progress-bar {
-		height: 100%;
-		background: #ffcd78;
-		border-radius: 4px;
 	}
 
 	.onb-steps {
@@ -196,20 +167,53 @@ function addStyles() {
 		visibility: visible;
 	}
 
-	.onb-header-logo {
+	.onb-title {
+		text-align: center;
+		margin-top: 12px;
+		margin-bottom: 5px;
+	}
+
+	.onb-title-icon {
 		display: flex;
+		justify-content: center;
+		margin-bottom: 8px;
+		height: 40px;
+	}
+
+	.onb-title-steps {
+		color: #6b7280;
+		font-size: 14px;
+		margin-bottom: 8px;
+	}
+
+	.onb-progress-badge {
+		background: #FDFAED;
+		color: #DB7706;
+		padding: 4px 10px;
+		border-radius: 999px;
+		font-size: 13px;
+		font-weight: 500;
+	}
+
+	.onb-progress-badge-complete {
+		background: #E4FAEB;
+		color: #278F5E;
+		padding: 4px 10px;
+		border-radius: 999px;
+		font-size: 13px;
+		font-weight: 500;
+	}
+
+	.onb-progress-row {
+		display: flex;
+		justify-content: space-between;
 		align-items: center;
-		gap: 8px;
+		margin: 14px 0 8px;
 	}
 
-	.onb-header-logo img {
-		width: 24px;
-		height: 24px;
-	}
-
-	.onb-header-logo h4 {
-		margin: 0;
-		white-space: nowrap;
+	.onb-progress-text {
+		color: #6b7280;
+		font-size: 14px;
 	}
 	`;
 

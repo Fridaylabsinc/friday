@@ -51,23 +51,19 @@ class Workspace:
 
 		self.allowed_pages = get_allowed_pages(cache=True)
 		self.allowed_reports = get_allowed_reports(cache=True)
-		self.onboarding_list = self.get_onboarding_list()
 
 		if not minimal:
+			if self.doc.content:
+				self.onboarding_list = [
+					x["data"]["onboarding_name"] for x in loads(self.doc.content) if x["type"] == "onboarding"
+				]
+
 			self.table_counts = get_table_with_counts()
 		self.restricted_doctypes = (
 			frappe.cache.get_value("domain_restricted_doctypes") or build_domain_restricted_doctype_cache()
 		)
 		self.restricted_pages = (
 			frappe.cache.get_value("domain_restricted_pages") or build_domain_restricted_page_cache()
-		)
-
-	def get_onboarding_list(self):
-		return frappe.get_all(
-			"Module Onboarding",
-			filters={"is_complete": 0, "module": self.page_name},
-			pluck="name",
-			order_by="creation",
 		)
 
 	def is_permitted(self):
@@ -160,6 +156,7 @@ class Workspace:
 		self.cards = {"items": self.get_links()}
 		self.charts = {"items": self.get_charts()}
 		self.shortcuts = {"items": self.get_shortcuts()}
+		self.onboardings = {"items": []}
 		self.quick_lists = {"items": self.get_quick_lists()}
 		self.number_cards = {"items": self.get_number_cards()}
 		self.custom_blocks = {"items": self.get_custom_blocks()}
@@ -370,6 +367,7 @@ def get_desktop_page(page):
 			"charts": workspace.charts,
 			"shortcuts": workspace.shortcuts,
 			"cards": workspace.cards,
+			"onboardings": workspace.onboardings,
 			"quick_lists": workspace.quick_lists,
 			"number_cards": workspace.number_cards,
 			"custom_blocks": workspace.custom_blocks,
@@ -649,10 +647,14 @@ def prepare_widget(config, doctype, parentfield):
 
 @frappe.whitelist()
 <<<<<<< HEAD
+<<<<<<< HEAD
 def update_onboarding_step(name, field, value):
 =======
 def update_onboarding_step(name: str, field: str, value: any):
 >>>>>>> c859375d2c (feat: module onboarding)
+=======
+def update_onboarding_step(name: str | int, field: str, value: int | str):
+>>>>>>> 97e4e46ec4 (fix: cy test case failing)
 	"""Update status of onboaridng step
 
 	Args:
@@ -688,6 +690,12 @@ def get_onboarding_data(module: str):
 	onboarding_doc = frappe.get_doc("Module Onboarding", module)
 	if onboarding_doc.is_complete:
 		return []
+
+	# Check if user is allowed
+	allowed_roles = set(onboarding_doc.get_allowed_roles())
+	user_roles = set(frappe.get_roles())
+	if not allowed_roles & user_roles:
+		return None
 
 	item = {
 		"label": _(module),

@@ -45,6 +45,8 @@ const visible = computed({
 	set: (val) => emit("update:modelValue", val),
 });
 
+let skippAll = false;
+
 const completedCount = computed(
 	() => props.steps.filter((step) => step.is_complete || step.is_skipped).length
 );
@@ -68,10 +70,27 @@ function skipAll(skips) {
 			markSkip(step);
 		}
 	});
+
+	skippAll = true;
+}
+
+function resetAll(skips) {
+	skips.forEach((step) => {
+		if (!step.is_complete && step.is_skipped) {
+			markReset(step);
+		}
+	});
+
+	skippAll = false;
 }
 
 function handleAction(step) {
 	if (step.is_complete) return;
+	if (step.is_skipped) return;
+
+	if (step.route_options && typeof step.route_options === "string") {
+		frappe.route_options = JSON.parse(step.route_options);
+	}
 
 	const actions = {
 		"Create Entry": createEntry,
@@ -79,6 +98,7 @@ function handleAction(step) {
 		"Update Settings": updateSettings,
 		"View Report": openReport,
 		"Go to Page": goToPage,
+		"View Docs": viewDocs,
 	};
 
 	if (step.action && actions[step.action]) {
@@ -88,13 +108,22 @@ function handleAction(step) {
 	}
 }
 
+function viewDocs(step) {
+	window.open(step.path, "_blank");
+	markComplete(step);
+}
+
 function goToPage(step) {
+	toggleCollapse();
+
 	frappe.set_route(step.path).then(() => {
 		markComplete(step);
 	});
 }
 
 function openReport(step) {
+	toggleCollapse();
+
 	const route = frappe.utils.generate_route({
 		name: step.reference_report,
 		type: "report",
@@ -162,7 +191,6 @@ async function createEntry(step) {
 	};
 
 	frappe.route_hooks.after_save = callback;
-
 	if (step.show_full_form) {
 		frappe.set_route("Form", step.reference_document, "new");
 	} else {
@@ -204,31 +232,42 @@ function markReset(step) {
 <template>
 	<div v-if="visible" class="onb-panel">
 		<!-- Header -->
-		<div class="header onb-header-main">
-			<div class="onb-header-left">
-				<div class="onb-header-logo" v-html="headerIcon"></div>
-				<h4 class="onb-header-title">{{ title }}</h4>
-			</div>
 
+		<div class="header onb-header-main">
+			<div class="text-base font-medium">Getting started</div>
 			<div class="onb-header-actions">
 				<button @click="toggleCollapse" v-html="minimizeIcon"></button>
 				<button @click="close" v-html="closeIcon"></button>
 			</div>
 		</div>
 
-		<!-- Body -->
 		<div v-if="!collapsed" class="body">
-			<div class="intro">
-				<p>{{ completedCount }}/{{ steps.length }} steps completed</p>
+			<div class="onb-title">
+				<div class="onb-title-icon" v-html="headerIcon"></div>
+
+				<div class="text-base font-medium">{{ title }}</div>
+
+				<div class="onb-title-steps">
+					{{ completedCount }}/{{ steps.length }} steps completed
+				</div>
 			</div>
 
-			<div class="onb-progress">
-				<div class="onboarding-progress-bar" :style="{ width: progress + '%' }"></div>
-			</div>
+			<div class="onb-progress-row">
+				<div v-if="progress !== 100">
+					<div class="onb-progress-badge">{{ progress }}% {{ __("completed") }}</div>
+				</div>
+				<div v-else>
+					<div class="onb-progress-badge-complete">
+						{{ progress }}% {{ __("completed") }}
+					</div>
+				</div>
 
-			<div class="onb-progress-label">
-				{{ progress }}% completed
-				<span class="onb-skip" @click="skipAll(steps)">Skip all</span>
+				<div v-if="skippAll">
+					<span class="onb-skip" @click="resetAll(steps)"> {{ __("Reset all") }}</span>
+				</div>
+				<div v-else>
+					<span class="onb-skip" @click="skipAll(steps)">Skip all</span>
+				</div>
 			</div>
 
 			<!-- Steps -->
@@ -248,7 +287,7 @@ function markReset(step) {
 								: 'text-ink-gray-8 onb-select-cursor'
 						"
 					>
-						<div class="onb-step-left">
+						<div class="onb-step-left" @click="handleAction(step)">
 							<div class="onb-step-icon" v-if="step.is_complete">
 								<div v-html="completeChecklistIcon"></div>
 							</div>
@@ -257,7 +296,7 @@ function markReset(step) {
 							</div>
 
 							<div v-if="!step.is_skipped">
-								<span class="text-base onb-step-text" @click="handleAction(step)">
+								<span class="text-base onb-step-text">
 									{{ step.action_label }}
 								</span>
 							</div>

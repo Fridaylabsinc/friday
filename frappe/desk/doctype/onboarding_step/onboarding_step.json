@@ -32,7 +32,9 @@
   "validate_action",
   "field",
   "value_to_validate",
-  "video_url"
+  "video_url",
+  "section_break_ajog",
+  "route_options"
  ],
  "fields": [
   {
@@ -61,7 +63,7 @@
    "fieldname": "action",
    "fieldtype": "Select",
    "label": "Action",
-   "options": "Create Entry\nUpdate Settings\nShow Form Tour\nView Report\nGo to Page\nWatch Video",
+   "options": "Create Entry\nUpdate Settings\nShow Form Tour\nView Report\nGo to Page\nView Docs",
    "reqd": 1
   },
   {
@@ -145,7 +147,7 @@
    "label": "Is Single"
   },
   {
-   "depends_on": "eval:doc.action == \"Go to Page\"",
+   "depends_on": "eval:doc.action == \"Go to Page\" || doc.action === \"View Docs\"",
    "description": "Example: #Tree/Account",
    "fieldname": "path",
    "fieldtype": "Data",
@@ -214,10 +216,19 @@
    "fieldtype": "Link",
    "label": "Form Tour",
    "options": "Form Tour"
+  },
+  {
+   "fieldname": "section_break_ajog",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "route_options",
+   "fieldtype": "Code",
+   "label": "Route Options"
   }
  ],
  "links": [],
- "modified": "2026-02-21 08:37:30.532549",
+ "modified": "2026-02-23 21:03:51.131292",
  "modified_by": "Administrator",
  "module": "Desk",
  "name": "Onboarding Step",
