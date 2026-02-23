@@ -887,8 +887,10 @@ def has_permission(doc, ptype=None, user=None, debug=False):
 		return True
 	if (
 		user != "Guest"
-		and ptype
-		and frappe.share.get_shared("File", filters=[["share_name", "=", doc.name]], rights=[ptype], user=user)
+		and ptype in ["read", "write", "share", "submit"]
+		and frappe.share.get_shared(
+			"File", filters=[["share_name", "=", doc.name]], rights=[ptype], user=user
+		)
 	):
 		return True
 
