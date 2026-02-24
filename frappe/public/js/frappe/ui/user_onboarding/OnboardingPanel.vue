@@ -170,6 +170,7 @@ function updateSettings(step) {
 	};
 
 	frappe.set_route("Form", step.reference_document);
+	markComplete(step);
 }
 
 async function createEntry(step) {
