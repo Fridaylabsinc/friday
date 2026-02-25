@@ -60,6 +60,7 @@ frappe.views.CommunicationComposer = class {
 			{
 				fieldtype: "Button",
 				label: frappe.utils.icon("down", "xs"),
+				title: __("More Options"),
 				fieldname: "option_toggle_button",
 				click: () => {
 					this.toggle_more_options();
