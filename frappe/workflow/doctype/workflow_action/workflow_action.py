@@ -206,7 +206,11 @@ def return_link_expired_page(doc, doc_workflow_state):
 		_("Document {0} has been set to state {1} by {2}").format(
 			frappe.bold(doc.get("name")),
 			frappe.bold(doc_workflow_state),
-			frappe.bold(user_full_name),
+			frappe.bold(
+				user_full_name
+				if user_full_name
+				else frappe.get_value("User", doc.get("modified_by"), "full_name")
+			),
 		),
 		indicator_color="blue",
 	)
