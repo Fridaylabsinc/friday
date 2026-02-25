@@ -79,7 +79,11 @@ frappe.ui.Sidebar = class Sidebar {
 	}
 
 	setup_promotional_banners() {
-		if (!frappe.user.has_role("System Manager")) return;
+		if (
+			cint(frappe.sys_defaults?.disable_product_suggestion) ||
+			!frappe.user.has_role("System Manager")
+		)
+			return;
 
 		let module = this.all_sidebar_items?.[this.workspace_title]?.["module"] || "";
 		if (!module) return;
