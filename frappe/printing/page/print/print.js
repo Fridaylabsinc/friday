@@ -706,7 +706,10 @@ frappe.ui.form.PrintView = class {
 				return;
 			}
 		} else {
-			this.is_wkhtmltopdf_valid();
+			let pdf_generator = this.get_pdf_generator(print_format?.pdf_generator);
+			if (pdf_generator === "wkhtmltopdf") {
+				this.is_wkhtmltopdf_valid();
+			}
 			this.render_page(
 				"/api/method/frappe.utils.print_format.download_pdf?",
 				false,
