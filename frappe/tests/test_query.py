@@ -981,6 +981,52 @@ class TestQuery(IntegrationTestCase):
 		test_user.remove_roles(test_role)
 		frappe.delete_doc("Role", test_role, force=True)
 
+	def test_filter_with_select_permission_allows_permlevel_0_fields(self):
+		"""Test that users with only select permission can filter by all permlevel 0 fields."""
+
+		test_role = "SelectFilterTestRole"
+		test_user_email = "test2@example.com"
+		test_note_title = "Select Filter Test Note"
+
+		# Cleanup previous runs
+		frappe.set_user("Administrator")
+		test_user = frappe.get_doc("User", test_user_email)
+		test_user.remove_roles(test_role)
+		frappe.delete_doc("Role", test_role, ignore_missing=True, force=True)
+		frappe.delete_doc("Note", {"title": test_note_title}, ignore_missing=True, force=True)
+
+		# Setup Role with only 'select' on Note (no read)
+		frappe.get_doc({"doctype": "Role", "role_name": test_role}).insert(ignore_if_duplicate=True)
+		add_permission("Note", test_role, 0, ptype="select")
+		update_permission_property("Note", test_role, 0, "read", 0, validate=False)
+		test_user.add_roles(test_role)
+
+		# Create a test note with specific content
+		note = frappe.get_doc(
+			doctype="Note", title=test_note_title, content="Specific Content", public=1
+		).insert(ignore_permissions=True)
+
+		# Register cleanups in reverse order (LIFO) - Administrator restore must happen first
+		def cleanup():
+			frappe.set_user("Administrator")
+			frappe.delete_doc("Note", note.name, ignore_missing=True, force=True)
+			test_user.remove_roles(test_role)
+			frappe.delete_doc("Role", test_role, ignore_missing=True, force=True)
+
+		self.addCleanup(cleanup)
+
+		frappe.set_user(test_user_email)
+
+		# 'content' is a permlevel 0 field but NOT a search field
+		result = frappe.qb.get_query(
+			"Note",
+			filters={"content": "Specific Content"},
+			fields=["name"],  # Only select 'name' which is allowed
+			ignore_permissions=False,
+		).run(as_dict=True)
+		self.assertEqual(len(result), 1, "Should find the note when filtering by permlevel 0 field")
+		self.assertEqual(result[0]["name"], note.name)
+
 	def test_nested_permission(self):
 		"""Test permission on nested doctypes"""
 		frappe.set_user("Administrator")

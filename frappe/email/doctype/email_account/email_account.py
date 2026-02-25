@@ -162,9 +162,14 @@ class EmailAccount(Document):
 			if self.auth_method == "Basic" or self.get_oauth_token():
 				self.validate_frappe_mail_settings()
 
-		# validate the imap settings
-		if self.enable_incoming and self.use_imap and len(self.imap_folder) <= 0:
-			frappe.throw(_("You need to set one IMAP folder for {0}").format(frappe.bold(self.email_id)))
+		if self.enable_incoming:
+			if self.use_imap and not self.imap_folder:
+				frappe.throw(_("You need to set one IMAP folder for {0}").format(frappe.bold(self.email_id)))
+
+			valid_doctypes = {d[0] for d in get_append_to()}
+			for folder in self.imap_folder:
+				if folder.append_to and folder.append_to not in valid_doctypes:
+					frappe.throw(_("Append To can be one of {0}").format(comma_or(valid_doctypes)))
 
 		if frappe.local.flags.in_patch or frappe.in_test:
 			return
@@ -186,7 +191,14 @@ class EmailAccount(Document):
 			if validate_oauth or self.password or self.smtp_server in ("127.0.0.1", "localhost"):
 				if self.enable_incoming:
 					self.flags.validate_imap_pop_connection = True
-					self.get_incoming_server()
+
+					server = self.get_incoming_server(in_receive=self.use_imap)
+					if self.use_imap:
+						try:
+							self.validate_imap_folders_exist(server)
+						finally:
+							server.logout()
+
 					self.no_failed = 0
 
 				if self.enable_outgoing:
@@ -202,13 +214,6 @@ class EmailAccount(Document):
 			for e in self.get_unreplied_notification_emails():
 				validate_email_address(e, True)
 
-		if self.enable_incoming:
-			for folder in self.imap_folder:
-				if folder.append_to:
-					valid_doctypes = [d[0] for d in get_append_to()]
-					if folder.append_to not in valid_doctypes:
-						frappe.throw(_("Append To can be one of {0}").format(comma_or(valid_doctypes)))
-
 		if self.enable_outgoing:
 			self.validate_reply_to_addresses()
 
@@ -217,6 +222,46 @@ class EmailAccount(Document):
 		if self.service == "Frappe Mail":
 			frappe_mail_client = self.get_frappe_mail_client()
 			frappe_mail_client.validate()
+
+	def validate_imap_folders_exist(self, server: EmailServer) -> None:
+		"""Validate that the configured IMAP folders exist on the server."""
+
+		status, mailboxes = server.imap.list()
+		if status != "OK":
+			frappe.throw(
+				_(
+					"Failed to retrieve the list of IMAP folders from the server. Please ensure the mailbox is accessible and the account has permission to list folders."
+				),
+				title=_("IMAP Folder Not Found"),
+			)
+
+		folders = []
+		for mailbox in mailboxes:
+			decoded = mailbox.decode()
+			parts = decoded.split(' "/" ')
+			if len(parts) == 2:
+				folder = parts[1].strip('"')
+				folders.append(folder)
+
+		if not folders:
+			frappe.throw(_("The server did not return any IMAP folders for this account."))
+
+		configured_folders = [f.folder_name for f in self.imap_folder]
+		missing_folders = [folder for folder in configured_folders if folder not in folders]
+
+		if missing_folders:
+			missing_list = "".join(
+				f"<li>{frappe.utils.escape_html(folder)}</li>" for folder in missing_folders
+			)
+			frappe.throw(
+				_(
+					"The following configured IMAP folder(s) were not found on the server:<br>"
+					"<ul>{0}</ul>"
+					"Please verify the folder names exactly as they appear on the server "
+					"(folder names are case-sensitive)."
+				).format(missing_list),
+				title=_("IMAP Folder Not Found"),
+			)
 
 	def validate_smtp_conn(self):
 		if not self.smtp_server:

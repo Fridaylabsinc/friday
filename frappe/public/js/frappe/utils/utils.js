@@ -1564,7 +1564,8 @@ Object.assign(frappe.utils, {
 				if (item.is_query_report) {
 					route = "query-report/" + item.name;
 				} else if (!item.is_query_report && item.report_ref_doctype) {
-					route = frappe.router.slug(item.report_ref_doctype) + "/view/report/";
+					route =
+						frappe.router.slug(item.report_ref_doctype) + "/view/report/" + item.name;
 				} else {
 					route = "report/" + item.name;
 				}
@@ -1898,7 +1899,13 @@ Object.assign(frappe.utils, {
 
 	process_filter_expression(filter) {
 		let filters = [];
-		filters = filter ? new Function(`return ${filter}`)() : [];
+		if (filter) {
+			try {
+				filters = JSON.parse(filter);
+			} catch {
+				console.warn("Invalid JSON in filter expression", filter);
+			}
+		}
 		return this.cleanup_filters(filters);
 	},
 	cleanup_filters(filters) {
