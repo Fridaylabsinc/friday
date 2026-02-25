@@ -723,7 +723,7 @@ frappe.views.Workspace = class Workspace {
 				default_block.push({
 					type: "paragraph",
 					data: {
-						text: `Click on  ${frappe.utils.icon("ellipsis")} to edit`,
+						text: __("Click on {0} to edit", [frappe.utils.icon("ellipsis")]),
 					},
 				});
 			}
