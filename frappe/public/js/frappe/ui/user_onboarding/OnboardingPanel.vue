@@ -264,10 +264,10 @@ function markReset(step) {
 				</div>
 
 				<div v-if="skippAll">
-					<span class="onb-skip" @click="resetAll(steps)"> {{ __("Reset all") }}</span>
+					<span class="onb-skip" @click="resetAll(steps)"> {{ __("Reset All") }}</span>
 				</div>
 				<div v-else>
-					<span class="onb-skip" @click="skipAll(steps)">Skip all</span>
+					<span class="onb-skip" @click="skipAll(steps)">{{ __("Skip All") }}</span>
 				</div>
 			</div>
 

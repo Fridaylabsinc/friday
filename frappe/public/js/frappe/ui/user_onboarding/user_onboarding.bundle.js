@@ -215,6 +215,46 @@ function addStyles() {
 		color: #6b7280;
 		font-size: 14px;
 	}
+
+	[data-theme="dark"] .onb-panel {
+		background-color: #232323;
+		color: #e5e7eb;
+		box-shadow: 0 12px 40px rgba(0,0,0,0.6);
+	}
+
+	[data-theme="dark"] .text-base {
+		color: #e5e7eb;
+	}
+
+	[data-theme="dark"] .onb-skip {
+		color: #9ca3af;
+	}
+
+	[data-theme="dark"] .onb-skip:hover {
+		color: #f3f4f6;
+	}
+
+	[data-theme="dark"] .onb-title-steps,
+	[data-theme="dark"] .onb-progress-text {
+		color: #9ca3af;
+	}
+
+	[data-theme="dark"] .onb-group:hover {
+		background: #374151;
+		color: #f3f4f6;
+	}
+
+	[data-theme="dark"] .onb-progress-badge {
+		background: rgba(245,158,11,0.15);
+		color: #fbbf24;
+	}
+
+	[data-theme="dark"] .onb-progress-badge-complete {
+		background: rgba(16,185,129,0.15);
+		color: #34d399;
+	}
+
+
 	`;
 
 	document.head.appendChild(style);
