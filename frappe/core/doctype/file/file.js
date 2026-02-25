@@ -45,9 +45,7 @@ frappe.ui.form.on("File", {
 		if (frm.doc.attached_to_name) {
 			const field = frm.get_field("attached_to_name");
 			field.$input_wrapper.find(".control-value").html(
-				`<a href="/desk/${frm.doc.attached_to_doctype}/${frm.doc.attached_to_name}" target="_blank">
-			  ${frm.doc.attached_to_name}
-			</a>`
+				`${frappe.utils.get_form_link(frm.doctype, frm.docname, true)}`
 			);
 		}
 	},
