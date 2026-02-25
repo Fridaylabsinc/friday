@@ -235,7 +235,7 @@ function markReset(step) {
 		<!-- Header -->
 
 		<div class="header onb-header-main">
-			<div class="text-base font-medium">Getting started</div>
+			<div class="text-base font-medium">{{ __("Getting Started") }}</div>
 			<div class="onb-header-actions">
 				<button @click="toggleCollapse" v-html="minimizeIcon"></button>
 				<button @click="close" v-html="closeIcon"></button>
@@ -249,7 +249,7 @@ function markReset(step) {
 				<div class="text-base font-medium">{{ title }}</div>
 
 				<div class="onb-title-steps">
-					{{ completedCount }}/{{ steps.length }} steps completed
+					{{ completedCount }}/{{ steps.length }} {{ __("steps completed") }}
 				</div>
 			</div>
 
@@ -297,8 +297,11 @@ function markReset(step) {
 							</div>
 
 							<div v-if="!step.is_skipped">
-								<span class="text-base onb-step-text">
-									{{ step.action_label }}
+								<span
+									class="text-base onb-step-text"
+									:class="step.is_complete ? 'text-extra-muted' : ''"
+								>
+									{{ __(step.action_label) }}
 								</span>
 							</div>
 							<div v-else>
@@ -306,7 +309,7 @@ function markReset(step) {
 									class="text-base onb-step-text"
 									style="text-decoration-line: line-through"
 								>
-									{{ step.action_label }}
+									{{ __(step.action_label) }}
 								</span>
 							</div>
 						</div>

@@ -163,6 +163,10 @@ frappe.ui.Sidebar = class Sidebar {
 	remove_onboarding_wrapper() {
 		this.$onboarding.empty();
 		this.wrapper.find(".onboarding-sidebar").removeClass("hidden");
+
+		if (!this.sidebar_data?.module_onboarding) {
+			this.wrapper.find(".onboarding-sidebar").addClass("hidden");
+		}
 	}
 
 	setup_onboarding() {
