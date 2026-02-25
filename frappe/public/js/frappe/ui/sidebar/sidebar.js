@@ -78,6 +78,73 @@ frappe.ui.Sidebar = class Sidebar {
 		}
 	}
 
+	setup_promotional_banners() {
+		if (!frappe.user.has_role("System Manager")) return;
+
+		let module = this.all_sidebar_items?.[this.workspace_title]?.["module"] || "";
+		if (!module) return;
+
+		this.$promotional_banners = this.wrapper.find(".promotional-banners");
+		this.$promotional_banners.empty();
+		this.promotional_banners = [];
+
+		this.get_crm_banner(module);
+
+		this.render_promotional_banners();
+	}
+
+	get_crm_banner(module) {
+		if (module != "CRM") return;
+
+		const icon = $(`<svg
+				width="16"
+				height="16"
+				viewBox="0 0 28 28"
+				fill="none"
+				xmlns="http://www.w3.org/2000/svg"
+			>
+				<path
+					d="M0 11.2C0 7.27963 0 5.31945 0.762954 3.82207C1.43407 2.50493 2.50493 1.43407 3.82207 0.762954C5.31945 0 7.27963 0 11.2 0H16.8C20.7204 0 22.6806 0 24.1779 0.762954C25.4951 1.43407 26.5659 2.50493 27.237 3.82207C28 5.31945 28 7.27963 28 11.2V16.8C28 20.7204 28 22.6806 27.237 24.1779C26.5659 25.4951 25.4951 26.5659 24.1779 27.237C22.6806 28 20.7204 28 16.8 28H11.2C7.27963 28 5.31945 28 3.82207 27.237C2.50493 26.5659 1.43407 25.4951 0.762954 24.1779C0 22.6806 0 20.7204 0 16.8V11.2Z"
+					fill="#DB4EE0"
+				/>
+				<path
+					d="M5.02441 6.58252V9.09486H20.4627V10.9791L15.0135 16.3806V19.3201H12.9676V16.3806C12.9676 16.3806 9.78529 13.1774 8.62962 12.0469H5.03698L10.0156 17.0087C10.3045 17.2851 10.4678 17.6745 10.4678 18.0765V21.041L17.5259 21.0661V18.0765C17.5259 17.6745 17.6892 17.2851 17.9781 17.0087L22.9751 12.0343V6.58252H5.02441Z"
+					fill="#F1FCFF"
+				/>
+			</svg>`);
+
+		const title = __("Switch to Frappe CRM");
+		const message = __(
+			"Frappe CRM helps you work, not slow you down. Open-source, intuitive, and free from extra costs. Give it a try!"
+		);
+		const link =
+			"https://frappe.io/crm?utm_source=crm-sidebar&utm_medium=sidebar&utm_campaign=frappe-ad";
+
+		this.promotional_banners.push({ title, message, link, icon });
+	}
+
+	render_promotional_banners() {
+		let me = this;
+
+		if (this.promotional_banners.length === 0) {
+			this.$promotional_banners.hide();
+			return;
+		}
+
+		this.$promotional_banners.show();
+
+		this.promotional_banners.forEach((banner) => {
+			let banner_html = $(`
+				<a href="${banner.link}" class="promotional-banner" target="_blank" title="${banner.message}">
+					<span>${banner.title}</span>
+				</a>
+			`);
+
+			banner_html.prepend(banner.icon);
+			me.$promotional_banners.append(banner_html);
+		});
+	}
+
 	remove_onboarding_wrapper() {
 		this.$onboarding.empty();
 		this.wrapper.find(".onboarding-sidebar").removeClass("hidden");
@@ -170,6 +237,7 @@ frappe.ui.Sidebar = class Sidebar {
 		this.sidebar_header = new frappe.ui.SidebarHeader(this);
 		this.make_sidebar();
 		this.add_sidebar_cards();
+		this.setup_promotional_banners();
 		this.setup_onboarding();
 
 		this.wrapper.find(".onboarding-sidebar").click(() => {
