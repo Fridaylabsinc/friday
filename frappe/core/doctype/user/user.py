@@ -376,9 +376,23 @@ class User(Document):
 		toggle_notifications(self.name, enable=cint(self.enabled), ignore_permissions=True)
 		self.disable_email_fields_if_user_disabled()
 
-	def email_new_password(self, new_password=None):
+	def set_new_password(self, new_password=None):
+		"""Set New Password for user"""
 		if new_password and not self.flags.in_insert:
 			_update_password(user=self.name, pwd=new_password, logout_all_sessions=self.logout_all_sessions)
+			outgoing_email_exists = frappe.db.exists(
+				"Email Account", {"default_outgoing": 1, "awaiting_password": 0}
+			)
+			if outgoing_email_exists:
+				email_message = _(
+					"Your password has been changed and you might have been logged out of all systems.<br>Please contact the Administrator for further assistance."
+				)
+				user_email = frappe.db.get_value("User", self.name, "email")
+				frappe.sendmail(
+					recipients=[user_email],
+					subject=_("Security Alert: Your password has been changed."),
+					content=email_message,
+				)
 
 	def set_system_user(self):
 		"""For the standard users like admin and guest, the user type is fixed."""
@@ -451,7 +465,7 @@ class User(Document):
 							msgprint(_("Welcome email sent"))
 						return
 			else:
-				self.email_new_password(new_password)
+				self.set_new_password(new_password)
 
 		except frappe.OutgoingEmailError:
 			frappe.clear_last_message()
