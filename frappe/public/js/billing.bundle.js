@@ -32,9 +32,6 @@ $(document).ready(function () {
 			!!frappe.boot.setup_complete &&
 			!frappe.is_mobile() &&
 			frappe.user.has_role("System Manager");
-		if (visiblity_condition && isFCUser) {
-			addChatBubble();
-		}
 		if (isFCUser) {
 			$.extend(card_args, {
 				primary_action_label: "Upgrade",
