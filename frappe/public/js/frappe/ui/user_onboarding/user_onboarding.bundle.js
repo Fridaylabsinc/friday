@@ -67,7 +67,7 @@ function addStyles() {
 		position: fixed;
 		right: 24px;
 		bottom: 24px;
-		width: 380px;
+		width: 310px;
 		max-height: 80vh;
 		background: #fff;
 		border-radius: 16px;
