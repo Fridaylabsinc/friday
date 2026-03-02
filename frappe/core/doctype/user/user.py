@@ -447,23 +447,24 @@ class User(Document):
 	def send_password_notification(self, new_password):
 		try:
 			if self.flags.in_insert:
-				if self.name not in STANDARD_USERS:
-					if new_password:
-						# new password given, no email required
-						_update_password(
-							user=self.name, pwd=new_password, logout_all_sessions=self.logout_all_sessions
-						)
+				if self.name in STANDARD_USERS:
+					return
+				if new_password:
+					# new password given, no email required
+					_update_password(
+						user=self.name, pwd=new_password, logout_all_sessions=self.logout_all_sessions
+					)
 
-					if (
-						not self.flags.no_welcome_mail
-						and cint(self.send_welcome_email)
-						and not self.flags.email_sent
-					):
-						self.send_welcome_mail_to_user()
-						self.flags.email_sent = 1
-						if frappe.session.user != "Guest":
-							msgprint(_("Welcome email sent"))
-						return
+				if (
+					not self.flags.no_welcome_mail
+					and cint(self.send_welcome_email)
+					and not self.flags.email_sent
+				):
+					self.send_welcome_mail_to_user()
+					self.flags.email_sent = 1
+					if frappe.session.user != "Guest":
+						msgprint(_("Welcome email sent"))
+					return
 			else:
 				self.set_new_password(new_password)
 
