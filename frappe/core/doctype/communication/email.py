@@ -17,7 +17,10 @@ from frappe.utils import (
 	get_imaginary_pixel_response,
 	get_string_between,
 	list_to_str,
+	now_datetime,
+	parse_addr,
 	split_emails,
+	time_diff_in_seconds,
 	validate_email_address,
 )
 
@@ -329,3 +332,63 @@ def update_communication_as_read(name):
 		name,
 		{"read_by_recipient": 1, "delivery_status": "Read", "read_by_recipient_on": get_datetime()},
 	)
+
+
+@frappe.whitelist()
+def undo_email_send(communication_name: str):
+	communication = frappe.get_doc("Communication", communication_name)
+
+	if communication.owner != frappe.session.user:
+		frappe.throw(_("You are not authorized to undo this email"))
+
+	if communication.sent_or_received != "Sent" or communication.communication_medium != "Email":
+		frappe.throw(_("Failed to delete communication"))
+
+	time_elapsed_in_seconds = time_diff_in_seconds(now_datetime(), communication.creation)
+	if time_elapsed_in_seconds > 10:
+		frappe.throw(_("Email undo window is over. Cannot undo email."))
+
+	email_queue_records_status = frappe.get_all(
+		"Email Queue",
+		filters={"communication": communication_name},
+		pluck="status",
+	)
+
+	for status in email_queue_records_status:
+		if status != "Not Sent":
+			frappe.throw(_("It is too late to undo this email. It is already being sent."))
+
+	frappe.db.delete(
+		"Email Queue Recipient",
+		{
+			"parent": [
+				"in",
+				frappe.get_all("Email Queue", filters={"communication": communication_name}, pluck="name"),
+			]
+		},
+	)
+
+	frappe.db.delete("Email Queue", {"communication": communication_name})
+
+	communication_data = {
+		"subject": communication.subject,
+		"content": communication.content,
+		"recipients": communication.recipients,
+		"cc": communication.cc,
+		"bcc": communication.bcc,
+		"doc": {"doctype": communication.reference_doctype, "name": communication.reference_name},
+		"sender": communication.sender,
+		"email_template": communication.email_template,
+		"send_read_receipt": communication.read_receipt,
+	}
+
+	linked_files = frappe.get_all(
+		"File",
+		filters={"attached_to_doctype": "Communication", "attached_to_name": communication_name},
+		pluck="name",
+	)
+	communication_data["attachments"] = linked_files
+
+	communication.delete(ignore_permissions=True)
+
+	return communication_data
