@@ -941,12 +941,10 @@ frappe.views.CommunicationComposer = class {
 												frm: me.frm,
 											});
 
-											setTimeout(() => {
-												frappe.show_alert({
-													message: __("Email sending undone"),
-													indicator: "blue",
-												});
-											}, 200);
+											frappe.show_alert({
+												message: __("Email sending undone"),
+												indicator: "blue",
+											});
 										}
 									},
 								});
