@@ -1,6 +1,7 @@
 # Copyright (c) 2015, Frappe Technologies Pvt. Ltd. and Contributors
 # License: MIT. See LICENSE
 
+import re
 from collections.abc import Iterable
 from datetime import timedelta
 from functools import cached_property
@@ -505,13 +506,19 @@ class User(Document):
 	def password_reset_mail(self, link):
 		reset_password_template = frappe.db.get_system_setting("reset_password_template")
 
-		self.send_login_mail(
+		q = self.send_login_mail(
 			_("Password Reset"),
 			"password_reset",
 			{"link": link},
 			now=True,
 			custom_template=reset_password_template,
 		)
+		if q:
+			raw_message = q.message
+			parts = re.split(r"(?i)Dear", raw_message, maxsplit=1)
+			if len(parts) > 1:
+				redacted_message = parts[0] + "[THE FOLLOWING CONTENT HAS BEEN REDACTED FOR SECURITY REASONS]"
+				frappe.db.set_value("Email Queue", q.name, "message", redacted_message, update_modified=False)
 
 	def send_welcome_mail_to_user(self):
 		from frappe.utils import get_url
@@ -530,7 +537,7 @@ class User(Document):
 
 		welcome_email_template = frappe.db.get_system_setting("welcome_email_template")
 
-		self.send_login_mail(
+		q = self.send_login_mail(
 			subject,
 			"new_user",
 			dict(
@@ -539,6 +546,12 @@ class User(Document):
 			),
 			custom_template=welcome_email_template,
 		)
+		if q:
+			raw_message = q.message
+			parts = re.split(r"(?i)Hello", raw_message, maxsplit=1)
+			if len(parts) > 1:
+				redacted_message = parts[0] + "[THE FOLLOWING CONTENT HAS BEEN REDACTED FOR SECURITY REASONS]"
+				frappe.db.set_value("Email Queue", q.name, "message", redacted_message, update_modified=False)
 
 	def send_login_mail(self, subject, template, add_args, now=None, custom_template=None):
 		"""send mail with login details"""
@@ -570,7 +583,7 @@ class User(Document):
 			subject = email_template.get("subject")
 			content = email_template.get("message")
 
-		frappe.sendmail(
+		return frappe.sendmail(
 			recipients=self.email,
 			sender=sender,
 			subject=subject,
