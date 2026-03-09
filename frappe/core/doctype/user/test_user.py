@@ -415,6 +415,12 @@ class TestUser(IntegrationTestCase):
 
 		# test API endpoint
 		with patch.object(user_module.frappe, "sendmail") as sendmail:
+			from unittest.mock import MagicMock
+
+			mock_q = MagicMock()
+			mock_q.name = "test-email-queue-name"
+			mock_q.message = "Subject: Test\n\nDear User, here is your link"
+			sendmail.return_value = mock_q
 			frappe.clear_messages()
 			test_user = frappe.get_doc("User", "test2@example.com")
 			self.assertEqual(reset_password(user="test2@example.com"), None)
