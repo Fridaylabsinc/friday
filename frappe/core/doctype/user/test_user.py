@@ -42,7 +42,7 @@ class TestUser(IntegrationTestCase):
 
 	@staticmethod
 	def reset_password(user) -> str:
-		link = user.reset_password()
+		link = user._reset_password()
 		return parse_qs(urlparse(link).query)["key"][0]
 
 	def test_user_type(self):
