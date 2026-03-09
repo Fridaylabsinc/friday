@@ -65,6 +65,16 @@ frappe.ui.Sidebar = class Sidebar {
 				frappe.current_app = app;
 				this.app_logo_url = app.app_logo_url;
 				return;
+			} else {
+				let app_name = frappe.boot.module_app[this.workspace_title];
+				if (app_name) {
+					let app_title = frappe.boot.app_data.find((f) => {
+						return f.app_name == app_name;
+					}).app_title;
+					this.header_subtitle = app_title;
+				} else {
+					this.header_subtitle = frappe.session.user;
+				}
 			}
 		}
 
