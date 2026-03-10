@@ -351,13 +351,19 @@ class Engine:
 			self.fields = [self.table.name]
 
 		self.query._child_queries = []
+		has_select_field = False
 		for field in self.fields:
 			if isinstance(field, DynamicTableField):
 				self.query = field.apply_select(self.query, engine=self)
+				has_select_field = True
 			elif isinstance(field, ChildQuery):
 				self.query._child_queries.append(field)
 			else:
 				self.query = self.query.select(field)
+				has_select_field = True
+
+		if not has_select_field:
+			self.query = self.query.select(self.table.name)
 
 	def apply_filters(
 		self,
