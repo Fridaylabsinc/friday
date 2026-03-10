@@ -76,7 +76,10 @@ def get_context(context) -> PrintContext:
 		from frappe.utils.weasyprint import get_html
 
 		body = get_html(
-			doctype=frappe.form_dict.doctype, name=frappe.form_dict.name, print_format=print_format.name
+			doctype=frappe.form_dict.doctype,
+			name=frappe.form_dict.name,
+			print_format=print_format.name,
+			letterhead=letterhead,
 		)
 		body += trigger_print_script
 	else:
