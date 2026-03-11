@@ -134,8 +134,8 @@ frappe.PermissionEngine = class PermissionEngine {
 		data.message.forEach((d) => {
 			let custom_rights = this.options.doctype_ptype_map[doctype] || [];
 			d.rights = this.rights
-				.filter((r) => d[r])
 				.concat(custom_rights)
+				.filter((r) => d[r])
 				.map((r) => {
 					return __(toTitle(frappe.unscrub(r)));
 				})
