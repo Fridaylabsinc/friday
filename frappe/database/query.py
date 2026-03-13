@@ -84,7 +84,7 @@ def _apply_date_field_filter_conversion(value, operator: str, doctype: str, fiel
 		elif isinstance(value, datetime.datetime):
 			return value.date()
 
-	except (AttributeError, TypeError, KeyError):
+	except AttributeError, TypeError, KeyError:
 		pass
 
 	return value
@@ -351,13 +351,19 @@ class Engine:
 			self.fields = [self.table.name]
 
 		self.query._child_queries = []
+		has_select_field = False
 		for field in self.fields:
 			if isinstance(field, DynamicTableField):
 				self.query = field.apply_select(self.query, engine=self)
+				has_select_field = True
 			elif isinstance(field, ChildQuery):
 				self.query._child_queries.append(field)
 			else:
 				self.query = self.query.select(field)
+				has_select_field = True
+
+		if not has_select_field:
+			self.query = self.query.select(self.table.name)
 
 	def apply_filters(
 		self,
@@ -649,7 +655,7 @@ class Engine:
 				else:
 					try:
 						fallback_value = int(fallback_sql)
-					except (ValueError, TypeError):
+					except ValueError, TypeError:
 						fallback_value = fallback_sql
 
 				return operator_fn(_field, ValueWrapper(fallback_value))
@@ -678,7 +684,7 @@ class Engine:
 				else:
 					try:
 						fallback_value = int(fallback_sql)
-					except (ValueError, TypeError):
+					except ValueError, TypeError:
 						fallback_value = fallback_sql
 
 				if fallback_value == _value:
@@ -1381,6 +1387,15 @@ class Engine:
 					# Skip child table fields if parent permission is only 'select'
 					continue
 
+				if field.parent_fieldname:
+					parent_meta = frappe.get_meta(self.doctype)
+					if parent_meta.get_field(
+						field.parent_fieldname
+					).permlevel not in parent_meta.get_permlevel_access(
+						parent_permission_type, user=self.user
+					):
+						continue
+
 				# Cache permitted fields for child doctypes if accessed multiple times
 				permitted_child_fields_set = self._get_cached_permitted_fields(
 					field.doctype,
@@ -1409,6 +1424,12 @@ class Engine:
 			elif isinstance(field, ChildQuery):
 				if parent_permission_type == "select":
 					# Skip child queries if parent permission is only 'select'
+					continue
+
+				parent_meta = frappe.get_meta(self.doctype)
+				if parent_meta.get_field(field.fieldname).permlevel not in parent_meta.get_permlevel_access(
+					parent_permission_type, user=self.user
+				):
 					continue
 
 				# Cache permitted fields for the child doctype of the query
