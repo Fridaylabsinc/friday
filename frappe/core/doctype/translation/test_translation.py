@@ -96,6 +96,7 @@ class TestTranslation(IntegrationTestCase):
 		"""Test fallback for messages w/ HTML Tags"""
 		message = "Hide descendant records of <b>For Value</b>."
 		translated_message = "隐藏下层节点<b>值</b>"
+		create_translation("zh", message, translated_message)
 		self.assertEqual(_(message, lang="zh"), translated_message)
 
 
