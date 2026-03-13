@@ -525,8 +525,8 @@ input.list-header-checkbox {
 }
 
 .restricted-button {
-	margin-top: var(--margin-xs);
-	height: var(--margin-xl);
+	margin: var(--margin-xs) 0 0 var(--margin-sm);
+	height: 29px;
 
 	.icon {
 		width: 14px;
@@ -539,13 +539,6 @@ input.list-header-checkbox {
 	&.btn {
 		@include button-variant($background: $light-yellow, $border: darken($light-yellow, 5%));
 		box-shadow: none;
-	}
-}
-
-.frappe-rtl {
-	.restricted-button {
-		margin: auto auto auto 5px;
-		direction: ltr;
 	}
 }
 
