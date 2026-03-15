@@ -186,7 +186,8 @@
 
 						.kanban-title-area {
 							margin-bottom: 12px;
-							max-width: 90%;
+							width: 100%;
+							max-width: 100%;
 							font-size: var(--text-md);
 							font-weight: 500;
 
@@ -377,8 +378,15 @@
 		z-index: 1001;
 	}
 
-	.kanban-cards {
-		overflow: visible !important;
+	.kanban-card-wrapper:first-child {
+		.hidden-tags {
+			bottom: auto;
+			top: 65%;
+		}
+
+		&:hover .hidden-tags {
+			transform: translateX(-50%) translateY(5px);
+		}
 	}
 }
 
