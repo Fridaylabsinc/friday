@@ -46,13 +46,16 @@ frappe.ui.SidebarHeader = class SidebarHeader {
 					me.sidebar.editor.toggle();
 				},
 			},
+			{
+				is_divider: true,
+				condition: function () {
+					return frappe.boot.developer_mode;
+				},
+			},
 		];
 		if (frappe.boot.desk_settings.notifications) {
 			let is_dark = frappe.ui.get_current_theme() === "dark";
 			this.dropdown_items.push(
-				{
-					is_divider: true,
-				},
 				{
 					label: "Session Defaults",
 					action: "frappe.ui.toolbar.setup_session_defaults()",
