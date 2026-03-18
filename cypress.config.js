@@ -1,6 +1,7 @@
 const { defineConfig } = require("cypress");
 const fs = require("fs");
 const path = require("path");
+const cypressSplit = require("cypress-split");
 
 module.exports = defineConfig({
 	projectId: "92odwv",
@@ -22,6 +23,7 @@ module.exports = defineConfig({
 		setupNodeEvents(on, config) {
 			// Delete videos for specs without failing or retried tests
 			// https://docs.cypress.io/guides/guides/screenshots-and-videos#Delete-videos-for-specs-without-failing-or-retried-tests
+			cypressSplit(on, config);
 			on("after:spec", (spec, results) => {
 				if (results && results.video) {
 					const failures = results.tests.some((test) =>
