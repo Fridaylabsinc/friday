@@ -1658,7 +1658,6 @@ frappe.views.QueryReport = class QueryReport extends frappe.views.BaseList {
 
 	async render_report_letterhead(print_settings) {
 		if (!print_settings.with_letter_head || !print_settings.letter_head_name) return;
-		if (print_settings.__letter_head_rendered) return;
 
 		const filters = this.get_filter_values ? this.get_filter_values() : {};
 		const doc_context = Object.assign({}, filters);
@@ -1674,7 +1673,6 @@ frappe.views.QueryReport = class QueryReport extends frappe.views.BaseList {
 			});
 			if (r.message) {
 				print_settings.letter_head = r.message;
-				print_settings.__letter_head_rendered = true;
 			}
 		} catch (e) {
 			// fall back silently if rendering fails
