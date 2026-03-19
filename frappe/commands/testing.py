@@ -477,6 +477,7 @@ def run_ui_tests(
 	real_events_plugin_path = f"{node_bin}/../cypress-real-events"
 	testing_library_path = f"{node_bin}/../@testing-library"
 	coverage_plugin_path = f"{node_bin}/../@cypress/code-coverage"
+	cypress_split_path = f"{node_bin}/../cypress-split"
 
 	# check if cypress in path...if not, install it.
 	if not (
@@ -485,6 +486,7 @@ def run_ui_tests(
 		and os.path.exists(real_events_plugin_path)
 		and os.path.exists(testing_library_path)
 		and os.path.exists(coverage_plugin_path)
+		and os.path.exists(cypress_split_path)
 	):
 		# install cypress & dependent plugins
 		click.secho("Installing Cypress...", fg="yellow")
@@ -496,6 +498,7 @@ def run_ui_tests(
 				"@testing-library/cypress@^10",
 				"@testing-library/dom@8.17.1",
 				"@cypress/code-coverage@^3",
+				"cypress-split@^1.0.0",
 			]
 		)
 
