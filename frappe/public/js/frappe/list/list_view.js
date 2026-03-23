@@ -698,6 +698,8 @@ frappe.views.ListView = class ListView extends frappe.views.BaseList {
 
 		let me = this;
 		let $count = this.get_count_element();
+		$count.css("white-space", "nowrap");
+
 		this.get_count_str().then((count) => {
 			$count.html(`<span>${count}</span>`);
 			if (
@@ -712,7 +714,6 @@ frappe.views.ListView = class ListView extends frappe.views.BaseList {
 				);
 				$count.tooltip({ delay: { show: 600, hide: 100 }, trigger: "hover" });
 				$count.css("cursor", "pointer");
-				$count.css("white-space", "nowrap");
 				$count.on("click", () => {
 					me.count_upper_bound = 0;
 					$count.off("click");
