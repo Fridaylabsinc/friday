@@ -141,7 +141,10 @@ def generate_report(prepared_report):
 	except Exception:
 		# we need to ensure that error gets stored
 		_save_error(instance, error=frappe.get_traceback(with_context=True))
+		return
 
+	instance.reload()
+	instance.status = "Completed"
 	instance.report_end_time = frappe.utils.now()
 	instance.peak_memory_usage = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss
 	add_data_to_monitor(peak_memory_usage=instance.peak_memory_usage)
