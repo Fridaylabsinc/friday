@@ -406,11 +406,20 @@ frappe.ui.form.ControlLink = class ControlLink extends frappe.ui.form.ControlDat
 		const doctype = this.get_options();
 		if (!doctype) return;
 
+		const reference_doctype = this.get_reference_doctype() || "";
+		const docfield_parent =
+			this.df?.parent || reference_doctype || (this.frm && this.frm.doctype) || "";
+		const meta_df =
+			docfield_parent && this.df?.fieldname
+				? frappe.meta.get_docfield(docfield_parent, this.df.fieldname)
+				: null;
+
 		const args = {
 			txt,
 			doctype,
-			ignore_user_permissions: this.df.ignore_user_permissions,
-			reference_doctype: this.get_reference_doctype() || "",
+			ignore_user_permissions:
+				this.df?.ignore_user_permissions || meta_df?.ignore_user_permissions,
+			reference_doctype,
 			page_length: cint(frappe.boot.sysdefaults?.link_field_results_limit) || 10,
 			link_fieldname: this.df.fieldname,
 		};
