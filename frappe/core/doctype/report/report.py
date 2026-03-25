@@ -85,9 +85,6 @@ class Report(Document):
 	def before_insert(self):
 		self.set_doctype_roles()
 
-	def after_insert(self):
-		self.update_report_cache()
-
 	def on_update(self):
 		self.export_doc()
 
@@ -109,8 +106,9 @@ class Report(Document):
 
 		delete_custom_role("report", self.name)
 
-	def after_delete(self):
+	def clear_cache(self):
 		self.update_report_cache()
+		return super().clear_cache()
 
 	def update_report_cache(self):
 		from frappe.boot import get_allowed_reports
