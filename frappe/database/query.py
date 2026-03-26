@@ -136,11 +136,7 @@ WORDS_PATTERN = re.compile(r"\w+")
 COMMA_PATTERN = re.compile(r",\s*(?![^()]*\))")
 
 # Pattern for validating simple field names (alphanumeric + underscore)
-SIMPLE_FIELD_PATTERN = re.compile(r"^\w+$", flags=re.ASCII)
-
-# Pattern for validating SQL identifiers (aliases, field names in functions)
-# More restrictive: must start with letter or underscore
-IDENTIFIER_PATTERN = re.compile(r"^[a-zA-Z_][a-zA-Z0-9_]*$", flags=re.ASCII)
+SIMPLE_FIELD_PATTERN = re.compile(r"^\w+$")
 
 # Pattern for detecting SQL function calls: identifier followed by opening parenthesis
 FUNCTION_CALL_PATTERN = re.compile(r"^\s*[a-zA-Z_][a-zA-Z0-9_]*\s*\(", flags=re.ASCII)
@@ -157,7 +153,7 @@ FUNCTION_CALL_PATTERN = re.compile(r"^\s*[a-zA-Z_][a-zA-Z0-9_]*\s*\(", flags=re.
 #     - ... as 'Child:field'
 ALLOWED_FIELD_PATTERN = re.compile(
 	r"^(?:(`[\w\s-]+`|\w+)\.)?(`\w+`|\w+)(?:\s+as\s+(?:`[\w\s-]+`|'[\w\s:-]+'|\w+))?$",
-	flags=re.ASCII | re.IGNORECASE,
+	flags=re.IGNORECASE,
 )
 
 # Regex to parse field names:
@@ -2372,13 +2368,14 @@ class SQLFunctionParser:
 					).format(arg),
 					frappe.ValidationError,
 				)
-		elif self._is_valid_field_name(arg):
-			self._check_function_field_permission(arg)
-			return self.engine.table[arg]
 
 		# Check if it's a numeric string like "1" (for COUNT(1), etc.)
 		elif arg.isdigit():
 			return int(arg)
+
+		elif self._is_valid_field_name(arg):
+			self._check_function_field_permission(arg)
+			return self.engine.table[arg]
 
 		else:
 			frappe.throw(
@@ -2391,7 +2388,7 @@ class SQLFunctionParser:
 	def _is_valid_field_name(self, name: str) -> bool:
 		"""Check if a string is a valid field name."""
 		# Field names should only contain alphanumeric characters and underscores
-		return IDENTIFIER_PATTERN.match(name) is not None
+		return SIMPLE_FIELD_PATTERN.match(name) is not None
 
 	def _validate_alias(self, alias: str):
 		"""Validate alias name for SQL injection."""
@@ -2404,7 +2401,7 @@ class SQLFunctionParser:
 
 		# Alias should be a simple identifier
 		# Note: pypika wraps aliases in backticks, so anything without backticks is safe
-		if not IDENTIFIER_PATTERN.match(alias):
+		if not SIMPLE_FIELD_PATTERN.match(alias):
 			frappe.throw(
 				_("Invalid alias format: {0}. Alias must be a simple identifier.").format(alias),
 				frappe.ValidationError,

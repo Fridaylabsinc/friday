@@ -167,6 +167,7 @@ class TestQuery(IntegrationTestCase):
 			"*",
 			"`tabHas Role`.`name`",
 			"field as `alias with space`",
+			"frappé",  # unicode field names should be valid
 		]
 
 		invalid_fields = [
