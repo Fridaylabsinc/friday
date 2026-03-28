@@ -1363,7 +1363,7 @@ class FilterArea {
 	}
 
 	make_filter_list() {
-		$(`<div class="filter-selector">
+		$(`<div class="filter-selector flex align-items-center">
 			<div class="btn-group">
 				<button class="btn btn-default btn-sm filter-button">
 					<span class="filter-icon button-icon">
