@@ -61,15 +61,14 @@ let docfield_df = computed(() => {
 				df.options = ["", "Email", "Name", "Phone", "URL", "Barcode", "IBAN"];
 			}
 
-			if (store.form.selected_field.fieldtype === "Select") {
-				df.description = __("Enter list of Options, each on a new line.");
-			} else if (store.form.selected_field.fieldtype === "Currency") {
-				df.description = __(
+			const df_desc = {
+				Select: __("Enter list of Options, each on a new line."),
+				Currency: __(
 					"fieldname of the currency field or a cached value (e.g. Company:company:default_currency)."
-				);
-			} else {
-				df.description = "";
-			}
+				),
+			};
+
+			df.description = df_desc[store.form.selected_field.fieldtype] || "";
 		}
 
 		// show link_filters docfield only when link field is selected
