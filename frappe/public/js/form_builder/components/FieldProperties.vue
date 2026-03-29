@@ -63,6 +63,10 @@ let docfield_df = computed(() => {
 
 			if (store.form.selected_field.fieldtype === "Select") {
 				df.description = __("Enter list of Options, each on a new line.");
+			} else if (store.form.selected_field.fieldtype === "Currency") {
+				df.description = __(
+					"fieldname of the currency field or a cached value (e.g. Company:company:default_currency)."
+				);
 			} else {
 				df.description = "";
 			}
