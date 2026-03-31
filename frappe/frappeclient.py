@@ -343,12 +343,19 @@ class FrappeClient:
 		)
 		return self.post_process(res)
 
-	def post_api(self, method, params=None):
+	def post_api(self, method, params=None, *, as_json=False):
 		if params is None:
 			params = {}
-		res = self.session.post(
-			f"{self.url}/api/method/{method}", params=params, verify=self.verify, headers=self.headers
-		)
+
+		if as_json:
+			res = self.session.post(
+				f"{self.url}/api/method/{method}", json=params, verify=self.verify, headers=self.headers
+			)
+		else:
+			data = self.preprocess(params)
+			res = self.session.post(
+				f"{self.url}/api/method/{method}", data=data, verify=self.verify, headers=self.headers
+			)
 		return self.post_process(res)
 
 	def get_request(self, params):
