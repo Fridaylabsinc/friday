@@ -83,6 +83,7 @@
 
 	.standard-sidebar-item {
 		display: flex;
+		position: relative;
 		@include transition(all, 0.3s, cubic-bezier(0.4, 0, 0.2, 1));
 
 		margin-bottom: 1px;
@@ -297,7 +298,6 @@
 	.standard-sidebar-item:hover {
 		& .sidebar-item-edit-controls {
 			visibility: visible;
-			width: auto;
 		}
 	}
 	.promotional-banners,
@@ -308,9 +308,10 @@
 }
 .sidebar-item-edit-controls {
 	visibility: hidden;
+	position: absolute;
+	right: 0;
 	display: flex;
 	gap: 6px;
-	width: 0;
 }
 .standard-sidebar-item[data-name="add-sidebar-item"] {
 	margin-top: 5px;

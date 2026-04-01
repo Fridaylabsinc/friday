@@ -167,6 +167,7 @@ class TestQuery(IntegrationTestCase):
 			"*",
 			"`tabHas Role`.`name`",
 			"field as `alias with space`",
+			"frappé",  # unicode field names should be valid
 		]
 
 		invalid_fields = [
@@ -415,7 +416,7 @@ class TestQuery(IntegrationTestCase):
 				"DocType",
 				filters={"name": ("in", [])},
 			).get_sql(),
-			"SELECT `name` FROM `tabDocType` WHERE `name` IN ('')",
+			"SELECT `name` FROM `tabDocType` WHERE COALESCE(`name`,'') IN ('')",
 		)
 
 		self.assertQueryEqual(

@@ -10,7 +10,7 @@ frappe.ui.SidebarHeader = class SidebarHeader {
 			{
 				name: "desktop",
 				label: __("Desktop"),
-				icon: "layout-grid",
+				icon: "home",
 				onClick: function (el) {
 					frappe.set_route("/desk");
 				},

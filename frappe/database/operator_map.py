@@ -48,6 +48,10 @@ def func_in(key: Field, value: list | tuple) -> frappe.qb:
 	"""
 	if isinstance(value, str):
 		value = value.split(",")
+
+	value = ["" if v is None else v for v in value]
+	if "" in value:
+		return Coalesce(key, "").isin(value)
 	return key.isin(value)
 
 
