@@ -9,6 +9,7 @@ import requests
 
 import frappe
 from frappe import _
+from frappe.utils.data import cint
 from frappe.utils.print_utils import find_or_download_chromium_executable
 
 # TODO: close browser when worker is killed.
@@ -69,11 +70,13 @@ class ChromePDFGenerator:
 		self.USE_PERSISTENT_CHROMIUM = site_config.get("use_persistent_chromium", False)
 		#  time to wait for chromium to start and provide dev tools url used in _set_devtools_url.
 		self.START_TIMEOUT = site_config.get("chromium_start_timeout", 3)
+		# Allow a single PDF request to opt into interactive Chromium debugging.
+		self.debug_mode = bool(cint(frappe.form_dict.get("pdf_debug")))
 
 		self._chromium_path = find_or_download_chromium_executable()
 		if self._verify_chromium_installation():
 			if not self._devtools_url:
-				self.start_chromium_process()
+				self.start_chromium_process(debug=self.debug_mode)
 
 	def _verify_chromium_installation(self):
 		"""Ensures Chromium is available and executable, raising clearer errors if not."""
