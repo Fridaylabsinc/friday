@@ -407,7 +407,6 @@ result = [
 		self.assertEqual(result[-1][1], 200)
 		self.assertEqual(result[-1][2], 150.50)
 
-<<<<<<< HEAD
 	def test_cte_in_query_report(self):
 		cte_query = textwrap.dedent(
 			"""
@@ -437,7 +436,7 @@ result = [
 			self.assertGreaterEqual(len(rows), 1)
 		elif frappe.db.db_type == "postgres":
 			self.assertRaises(frappe.PermissionError, report.execute_query_report, filters={})
-=======
+
 	def test_report_cache_invalidation(self):
 		import frappe.sessions
 		from frappe.utils import set_request
@@ -466,4 +465,3 @@ result = [
 		finally:
 			frappe.local.request = None
 			frappe.set_user("Administrator")
->>>>>>> 2efc3c9cb4 (fix: update user allowed reports cache after insert and trash to reflect updated reports in dropdown)
