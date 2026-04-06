@@ -312,6 +312,12 @@ frappe.ui.Sidebar = class Sidebar {
 		$(document).on("form-refresh", function () {
 			frappe.app.sidebar.toggle();
 		});
+
+		frappe.ui.keys.add_shortcut({
+			shortcut: "ctrl+/",
+			action: () => me.toggle_width(),
+			description: __("Toggle sidebar"),
+		});
 	}
 
 	toggle() {
