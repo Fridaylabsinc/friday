@@ -159,11 +159,14 @@ def main(
 			discover_all_tests(apps, runner)
 
 		results = []
+		global unittest_runner
 		for app, category, suite in runner.iterRun():
 			click.secho(
 				f"\nRunning {suite.countTestCases()} {category} tests for {app}", fg="cyan", bold=True
 			)
-			results.append([app, category, runner.run(suite)])
+			main_runner = unittest_runner if junit_xml_output and unittest_runner else runner
+			res = main_runner.run(suite)
+			results.append([app, category, res])
 
 		success = all(r.wasSuccessful() for _, _, r in results)
 		if not success:
