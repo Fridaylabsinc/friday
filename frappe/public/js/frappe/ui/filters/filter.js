@@ -491,9 +491,11 @@ frappe.ui.filter_utils = {
 					const parsed = JSON.parse(val);
 					val = Array.isArray(parsed) ? parsed : [String(parsed)];
 				} catch {
-					val = val.split(",").map((v) => strip(v));
+					val = val
+						.split(",")
+						.map((v) => strip(v))
+						.filter((v) => v != null && v !== "");
 				}
-				val = val.filter((v) => v != null && v !== ""); // remove empty values
 			}
 		} else if (frappe.boot.additional_filters_config[condition]) {
 			val = field.value || val;
