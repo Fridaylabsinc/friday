@@ -436,3 +436,32 @@ result = [
 			self.assertGreaterEqual(len(rows), 1)
 		elif frappe.db.db_type == "postgres":
 			self.assertRaises(frappe.PermissionError, report.execute_query_report, filters={})
+
+	def test_report_cache_invalidation(self):
+		import frappe.sessions
+		from frappe.utils import set_request
+
+		frappe.set_user("test@example.com")
+		set_request(method="GET", path="/app")
+
+		try:
+			frappe.sessions.get()
+
+			report_name = _save_report(
+				"Test Cache Invalidation Report",
+				"User",
+				json.dumps([{"fieldname": "email", "fieldtype": "Data", "label": "Email"}]),
+			)
+
+			cached_bootinfo = frappe.sessions.get()
+			self.assertIn(report_name, cached_bootinfo["user"]["all_reports"])
+
+			doc = frappe.get_doc("Report", report_name)
+			delete_report(doc.name)
+
+			cached_bootinfo = frappe.sessions.get()
+			self.assertNotIn(report_name, cached_bootinfo["user"]["all_reports"])
+
+		finally:
+			frappe.local.request = None
+			frappe.set_user("Administrator")

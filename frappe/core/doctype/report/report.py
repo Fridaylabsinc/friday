@@ -106,6 +106,13 @@ class Report(Document):
 
 		delete_custom_role("report", self.name)
 
+	def clear_cache(self):
+		self.update_report_cache()
+		return super().clear_cache()
+
+	def update_report_cache(self):
+		frappe.cache.delete_key("bootinfo")
+
 	def delete_report_folder(self):
 		from frappe.modules.export_file import delete_folder
 
