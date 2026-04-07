@@ -493,6 +493,7 @@ frappe.ui.filter_utils = {
 				} catch {
 					val = val.split(",").map((v) => strip(v));
 				}
+				val = val.filter((v) => v != null && v !== ""); // remove empty values
 			}
 		} else if (frappe.boot.additional_filters_config[condition]) {
 			val = field.value || val;
