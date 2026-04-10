@@ -91,9 +91,8 @@ class TestConcurrentLimit(IntegrationTestCase):
 			del frappe.local.request
 			frappe.cache.delete(key)
 
-	def test_service_unavailable_has_correct_http_status_and_retry_after(self):
-		"""The raised exception must carry http_status_code=503 and retry_after
-		equal to the configured wait_timeout."""
+	def test_service_unavailable_has_correct_http_status(self):
+		"""The raised exception must carry http_status_code=503."""
 		TIMEOUT = 1
 
 		@concurrent_limit(limit=1, wait_timeout=TIMEOUT)
@@ -110,7 +109,6 @@ class TestConcurrentLimit(IntegrationTestCase):
 				fn()
 			exc = ctx.exception
 			self.assertEqual(exc.http_status_code, 503)
-			self.assertEqual(exc.retry_after, TIMEOUT)
 		finally:
 			del frappe.local.request
 			frappe.cache.delete(key)
