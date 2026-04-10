@@ -400,6 +400,12 @@ def handle_exception(e):
 	elif http_status_code == 429:
 		response = frappe.rate_limiter.respond()
 
+	elif http_status_code == 503:
+		retry_after = getattr(e, "retry_after", 10)
+		response = frappe.utils.response.report_error(503)
+		if response:
+			response.headers["Retry-After"] = str(retry_after)
+
 	else:
 		response = ErrorPage(
 			http_status_code=http_status_code, title=_("Server Error"), message=_("Uncaught Exception")

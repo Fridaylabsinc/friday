@@ -86,6 +86,17 @@ class TooManyRequestsError(Exception):
 	http_status_code = 429
 
 
+class ServiceUnavailableError(Exception):
+	"""Raised when a concurrency limit is exceeded for an endpoint.
+
+	Set :attr:`retry_after` (seconds) before raising so that the response
+	includes a ``Retry-After`` header.
+	"""
+
+	http_status_code = 503
+	retry_after: int = 10
+
+
 class ImproperDBConfigurationError(Exception):
 	"""
 	Used when frappe detects that database or tables are not properly

@@ -34,6 +34,7 @@ import orjson
 from werkzeug.datastructures import Headers
 
 import frappe
+from frappe.concurrency_limiter import concurrent_limit
 from frappe.query_builder.utils import (
 	get_query,
 	get_query_builder,
