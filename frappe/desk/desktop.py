@@ -680,6 +680,9 @@ def get_onboarding_data(module: str):
 	Return:
 	        dict: onboarding data
 	"""
+	if not frappe.get_system_settings("enable_onboarding"):
+		return []
+
 	onboardings = []
 	onboarding_doc = frappe.get_doc("Module Onboarding", module)
 	if onboarding_doc.is_complete:
