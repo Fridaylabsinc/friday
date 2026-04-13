@@ -113,7 +113,7 @@ class WebForm(WebsiteGenerator):
 
 	def validate_hidden_and_mandatory(self):
 		for d in self.web_form_fields:
-			if d.hidden and d.reqd and not d.default and not frappe.flags.in_migrate:
+			if (d.hidden and d.reqd) and not (d.default or frappe.flags.in_migrate):
 				frappe.throw(
 					_("{0}: Field {1} in row {2} cannot be hidden and mandatory without default").format(
 						self.name, d.label, d.idx
