@@ -359,7 +359,7 @@ class User(Document):
 	def clean_name(self):
 		for field in ("first_name", "middle_name", "last_name"):
 			if field_value := self.get(field):
-				self.set(field, sanitize_html(field_value, always_sanitize=True))
+				self.set(field, sanitize_html(field_value, always_sanitize=True, disallowed_tags="*"))
 
 	def set_full_name(self):
 		self.full_name = " ".join(p for p in [self.first_name, self.middle_name, self.last_name] if p)
