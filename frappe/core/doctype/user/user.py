@@ -1,6 +1,7 @@
 # Copyright (c) 2015, Frappe Technologies Pvt. Ltd. and Contributors
 # License: MIT. See LICENSE
 
+import re
 from collections.abc import Iterable
 from datetime import timedelta
 from functools import cached_property
@@ -358,7 +359,7 @@ class User(Document):
 	def clean_name(self):
 		for field in ("first_name", "middle_name", "last_name"):
 			if field_value := self.get(field):
-				self.set(field, sanitize_html(field_value, always_sanitize=True))
+				self.set(field, sanitize_html(field_value, always_sanitize=True, disallowed_tags="*"))
 
 	def set_full_name(self):
 		self.full_name = " ".join(p for p in [self.first_name, self.middle_name, self.last_name] if p)
@@ -376,9 +377,23 @@ class User(Document):
 		toggle_notifications(self.name, enable=cint(self.enabled), ignore_permissions=True)
 		self.disable_email_fields_if_user_disabled()
 
-	def email_new_password(self, new_password=None):
+	def set_new_password(self, new_password=None):
+		"""Set New Password for user"""
 		if new_password and not self.flags.in_insert:
 			_update_password(user=self.name, pwd=new_password, logout_all_sessions=self.logout_all_sessions)
+			outgoing_email_exists = frappe.db.exists(
+				"Email Account", {"default_outgoing": 1, "awaiting_password": 0}
+			)
+			if outgoing_email_exists:
+				email_message = _(
+					"Your password has been changed and you might have been logged out of all systems.<br>Please contact the Administrator for further assistance."
+				)
+				user_email = frappe.db.get_value("User", self.name, "email")
+				frappe.sendmail(
+					recipients=[user_email],
+					subject=_("Security Alert: Your password has been changed."),
+					content=email_message,
+				)
 
 	def set_system_user(self):
 		"""For the standard users like admin and guest, the user type is fixed."""
@@ -433,25 +448,26 @@ class User(Document):
 	def send_password_notification(self, new_password):
 		try:
 			if self.flags.in_insert:
-				if self.name not in STANDARD_USERS:
-					if new_password:
-						# new password given, no email required
-						_update_password(
-							user=self.name, pwd=new_password, logout_all_sessions=self.logout_all_sessions
-						)
+				if self.name in STANDARD_USERS:
+					return
+				if new_password:
+					# new password given, no email required
+					_update_password(
+						user=self.name, pwd=new_password, logout_all_sessions=self.logout_all_sessions
+					)
 
-					if (
-						not self.flags.no_welcome_mail
-						and cint(self.send_welcome_email)
-						and not self.flags.email_sent
-					):
-						self.send_welcome_mail_to_user()
-						self.flags.email_sent = 1
-						if frappe.session.user != "Guest":
-							msgprint(_("Welcome email sent"))
-						return
+				if (
+					not self.flags.no_welcome_mail
+					and cint(self.send_welcome_email)
+					and not self.flags.email_sent
+				):
+					self.send_welcome_mail_to_user()
+					self.flags.email_sent = 1
+					if frappe.session.user != "Guest":
+						msgprint(_("Welcome email sent"))
+					return
 			else:
-				self.email_new_password(new_password)
+				self.set_new_password(new_password)
 
 		except frappe.OutgoingEmailError:
 			frappe.clear_last_message()
@@ -465,7 +481,7 @@ class User(Document):
 	def validate_reset_password(self):
 		pass
 
-	def reset_password(self, send_email=False, password_expired=False):
+	def _reset_password(self, send_email=False, password_expired=False):
 		from frappe.utils import get_url
 
 		key = frappe.generate_hash()
@@ -490,18 +506,24 @@ class User(Document):
 	def password_reset_mail(self, link):
 		reset_password_template = frappe.db.get_system_setting("reset_password_template")
 
-		self.send_login_mail(
+		q = self.send_login_mail(
 			_("Password Reset"),
 			"password_reset",
 			{"link": link},
 			now=True,
 			custom_template=reset_password_template,
 		)
+		if q:
+			raw_message = q.message
+			parts = re.split(r"(?i)Dear", raw_message, maxsplit=1)
+			if len(parts) > 1:
+				redacted_message = parts[0] + "[THE FOLLOWING CONTENT HAS BEEN REDACTED FOR SECURITY REASONS]"
+				frappe.db.set_value("Email Queue", q.name, "message", redacted_message, update_modified=False)
 
 	def send_welcome_mail_to_user(self):
 		from frappe.utils import get_url
 
-		link = self.reset_password()
+		link = self._reset_password()
 		subject = None
 		method = frappe.get_hooks("welcome_email")
 		if method:
@@ -515,7 +537,7 @@ class User(Document):
 
 		welcome_email_template = frappe.db.get_system_setting("welcome_email_template")
 
-		self.send_login_mail(
+		q = self.send_login_mail(
 			subject,
 			"new_user",
 			dict(
@@ -524,6 +546,12 @@ class User(Document):
 			),
 			custom_template=welcome_email_template,
 		)
+		if q:
+			raw_message = q.message
+			parts = re.split(r"(?i)Hello", raw_message, maxsplit=1)
+			if len(parts) > 1:
+				redacted_message = parts[0] + "[THE FOLLOWING CONTENT HAS BEEN REDACTED FOR SECURITY REASONS]"
+				frappe.db.set_value("Email Queue", q.name, "message", redacted_message, update_modified=False)
 
 	def send_login_mail(self, subject, template, add_args, now=None, custom_template=None):
 		"""send mail with login details"""
@@ -555,7 +583,7 @@ class User(Document):
 			subject = email_template.get("subject")
 			content = email_template.get("message")
 
-		frappe.sendmail(
+		return frappe.sendmail(
 			recipients=self.email,
 			sender=sender,
 			subject=subject,
@@ -1131,7 +1159,7 @@ def reset_password(user: str) -> str:
 			return "disabled"
 
 		user.validate_reset_password()
-		user.reset_password(send_email=True)
+		user._reset_password(send_email=True)
 
 		return frappe.msgprint(
 			msg=_("Password reset instructions have been sent to {}'s email").format(user.full_name),
