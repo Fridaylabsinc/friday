@@ -519,8 +519,11 @@ def get_field_info(fields, doctype):
 		except ValueError:
 			# handles aggregate functions
 			parenttype = doctype
-			fieldname = key.split("(", 1)[0]
-			fieldname = fieldname[0].upper() + fieldname[1:]
+			if isinstance(key, dict):
+				fieldname = next(k for k in key if k != "as")
+			else:
+				fieldname = key.split("(", 1)[0]
+			fieldname = fieldname.capitalize()
 
 		parenttype = parenttype or doctype
 
@@ -579,8 +582,11 @@ def handle_duration_fieldtype_values(doctype, data, fields):
 	return data
 
 
-def parse_field(field: str) -> tuple[str | None, str]:
+def parse_field(field: str | dict) -> tuple[str | None, str]:
 	"""Parse a field into parenttype and fieldname."""
+	if isinstance(field, dict):  # for aggregates via qb
+		raise ValueError
+
 	key = field.split(" as ", 1)[0]
 
 	if key.startswith(("count(", "sum(", "avg(")):
