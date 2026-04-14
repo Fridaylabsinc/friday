@@ -196,6 +196,9 @@
 		display: flex;
 		width: var(--sidebar-width);
 	}
+	.sidebar-resize-handle {
+		cursor: w-resize;
+	}
 }
 
 .body-sidebar-container.expanded {
@@ -273,8 +276,8 @@
 	right: -4px;
 	width: 8px;
 	height: 100%;
-	cursor: col-resize;
 	z-index: 1022;
+	cursor: e-resize;
 
 	&::after {
 		content: "";
@@ -289,7 +292,7 @@
 	}
 
 	&:hover::after {
-		background: var(--gray-700, #333);
+		background: var(--ink-gray-2);
 	}
 }
 .section-break {
