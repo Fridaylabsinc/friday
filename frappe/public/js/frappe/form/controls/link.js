@@ -82,7 +82,7 @@ frappe.ui.form.ControlLink = class ControlLink extends frappe.ui.form.ControlDat
 	}
 
 	is_clear_button_enabled() {
-		return cint(frappe.boot?.sysdefaults?.show_clear_button_in_link_field);
+		return cint(frappe.boot?.sysdefaults?.allow_clearing_link_fields);
 	}
 
 	hide_link_and_clear_buttons() {
