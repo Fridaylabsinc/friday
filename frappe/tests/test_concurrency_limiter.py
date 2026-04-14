@@ -10,8 +10,12 @@ from frappe.exceptions import ServiceUnavailableError
 from frappe.tests import IntegrationTestCase
 
 
+def _cache_name(fn):
+	return f"concurrency:{fn.__module__}.{fn.__qualname__}"
+
+
 def _cache_key(fn):
-	return frappe.cache.make_key(f"concurrency:{fn.__module__}.{fn.__qualname__}")
+	return frappe.cache.make_key(_cache_name(fn))
 
 
 class TestConcurrentLimit(IntegrationTestCase):
@@ -37,7 +41,7 @@ class TestConcurrentLimit(IntegrationTestCase):
 
 		self.assertEqual(calls, [True])
 		# Counter must not have been touched
-		self.assertIsNone(frappe.cache.get(_cache_key(fn)))
+		self.assertFalse(frappe.cache.exists(_cache_key(fn)))
 
 	def test_raises_immediately_when_limit_full(self):
 		"""ServiceUnavailableError is raised at once when wait_timeout=0 and the
@@ -69,7 +73,7 @@ class TestConcurrentLimit(IntegrationTestCase):
 		try:
 			frappe.local.request = frappe._dict()
 			fn()
-			self.assertEqual(int(frappe.cache.get(key) or 0), 0)
+			self.assertEqual(frappe.cache.incrby(_cache_key(fn), 0), 0)
 		finally:
 			del frappe.local.request
 			frappe.cache.delete(key)
@@ -86,7 +90,7 @@ class TestConcurrentLimit(IntegrationTestCase):
 		try:
 			frappe.local.request = frappe._dict()
 			self.assertRaises(ValueError, fn)
-			self.assertEqual(int(frappe.cache.get(key) or 0), 0)
+			self.assertEqual(frappe.cache.incrby(_cache_key(fn), 0), 0)
 		finally:
 			del frappe.local.request
 			frappe.cache.delete(key)
@@ -149,7 +153,7 @@ class TestConcurrentLimit(IntegrationTestCase):
 		_release(key)  # correct release → 0
 		_release(key)  # spurious extra release
 
-		counter = int(frappe.cache.get(key) or 0)
+		counter = frappe.cache.incrby(key, 0)
 		frappe.cache.delete(key)
 
 		self.assertGreaterEqual(counter, 0)

@@ -56,7 +56,7 @@ def concurrent_limit(limit: int | None = None, wait_timeout: int | None = None):
 		def wrapper(*args, **kwargs):
 			# Skip concurrency limiting outside of HTTP requests (background jobs,
 			# CLI commands, tests that call functions directly, etc.).
-			if not getattr(frappe.local, "request", None):
+			if getattr(frappe.local, "request", None) is None:
 				return fn(*args, **kwargs)
 
 			effective_limit = int(limit) if limit is not None else _default_limit()
@@ -72,9 +72,11 @@ def concurrent_limit(limit: int | None = None, wait_timeout: int | None = None):
 			if not acquired:
 				from frappe.exceptions import ServiceUnavailableError
 
-				exc = ServiceUnavailableError(frappe._("Server is busy. Please try again in a few seconds."))
 				retry_after = max(1, int(effective_wait))
-				frappe.local.response_headers.set("Retry-After", str(retry_after))
+				if (headers := getattr(frappe.local, "response_headers", None)) is not None:
+					headers.set("Retry-After", str(retry_after))
+				exc = ServiceUnavailableError(frappe._("Server is busy. Please try again in a few seconds."))
+				exc.retry_after = retry_after
 				raise exc
 
 			try:
