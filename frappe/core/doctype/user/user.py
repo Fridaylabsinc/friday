@@ -1151,7 +1151,12 @@ def sign_up(email: str, full_name: str, redirect_to: str) -> tuple[int, str]:
 @frappe.whitelist(allow_guest=True, methods=["POST"])
 @rate_limit(limit=get_password_reset_limit, seconds=60 * 60)
 def reset_password(user: str) -> str:
+	# Always return the same generic response regardless of whether the user
+	# exists, is disabled, or is restricted. This prevents username enumeration
+	# via different messages or HTTP status codes (CWE-204).
+
 	try:
+<<<<<<< HEAD
 		user: User = frappe.get_doc("User", user)
 		if user.name == "Administrator":
 			return "not allowed"
@@ -1165,10 +1170,21 @@ def reset_password(user: str) -> str:
 			msg=_("Password reset instructions have been sent to {}'s email").format(user.full_name),
 			title=_("Password Email Sent"),
 		)
+=======
+		user_doc: User = frappe.get_doc("User", user)
+		if user_doc.name != "Administrator" and user_doc.enabled:
+			user_doc.validate_reset_password()
+			user_doc.reset_password(send_email=True)
+		# For Administrator or disabled users: silently skip — same response below
+>>>>>>> f00c4b7738 (fix: enhance password reset flow to prevent username enumeration)
 	except frappe.DoesNotExistError:
-		frappe.local.response["http_status_code"] = 404
 		frappe.clear_messages()
-		return "not found"
+		# Do not reveal whether the account exists — fall through to generic response
+
+	return frappe.msgprint(
+		msg=_("If an account with this email exists, password reset instructions have been sent."),
+		title=_("Password Reset"),
+	)
 
 
 @frappe.whitelist()
