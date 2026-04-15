@@ -1179,7 +1179,12 @@ def reset_password(user: str) -> str:
 >>>>>>> f00c4b7738 (fix: enhance password reset flow to prevent username enumeration)
 	except frappe.DoesNotExistError:
 		frappe.clear_messages()
-		# Do not reveal whether the account exists — fall through to generic response
+	except frappe.OutgoingEmailError:
+		frappe.clear_messages()
+		frappe.log_error(title="Password reset email could not be sent", message=frappe.get_traceback())
+	except Exception:
+		frappe.clear_messages()
+		frappe.log_error(title="Password reset failed unexpectedly", message=frappe.get_traceback())
 
 	return frappe.msgprint(
 		msg=_("If an account with this email exists, password reset instructions have been sent."),
