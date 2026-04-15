@@ -431,7 +431,7 @@ class TestUser(IntegrationTestCase):
 			update_password(old_password, old_password=new_password)
 			self.assertEqual(
 				frappe.message_log[0].get("message"),
-				"If an account with this email exists, password reset instructions have been sent.",
+				"If this email is registered with us, we’ve sent password reset instructions to it. Please check your inbox.",
 			)
 
 		sendmail.assert_called_once()
@@ -440,7 +440,7 @@ class TestUser(IntegrationTestCase):
 		# Constant-response guarantee: every path — existing user, Administrator,
 		# and non-existent user — must return None AND enqueue the same generic
 		# message, so callers cannot distinguish between them.
-		_GENERIC_MSG = "If an account with this email exists, password reset instructions have been sent."
+		_GENERIC_MSG = "If this email is registered with us, we’ve sent password reset instructions to it. Please check your inbox."
 
 		frappe.clear_messages()
 		self.assertIsNone(reset_password(user="test2@example.com"))
