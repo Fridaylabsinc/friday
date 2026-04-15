@@ -1150,7 +1150,7 @@ def sign_up(email: str, full_name: str, redirect_to: str) -> tuple[int, str]:
 
 @frappe.whitelist(allow_guest=True, methods=["POST"])
 @rate_limit(limit=get_password_reset_limit, seconds=60 * 60)
-def reset_password(user: str) -> str:
+def reset_password(user: str) -> None:
 	# Always return the same generic response regardless of whether the user
 	# exists, is disabled, or is restricted. This prevents username enumeration
 	# via different messages or HTTP status codes (CWE-204).
@@ -1186,7 +1186,7 @@ def reset_password(user: str) -> str:
 		frappe.clear_messages()
 		frappe.log_error(title="Password reset failed unexpectedly", message=frappe.get_traceback())
 
-	return frappe.msgprint(
+	frappe.msgprint(
 		msg=_("If an account with this email exists, password reset instructions have been sent."),
 		title=_("Password Reset"),
 	)
