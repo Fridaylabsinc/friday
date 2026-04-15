@@ -1187,7 +1187,9 @@ def reset_password(user: str) -> None:
 		frappe.log_error(title="Password reset failed unexpectedly", message=frappe.get_traceback())
 
 	frappe.msgprint(
-		msg=_("If this email is registered with us, we’ve sent password reset instructions to it. Please check your inbox."),
+		msg=_(
+			"If this email is registered with us, we have sent password reset instructions to it. Please check your inbox."
+		),
 		title=_("Password Reset"),
 	)
 
