@@ -1156,27 +1156,11 @@ def reset_password(user: str) -> None:
 	# via different messages or HTTP status codes (CWE-204).
 
 	try:
-<<<<<<< HEAD
-		user: User = frappe.get_doc("User", user)
-		if user.name == "Administrator":
-			return "not allowed"
-		if not user.enabled:
-			return "disabled"
-
-		user.validate_reset_password()
-		user._reset_password(send_email=True)
-
-		return frappe.msgprint(
-			msg=_("Password reset instructions have been sent to {}'s email").format(user.full_name),
-			title=_("Password Email Sent"),
-		)
-=======
 		user_doc: User = frappe.get_doc("User", user)
 		if user_doc.name != "Administrator" and user_doc.enabled:
 			user_doc.validate_reset_password()
-			user_doc.reset_password(send_email=True)
+			user_doc._reset_password(send_email=True)
 		# For Administrator or disabled users: silently skip — same response below
->>>>>>> f00c4b7738 (fix: enhance password reset flow to prevent username enumeration)
 	except frappe.DoesNotExistError:
 		frappe.clear_messages()
 	except frappe.OutgoingEmailError:
