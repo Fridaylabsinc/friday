@@ -70,6 +70,11 @@
 	right: 6px;
 	height: 5.5px;
 	width: 5.5px;
+	transition: opacity 0.2s ease-in-out;
+}
+
+.sidebar-notification:hover .sidebar-item-icon.indicator::before {
+	opacity: 0;
 }
 
 .sidebar-notification .standard-sidebar-item .item-anchor {
