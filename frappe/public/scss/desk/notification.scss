@@ -44,6 +44,39 @@
 	display: none;
 }
 
+<<<<<<< HEAD
+=======
+.sidebar-notification .sidebar-item-icon.indicator,
+.desktop-notification-icon.indicator {
+	position: relative;
+
+	&::before {
+		position: absolute;
+		left: auto;
+		height: 6px;
+		width: 6px;
+		margin: 0;
+		z-index: 1;
+	}
+}
+
+.desktop-notification-icon.indicator::before {
+	top: 0;
+	right: 0;
+}
+
+.sidebar-notification .sidebar-item-icon.indicator::before {
+	top: 3px;
+	right: 5px;
+	height: 5px;
+	width: 5px;
+}
+
+.sidebar-notification .standard-sidebar-item .item-anchor {
+	overflow: visible;
+}
+
+>>>>>>> 44ecd8b677 (fix(ui): properly align notification indicator on sidebar badge)
 .mark-read {
 	display: none;
 	margin-left: 10px;
