@@ -68,6 +68,10 @@ frappe.search.AwesomeBar = class AwesomeBar {
 		});
 
 		$search_element.on("click", () => {
+			if ($(search_modal).hasClass("show")) {
+				search_modal.modal("hide");
+				return;
+			}
 			search_modal.modal("show");
 
 			if (is_event_listeners_added) return;
