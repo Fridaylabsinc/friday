@@ -174,6 +174,12 @@ class RedisWrapper(redis.Redis):
 	def rpop(self, key):
 		return super().rpop(self.make_key(key))
 
+	def blpop(self, key, timeout=0):
+		return super().blpop(self.make_key(key), timeout=timeout)
+
+	def setnx(self, name, value):
+		return super().setnx(self.make_key(name), value)
+
 	def llen(self, key):
 		return super().llen(self.make_key(key))
 
