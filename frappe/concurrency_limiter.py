@@ -31,17 +31,55 @@ _DEFAULT_WAIT_TIMEOUT = 10
 
 @redis_cache(shared=True)
 def _default_limit() -> int:
-	"""Derive a sensible default concurrency limit from the number of gunicorn workers."""
-	import multiprocessing
+	"""Derive a sensible default concurrency limit from gunicorn's max concurrency."""
+	return max(1, gunicorn_max_concurrency() // 2)
 
-	workers = frappe.conf.get("gunicorn_workers") or (multiprocessing.cpu_count() * 2 + 1)
-	return max(1, int(workers) // 2)
+
+def gunicorn_max_concurrency() -> int:
+	"""Detect max concurrent requests from the running gunicorn master's cmdline.
+
+	Reads /proc/<ppid>/cmdline to extract --workers and --threads without
+	shelling out. Falls back to a CPU-based heuristic on non-Linux platforms
+	or when not running under gunicorn (dev server, CLI, tests).
+	"""
+	import os
+
+	fallback = 4
+
+	try:
+		ppid = os.getppid()
+		with open(f"/proc/{ppid}/cmdline", "rb") as f:
+			args = f.read().rstrip(b"\0").decode().split("\0")
+
+		if not any("gunicorn" in a for a in args):
+			return fallback
+
+		workers = _extract_cli_int(args, "-w", "--workers") or fallback
+		threads = _extract_cli_int(args, "--threads") or 1
+		return workers * threads
+	except OSError:
+		return fallback
+
+
+def _extract_cli_int(args: list[str], *flags: str) -> int | None:
+	"""Return the integer value for a CLI flag from a split argument list.
+
+	Handles both ``--flag value`` and ``--flag=value`` forms.
+	"""
+	for i, arg in enumerate(args):
+		for flag in flags:
+			if arg == flag and i + 1 < len(args):
+				return int(args[i + 1])
+			if arg.startswith(f"{flag}="):
+				return int(arg.split("=", 1)[1])
+	return None
 
 
 def concurrent_limit(limit: int | None = None, wait_timeout: int = _DEFAULT_WAIT_TIMEOUT):
 	"""Decorator that limits simultaneous in-flight executions of the wrapped function.
 
-	:param limit: Maximum number of concurrent executions. Defaults to ``gunicorn_workers // 2``
+	:param limit: Maximum number of concurrent executions. Defaults to half of ``workers x threads``
+	    as detected from the gunicorn master process (or a CPU-based heuristic as fallback).
 	:param wait_timeout: Seconds to wait for a free slot before returning 503.
 	    Defaults to 10 s.  Suppressed for background jobs.
 	"""
