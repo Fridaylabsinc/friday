@@ -76,13 +76,19 @@ def concurrent_limit(limit: int | None = None, wait_timeout: int = _DEFAULT_WAIT
 	return decorator
 
 
+# Safety TTL (seconds) for the capacity key — allows the pool to self-heal
+# after a worker crash that leaked a token. The cap key expiring causes the
+# next request to re-initialize the pool to full capacity. Must be longer
+# than any realistic request, but short enough to recover from crashes.
+_CAPACITY_KEY_TTL = 3600  # 1 hour
+
 # Lua script that atomically initializes the token pool.
 # Combines the SET NX check and the DEL + RPUSH population into a single
 # atomic operation, closing the race window between the init-flag check
 # and the list population that existed with the prior setnx + pipeline approach.
-# KEYS[1] = capacity key, KEYS[2] = token list key, ARGV[1] = limit
+# KEYS[1] = capacity key, KEYS[2] = token list key, ARGV[1] = limit, ARGV[2] = TTL
 _INIT_SCRIPT = """\
-if redis.call('SET', KEYS[1], ARGV[1], 'NX') then
+if redis.call('SET', KEYS[1], ARGV[1], 'NX', 'EX', ARGV[2]) then
     redis.call('DEL', KEYS[2])
     local n = tonumber(ARGV[1])
     for i = 1, n do
@@ -102,7 +108,7 @@ def _ensure_tokens(key: str, limit: int) -> None:
 	try:
 		prefixed_cap_key = frappe.cache.make_key(f"{key}:capacity")
 		prefixed_key = frappe.cache.make_key(key)
-		frappe.cache.eval(_INIT_SCRIPT, 2, prefixed_cap_key, prefixed_key, str(limit))
+		frappe.cache.eval(_INIT_SCRIPT, 2, prefixed_cap_key, prefixed_key, str(limit), str(_CAPACITY_KEY_TTL))
 	except Exception:
 		frappe.log_error("Concurrency limiter: Failed to initialize tokens")
 
