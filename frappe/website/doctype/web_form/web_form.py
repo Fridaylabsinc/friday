@@ -112,6 +112,8 @@ class WebForm(WebsiteGenerator):
 			frappe.throw(_("Following fields are missing:") + "<br>" + "<br>".join(missing))
 
 	def validate_hidden_and_mandatory(self):
+		if self.allow_incomplete:
+			return
 		for d in self.web_form_fields:
 			if (d.hidden and d.reqd) and not (d.default or frappe.flags.in_migrate):
 				frappe.throw(
