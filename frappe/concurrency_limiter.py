@@ -23,13 +23,13 @@ from functools import wraps
 import frappe
 from frappe.exceptions import ServiceUnavailableError
 from frappe.utils import cint
-from frappe.utils.caching import redis_cache
+from frappe.utils.caching import site_cache
 
 # Default wait timeout (seconds) before returning 503 to the caller.
 _DEFAULT_WAIT_TIMEOUT = 10
 
 
-@redis_cache(shared=True)
+@site_cache(ttl=3600)
 def _default_limit() -> int:
 	"""Derive a sensible default concurrency limit from gunicorn's max concurrency."""
 	return max(1, gunicorn_max_concurrency() // 2)
