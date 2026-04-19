@@ -1920,6 +1920,14 @@ def get_link_to_form(doctype: str, name: str | None = None, label: str | None = 
 	return f"""<a href="{get_url_to_form(doctype, name)}">{label}</a>"""
 
 
+def get_url_to_workspace(workspace: str, is_public: bool):
+	url_prefix = "/desk/"
+	if not is_public:
+		workspace_url = "/desk/private/"
+	workspace_url = url_prefix + workspace.lower()
+	return workspace_url
+
+
 def get_link_to_report(
 	name: str,
 	label: str | None = None,
