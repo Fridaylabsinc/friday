@@ -48,17 +48,20 @@ if redis.call('SET', KEYS[1], ARGV[1], 'NX', 'EX', ARGV[2]) then
 end
 """
 
-	def __init__(self, key: str, limit: int, wait_timeout: float = 0):
+	def __init__(self, key: str, limit: int, wait_timeout: float = 0, shared: bool = False):
 		"""
 		:param key: A unique Redis key name for this semaphore (will be
 		    prefixed by the cache layer).
 		:param limit: Maximum number of concurrent holders.
 		:param wait_timeout: Seconds to block waiting for a free slot.
 		    0 means non-blocking (immediate return if unavailable).
+		:param shared: If True, the semaphore key is bench-wide (not
+		    prefixed with the site's db_name). Defaults to site-scoped.
 		"""
 		self.key = key
 		self.limit = limit
 		self.wait_timeout = wait_timeout
+		self.shared = shared
 		self._token: str | None = None
 
 	def acquire(self) -> str | None:
@@ -72,10 +75,10 @@ end
 			self._ensure_tokens()
 
 			if self.wait_timeout <= 0:
-				result = frappe.cache.lpop(self.key)
+				result = frappe.cache.lpop(self.key, shared=self.shared)
 				return self._decode(result) if result is not None else None
 
-			if result := frappe.cache.blpop(self.key, timeout=int(self.wait_timeout)):
+			if result := frappe.cache.blpop(self.key, timeout=int(self.wait_timeout), shared=self.shared):
 				return self._decode(result[1])
 			return None
 
@@ -88,7 +91,7 @@ end
 		if token == "fallback":
 			return
 		try:
-			frappe.cache.lpush(self.key, token)
+			frappe.cache.lpush(self.key, token, shared=self.shared)
 		except Exception:
 			frappe.log_error(f"RedisSemaphore({self.key}): Failed to release token {token}")
 
@@ -108,8 +111,8 @@ end
 	def _ensure_tokens(self) -> None:
 		"""Lazily initialize the token pool via an atomic Lua script."""
 		try:
-			prefixed_cap_key = frappe.cache.make_key(f"{self.key}:capacity")
-			prefixed_key = frappe.cache.make_key(self.key)
+			prefixed_cap_key = frappe.cache.make_key(f"{self.key}:capacity", shared=self.shared)
+			prefixed_key = frappe.cache.make_key(self.key, shared=self.shared)
 			frappe.cache.eval(
 				self._INIT_SCRIPT,
 				2,

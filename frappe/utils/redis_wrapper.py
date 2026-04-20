@@ -162,20 +162,20 @@ class RedisWrapper(redis.Redis):
 		except redis.exceptions.ConnectionError:
 			pass
 
-	def lpush(self, key, value):
-		return super().lpush(self.make_key(key), value)
+	def lpush(self, key, value, user=None, shared=False):
+		return super().lpush(self.make_key(key, user=user, shared=shared), value)
 
 	def rpush(self, key, value):
 		return super().rpush(self.make_key(key), value)
 
-	def lpop(self, key):
-		return super().lpop(self.make_key(key))
+	def lpop(self, key, user=None, shared=False):
+		return super().lpop(self.make_key(key, user=user, shared=shared))
 
 	def rpop(self, key):
 		return super().rpop(self.make_key(key))
 
-	def blpop(self, key, timeout=0):
-		return super().blpop(self.make_key(key), timeout=timeout)
+	def blpop(self, key, timeout=0, user=None, shared=False):
+		return super().blpop(self.make_key(key, user=user, shared=shared), timeout=timeout)
 
 	def setnx(self, name, value):
 		return super().setnx(self.make_key(name), value)

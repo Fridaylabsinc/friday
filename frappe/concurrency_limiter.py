@@ -94,7 +94,7 @@ def concurrent_limit(limit: int | None = None, wait_timeout: int = _DEFAULT_WAIT
 			_limit = cint(limit) if limit is not None else _default_limit()
 			key = f"concurrency:{fn.__module__}.{fn.__qualname__}"
 
-			sem = RedisSemaphore(key, _limit, wait_timeout)
+			sem = RedisSemaphore(key, _limit, wait_timeout, shared=True)
 			token = sem.acquire()
 			if not token:
 				retry_after = max(1, int(wait_timeout))

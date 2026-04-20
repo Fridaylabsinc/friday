@@ -18,7 +18,7 @@ def _key(fn):
 
 def _cleanup(fn):
 	key = _key(fn)
-	frappe.cache.delete_value([key, f"{key}:capacity"])
+	frappe.cache.delete_value([key, f"{key}:capacity"], shared=True)
 
 
 class TestConcurrentLimit(IntegrationTestCase):
@@ -131,11 +131,11 @@ class TestConcurrentLimit(IntegrationTestCase):
 
 			# Simulate all tokens being leaked (workers crashed mid-request)
 			# by draining the pool without returning tokens.
-			while frappe.cache.lpop(key):
+			while frappe.cache.lpop(key, shared=True):
 				pass
 
 			# Simulate capacity key TTL expiry.
-			frappe.cache.delete_value(f"{key}:capacity")
+			frappe.cache.delete_value(f"{key}:capacity", shared=True)
 
 			# Self-heal: next request must re-initialize the pool and succeed.
 			fn()  # must not raise ServiceUnavailableError
