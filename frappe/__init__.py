@@ -34,7 +34,6 @@ import orjson
 from werkzeug.datastructures import Headers
 
 import frappe
-from frappe.concurrency_limiter import concurrent_limit
 from frappe.query_builder.utils import (
 	get_query,
 	get_query_builder,
@@ -1593,6 +1592,7 @@ from frappe.utils.error import log_error
 from frappe.utils.formatters import format_value
 from frappe.utils.print_utils import get_print, attach_print
 from frappe.email import sendmail
+from frappe.concurrency_limiter import concurrent_limit
 
 # for backwards compatibility
 format = format_value

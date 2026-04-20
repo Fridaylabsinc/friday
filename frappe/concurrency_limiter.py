@@ -112,3 +112,14 @@ def concurrent_limit(limit: int | None = None, wait_timeout: int = _DEFAULT_WAIT
 		return wrapper
 
 	return decorator
+
+
+@frappe.whitelist()
+def get_stats() -> dict:
+	frappe.only_for("System Manager")
+	cached_limit = _default_limit()
+	gunicorn_limit = gunicorn_max_concurrency()
+	return {
+		"cached_limit": cached_limit,
+		"gunicorn_limit": gunicorn_limit,
+	}
