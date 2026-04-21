@@ -442,3 +442,64 @@ def _update_fieldname_references(field: CustomField, old_fieldname: str, new_fie
 		"insert_after",
 		new_fieldname,
 	)
+
+
+def delete_custom_fields(custom_fields: dict):
+	"""
+	Delete custom fields from the given doctypes.
+
+	:param custom_fields: Dictionary of doctypes with fields to be deleted.
+
+	---
+	Structure of the `custom_fields` dictionary:
+
+	```py
+	# first structure
+	{
+	    "DocType1": ["field1", "field2", ...],
+	    "DocType2": ["field1", "field2", ...],
+	    ...
+	}
+
+	# second structure
+	{
+	    "DocType1": [
+	        {"fieldname": "field1", ...},
+	        {"fieldname": "field2", ...},
+	        ...
+	    ],
+	    "DocType2": [
+	        {"fieldname": "field1", ...},
+	        {"fieldname": "field2", ...},
+	        ...
+	    ],
+	    ...
+	}
+	```
+
+	"""
+	for doctype, fields in custom_fields.items():
+		fieldnames = []
+
+		if isinstance(fields, (list, tuple, set)):
+			for field in fields:
+				if isinstance(field, str):
+					fieldnames.append(field)
+				elif isinstance(field, dict) and field.get("fieldname"):
+					fieldnames.append(field["fieldname"])
+
+		# avoid redundant values in SQL IN clause
+		fieldnames = list(set(fieldnames))
+
+		if not fieldnames:
+			continue
+
+		frappe.db.delete(
+			"Custom Field",
+			{
+				"fieldname": ("in", fieldnames),
+				"dt": doctype,
+			},
+		)
+
+		frappe.clear_cache(doctype=doctype)
