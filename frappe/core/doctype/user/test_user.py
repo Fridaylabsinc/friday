@@ -292,7 +292,7 @@ class TestUser(IntegrationTestCase):
 		c = FrappeClient(url)
 		res1 = c.session.post(url, data=data, verify=c.verify, headers=c.headers)
 		res2 = c.session.post(url, data=data, verify=c.verify, headers=c.headers)
-		self.assertEqual(res1.status_code, 404)
+		self.assertEqual(res1.status_code, 200)
 		self.assertEqual(res2.status_code, 429)
 
 	def test_user_rename(self):
@@ -431,15 +431,28 @@ class TestUser(IntegrationTestCase):
 			update_password(old_password, old_password=new_password)
 			self.assertEqual(
 				frappe.message_log[0].get("message"),
-				f"Password reset instructions have been sent to {test_user.full_name}'s email",
+				"If this email is registered with us, we have sent password reset instructions to it. Please check your inbox.",
 			)
 
 		sendmail.assert_called_once()
 		self.assertEqual(sendmail.call_args[1]["recipients"], "test2@example.com")
 
-		self.assertEqual(reset_password(user="test2@example.com"), None)
-		self.assertEqual(reset_password(user="Administrator"), "not allowed")
-		self.assertEqual(reset_password(user="random"), "not found")
+		# Constant-response guarantee: every path — existing user, Administrator,
+		# and non-existent user — must return None AND enqueue the same generic
+		# message, so callers cannot distinguish between them.
+		_GENERIC_MSG = "If this email is registered with us, we have sent password reset instructions to it. Please check your inbox."
+
+		frappe.clear_messages()
+		self.assertIsNone(reset_password(user="test2@example.com"))
+		self.assertEqual(frappe.message_log[0].get("message"), _GENERIC_MSG)
+
+		frappe.clear_messages()
+		self.assertIsNone(reset_password(user="Administrator"))
+		self.assertEqual(frappe.message_log[0].get("message"), _GENERIC_MSG)
+
+		frappe.clear_messages()
+		self.assertIsNone(reset_password(user="random"))
+		self.assertEqual(frappe.message_log[0].get("message"), _GENERIC_MSG)
 
 	def test_user_onload_modules(self):
 		from frappe.desk.form.load import getdoc

@@ -13,13 +13,14 @@ import frappe.translate
 from frappe import _
 from frappe.core.doctype.doctype.doctype import (
 	check_email_append_to,
+	get_fields_not_allowed_in_list_view,
 	validate_autoincrement_autoname,
 	validate_fields_for_doctype,
 	validate_series,
 )
 from frappe.custom.doctype.custom_field.custom_field import create_custom_field
 from frappe.custom.doctype.property_setter.property_setter import delete_property_setter
-from frappe.model import core_doctypes_list, no_value_fields
+from frappe.model import core_doctypes_list
 from frappe.model.docfield import supports_translation
 from frappe.model.document import Document
 from frappe.model.meta import trim_table
@@ -319,12 +320,12 @@ class CustomizeForm(Document):
 	def set_property_setters_for_docfield(self, meta, df, meta_df):
 		for prop, prop_type in docfield_properties.items():
 			if prop != "idx" and (df.get(prop) or "") != (meta_df[0].get(prop) or ""):
-				if not self.allow_property_change(prop, meta_df, df):
+				if not self.allow_property_change(prop, meta_df, df, meta):
 					continue
 
 				self.make_property_setter(prop, df.get(prop), prop_type, fieldname=df.fieldname)
 
-	def allow_property_change(self, prop, meta_df, df):
+	def allow_property_change(self, prop, meta_df, df, meta):
 		if prop == "fieldtype":
 			self.validate_fieldtype_change(df, meta_df[0].get(prop), df.get(prop))
 
@@ -360,8 +361,7 @@ class CustomizeForm(Document):
 		elif (
 			prop == "in_list_view"
 			and df.get(prop)
-			and df.fieldtype != "Attach Image"
-			and df.fieldtype in no_value_fields
+			and df.fieldtype in get_fields_not_allowed_in_list_view(meta)
 		):
 			frappe.msgprint(
 				_("'In List View' not allowed for type {0} in row {1}").format(df.fieldtype, df.idx)
