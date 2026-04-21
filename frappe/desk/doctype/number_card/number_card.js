@@ -389,12 +389,98 @@ frappe.ui.form.on("Number Card", {
 						}
 					}
 
+<<<<<<< HEAD
 					if (is_document_type) {
 						frm.set_value("dynamic_filters_json", JSON.stringify(dynamic_filters));
 					} else {
 						frm.set_value("dynamic_filters_json", JSON.stringify(values));
 					}
 					frm.trigger("set_dynamic_filters_in_table");
+=======
+		const add_filter_row = frm.events.build_dynamic_filter_interface(
+			dialog.fields_dict.filter_area.$wrapper,
+			field_options,
+			doctype_or_report
+		);
+
+		if (dynamic_filters?.length) {
+			dynamic_filters.forEach((filter) => {
+				add_filter_row(filter[1], filter[3]);
+			});
+		} else {
+			add_filter_row();
+		}
+
+		dialog.show();
+	},
+
+	get_dynamic_filter_help_text: function () {
+		return `<p class="text-muted small">
+			${__("Enter expressions that will be evaluated when the card is displayed. For example:")}<br>
+			<code>frappe.defaults.get_user_default("Company")</code><br>
+			<code>frappe.datetime.get_today()</code><br>
+		</p>`;
+	},
+
+	build_dynamic_filter_interface: function ($filter_area, field_options, doctype_or_report) {
+		const filter_html = `
+			<div>
+				<table class="table table-bordered" style="margin-bottom: 12px;">
+					<thead>
+						<tr>
+							<th style="width: 35%">${__("Field")}</th>
+							<th style="width: 60%">${__("Expression")}</th>
+							<th style="width: 5%"></th>
+						</tr>
+					</thead>
+					<tbody class="filter-rows"></tbody>
+				</table>
+				<div style="display: flex; justify-content: space-between; align-items: center;">
+					<button class="text-muted add-filter btn btn-xs">
+						+ ${__("Add Filter")}
+					</button>
+					<button class="btn btn-secondary btn-xs clear-filters">
+						${__("Clear Filters")}
+					</button>
+				</div>
+			</div>
+		`;
+
+		$filter_area.html(filter_html);
+
+		const filter_fields = field_options.map((opt) => ({
+			fieldname: opt.value,
+			label: opt.label,
+			parent: doctype_or_report,
+		}));
+
+		const add_filter_row = (fieldname = "", expression = "") => {
+			const row_html = `
+				<tr class="dynamic-filter-row">
+					<td class="fieldname-select-area"></td>
+					<td>
+						<input type="text" class="form-control input-xs filter-expression">
+					</td>
+					<td class="text-center">
+						<a class="remove-filter text-muted" style="cursor: pointer;">
+							<svg class="icon icon-sm">
+								<use href="#icon-x" class="close"></use>
+							</svg>
+						</a>
+					</td>
+				</tr>
+			`;
+
+			const $row = $(row_html);
+
+			const field_select = new frappe.ui.FieldSelect({
+				parent: $row.find(".fieldname-select-area"),
+				doctype: doctype_or_report,
+				filter_fields: filter_fields,
+				input_class: "input-xs",
+				select: (_, selected_fieldname) => {
+					$row.data("selected_fieldname", selected_fieldname);
+>>>>>>> 32aaaa7abe (fix: replace icon-close with icon-x)
 				},
 				primary_action_label: __("Set"),
 			});
