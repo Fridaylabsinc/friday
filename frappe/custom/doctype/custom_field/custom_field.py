@@ -488,16 +488,13 @@ def delete_custom_fields(custom_fields: dict):
 				elif isinstance(field, dict) and field.get("fieldname"):
 					fieldnames.append(field["fieldname"])
 
-		# avoid redundant values in SQL IN clause
-		fieldnames = list(set(fieldnames))
-
 		if not fieldnames:
 			continue
 
 		frappe.db.delete(
 			"Custom Field",
 			{
-				"fieldname": ("in", fieldnames),
+				"fieldname": ("in", set(fieldnames)),
 				"dt": doctype,
 			},
 		)
