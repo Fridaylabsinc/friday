@@ -5,6 +5,7 @@ import frappe
 from frappe.custom.doctype.custom_field.custom_field import (
 	create_custom_field,
 	create_custom_fields,
+	delete_custom_fields,
 	rename_fieldname,
 )
 from frappe.tests import IntegrationTestCase
@@ -183,3 +184,36 @@ class TestCustomField(IntegrationTestCase):
 		self.assertFalse(doc.get(old))
 
 		field.delete()
+
+	def test_delete_custom_fields(self):
+		doctype = "ToDo"
+
+		field_1 = f"test_delete_cf_{frappe.generate_hash(length=6)}"
+		field_2 = f"test_delete_cf_{frappe.generate_hash(length=6)}"
+		field_3 = f"test_delete_cf_{frappe.generate_hash(length=6)}"
+
+		create_custom_fields(
+			{
+				doctype: [
+					{"fieldname": field_1, "fieldtype": "Data", "insert_after": "status"},
+					{"fieldname": field_2, "fieldtype": "Data", "insert_after": "priority"},
+					{"fieldname": field_3, "fieldtype": "Data", "insert_after": "color"},
+				]
+			}
+		)
+
+		def field_exists(fieldname):
+			return frappe.db.exists("Custom Field", {"fieldname": fieldname, "dt": doctype})
+
+		self.assertTrue(field_exists(field_1))
+		self.assertTrue(field_exists(field_2))
+		self.assertTrue(field_exists(field_3))
+
+		# delete using first supported structure (list of fieldname strings)
+		delete_custom_fields({doctype: [field_1, field_1]})
+		self.assertFalse(field_exists(field_1))
+
+		# delete using second supported structure (list of field dicts)
+		delete_custom_fields({doctype: [{"fieldname": field_2}, {"fieldname": field_3}]})
+		self.assertFalse(field_exists(field_2))
+		self.assertFalse(field_exists(field_3))
