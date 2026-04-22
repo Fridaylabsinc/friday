@@ -172,13 +172,6 @@ def send_login_link(email: str):
 		frappe.clear_messages()
 		frappe.log_error(title="Login link generation failed unexpectedly", message=frappe.get_traceback())
 
-	frappe.msgprint(
-		msg=_(
-			"If this email is registered with us, we have sent a login link to it. Please check your inbox."
-		),
-		title=_("Login Link"),
-	)
-
 
 def _generate_temporary_login_link(email: str, expiry: int):
 	assert isinstance(email, str)
