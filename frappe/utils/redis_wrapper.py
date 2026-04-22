@@ -177,9 +177,6 @@ class RedisWrapper(redis.Redis):
 	def blpop(self, key, timeout=0, user=None, shared=False):
 		return super().blpop(self.make_key(key, user=user, shared=shared), timeout=timeout)
 
-	def setnx(self, name, value):
-		return super().setnx(self.make_key(name), value)
-
 	def llen(self, key):
 		return super().llen(self.make_key(key))
 
