@@ -236,6 +236,11 @@ def save(doc):
 	if isinstance(doc, str):
 		doc = json.loads(doc)
 
+	forbidden = {"docstatus", "idx"}
+	for field in doc:
+		if field in forbidden:
+			frappe.throw(_("Cannot edit standard fields"))
+
 	doc = frappe.get_doc(doc)
 	doc.save()
 
