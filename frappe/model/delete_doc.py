@@ -371,7 +371,9 @@ def check_if_doc_is_linked(doc, method="Delete"):
 	"""
 	Raises exception if the given document is linked in another record.
 	"""
-	for link in get_linked_docs(doc, method):
+	links = get_linked_docs(doc, method)
+	if links:
+		link = links[0]
 		raise_link_exists_exception(doc, link["reference_doctype"], link["reference_docname"])
 
 
@@ -415,9 +417,10 @@ def get_dynamic_linked_docs(doc, method="Delete") -> list[dict]:
 		else:
 			# dynamic link in table
 			RefDoc = DocType(df.parent)
+			fields = [RefDoc.name, RefDoc.docstatus]
 			query = (
 				frappe.qb.from_(RefDoc)
-				.select(RefDoc.name, RefDoc.docstatus)
+				.select(*fields)
 				.where(RefDoc[df.options] == doc.doctype)
 				.where(RefDoc[df.fieldname] == doc.name)
 			)
@@ -454,7 +457,9 @@ def get_dynamic_linked_docs(doc, method="Delete") -> list[dict]:
 
 def check_if_doc_is_dynamically_linked(doc, method="Delete"):
 	"""Raise `frappe.LinkExistsError` if the document is dynamically linked"""
-	for link in get_dynamic_linked_docs(doc, method):
+	links = get_dynamic_linked_docs(doc, method)
+	if links:
+		link = links[0]
 		raise_link_exists_exception(
 			doc, link["reference_doctype"], link["reference_docname"], link["at_position"]
 		)
