@@ -8,6 +8,7 @@ from frappe.custom.doctype.custom_field.custom_field import (
 	delete_custom_fields,
 	rename_fieldname,
 )
+from frappe.custom.doctype.property_setter.property_setter import make_property_setter
 from frappe.tests import IntegrationTestCase
 
 
@@ -187,33 +188,47 @@ class TestCustomField(IntegrationTestCase):
 
 	def test_delete_custom_fields(self):
 		doctype = "ToDo"
-
-		field_1 = f"test_delete_cf_{frappe.generate_hash(length=6)}"
-		field_2 = f"test_delete_cf_{frappe.generate_hash(length=6)}"
-		field_3 = f"test_delete_cf_{frappe.generate_hash(length=6)}"
-
-		create_custom_fields(
+		fields = [
 			{
-				doctype: [
-					{"fieldname": field_1, "fieldtype": "Data", "insert_after": "status"},
-					{"fieldname": field_2, "fieldtype": "Data", "insert_after": "priority"},
-					{"fieldname": field_3, "fieldtype": "Data", "insert_after": "color"},
-				]
+				"fieldname": f"test_delete_{frappe.generate_hash(length=5)}",
+				"fieldtype": "Data",
+				"insert_after": "status",
 			}
-		)
+			for _ in range(4)
+		]
+		fieldnames = [f["fieldname"] for f in fields]
+
+		create_custom_fields({doctype: fields})
+
+		# create property setters for fields deleted via safe path (hooks should clean these up)
+		for fieldname in fieldnames[:2]:
+			make_property_setter(doctype, fieldname, "hidden", "1", "Check")
 
 		def field_exists(fieldname):
 			return frappe.db.exists("Custom Field", {"fieldname": fieldname, "dt": doctype})
 
-		self.assertTrue(field_exists(field_1))
-		self.assertTrue(field_exists(field_2))
-		self.assertTrue(field_exists(field_3))
+		def property_setter_exists(fieldname):
+			return frappe.db.exists("Property Setter", {"doc_type": doctype, "field_name": fieldname})
 
-		# delete using first supported structure (list of fieldname strings)
-		delete_custom_fields({doctype: [field_1, field_1]})
-		self.assertFalse(field_exists(field_1))
+		for fieldname in fieldnames:
+			self.assertTrue(field_exists(fieldname))
+		for fieldname in fieldnames[:2]:
+			self.assertTrue(property_setter_exists(fieldname))
 
-		# delete using second supported structure (list of field dicts)
-		delete_custom_fields({doctype: [{"fieldname": field_2}, {"fieldname": field_3}]})
-		self.assertFalse(field_exists(field_2))
-		self.assertFalse(field_exists(field_3))
+		# 1
+		delete_custom_fields({doctype: [fieldnames[0], fieldnames[0]]})
+		self.assertFalse(field_exists(fieldnames[0]))
+		self.assertFalse(property_setter_exists(fieldnames[0]))
+
+		# 2
+		delete_custom_fields({doctype: [{"fieldname": fieldnames[1]}]})
+		self.assertFalse(field_exists(fieldnames[1]))
+		self.assertFalse(property_setter_exists(fieldnames[1]))
+
+		# 3
+		delete_custom_fields({doctype: [fieldnames[2], fieldnames[2]]}, bypass_hooks=True)
+		self.assertFalse(field_exists(fieldnames[2]))
+
+		# 4
+		delete_custom_fields({doctype: [{"fieldname": fieldnames[3]}]}, bypass_hooks=True)
+		self.assertFalse(field_exists(fieldnames[3]))
