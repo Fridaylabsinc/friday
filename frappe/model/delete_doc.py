@@ -138,7 +138,7 @@ def delete_doc(
 			):
 				try:
 					delete_controllers(name, doc.module)
-				except OSError, KeyError:
+				except (OSError, KeyError):
 					# in case a doctype doesnt have any controller code  nor any app and module
 					pass
 
@@ -148,7 +148,7 @@ def delete_doc(
 			# Lock the doc without waiting
 			try:
 				frappe.db.get_value(doctype, name, for_update=True, wait=False)
-			except frappe.QueryTimeoutError, frappe.QueryDeadlockError:
+			except (frappe.QueryTimeoutError, frappe.QueryDeadlockError):
 				frappe.throw(
 					_(
 						"This document can not be deleted right now as it's being modified by another user. Please try again after some time."
@@ -418,14 +418,14 @@ def get_dynamic_linked_docs(doc, method="Delete") -> list[dict]:
 			# dynamic link in table
 			RefDoc = DocType(df.parent)
 			fields = [RefDoc.name, RefDoc.docstatus]
+			if meta.istable:
+				fields.extend([RefDoc.parent, RefDoc.parenttype, RefDoc.idx])
 			query = (
 				frappe.qb.from_(RefDoc)
 				.select(*fields)
 				.where(RefDoc[df.options] == doc.doctype)
 				.where(RefDoc[df.fieldname] == doc.name)
 			)
-			if meta.istable:
-				query = query.select(RefDoc.parent, RefDoc.parenttype, RefDoc.idx)
 			for refdoc in query.run(as_dict=True):
 				# linked to an non-cancelled doc when deleting
 				# or linked to a submitted doc when cancelling
