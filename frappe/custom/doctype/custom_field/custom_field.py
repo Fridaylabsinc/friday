@@ -482,6 +482,7 @@ def delete_custom_fields(custom_fields: dict, bypass_hooks: bool = False):
 					"dt": doctype,
 				},
 			)
+			frappe.clear_cache(doctype=doctype)
 		else:
 			custom_field_names = frappe.get_all(
 				"Custom Field",
@@ -491,5 +492,3 @@ def delete_custom_fields(custom_fields: dict, bypass_hooks: bool = False):
 
 			for custom_field_name in custom_field_names:
 				frappe.get_doc("Custom Field", custom_field_name).delete(ignore_permissions=True, force=True)
-
-		frappe.clear_cache(doctype=doctype)
