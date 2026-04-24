@@ -701,3 +701,11 @@ input.list-header-checkbox {
 		display: none;
 	}
 }
+
+@media screen and (max-width: 375px) {
+	.navbar-breadcrumbs li:last-child > a {
+		max-width: 105px;
+		overflow: hidden;
+		text-overflow: ellipsis;
+	}
+}
