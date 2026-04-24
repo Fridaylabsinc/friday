@@ -24,15 +24,8 @@ def get_limit():
 
 
 @frappe.whitelist(allow_guest=True)
-<<<<<<< HEAD
-# @rate_limit(key="reference_name", limit=get_limit, seconds=60 * 60)
-def add_comment(comment, comment_email, comment_by, reference_doctype, reference_name, route):
-=======
 @rate_limit(limit=get_limit, seconds=60 * 60)
-def add_comment(
-	comment: str, comment_email: str, comment_by: str, reference_doctype: str, reference_name: str, route: str
-):
->>>>>>> 1f9015a9c2 (fix: Re-add rate limit on blog comments (#38862))
+def add_comment(comment, comment_email, comment_by, reference_doctype, reference_name, route):
 	if frappe.session.user == "Guest":
 		allowed_doctypes = ["Web Page"]
 		comments_permission_config = frappe.get_hooks("has_comment_permission")
