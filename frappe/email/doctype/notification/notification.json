@@ -363,11 +363,7 @@
  "icon": "fa fa-envelope",
  "index_web_pages_for_search": 1,
  "links": [],
-<<<<<<< HEAD
- "modified": "2025-10-21 23:14:52.345857",
-=======
  "modified": "2026-04-22 15:37:19.355265",
->>>>>>> 95d0fecee7 (fix: Makes Condition Examples title translatable)
  "modified_by": "Administrator",
  "module": "Email",
  "name": "Notification",
