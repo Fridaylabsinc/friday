@@ -575,6 +575,7 @@ frappe.ui.Sidebar = class Sidebar {
 			$('[data-toggle="tooltip"]').tooltip("dispose");
 			this.wrapper.find(".avatar-name-email").show();
 			this.wrapper.find(".about-sidebar-link").show();
+			this.wrapper.find(".onboarding-sidebar span").show();
 		} else {
 			this.wrapper.removeClass("expanded");
 			direction = "left";
@@ -585,6 +586,7 @@ frappe.ui.Sidebar = class Sidebar {
 			});
 			this.wrapper.find(".avatar-name-email").hide();
 			this.wrapper.find(".about-sidebar-link").hide();
+			this.wrapper.find(".onboarding-sidebar span").hide();
 		}
 
 		localStorage.setItem("sidebar-expanded", this.sidebar_expanded);
