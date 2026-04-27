@@ -60,7 +60,12 @@ def get_system_managers():
 
 
 @frappe.whitelist()
+<<<<<<< HEAD
 def relink(name, reference_doctype=None, reference_name=None):
+=======
+def relink(name: str, reference_doctype: str | None = None, reference_name: str | None = None):
+	frappe.has_permission("Communication", "write", name)
+>>>>>>> 82463933e0 (fix: add perm. check to relink endpoint)
 	frappe.db.sql(
 		"""update
 			`tabCommunication`
