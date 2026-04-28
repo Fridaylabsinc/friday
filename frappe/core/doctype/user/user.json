@@ -910,11 +910,7 @@
   }
  ],
  "make_attachments_public": 1,
-<<<<<<< HEAD
- "modified": "2026-01-12 16:04:21.542524",
-=======
  "modified": "2026-04-28 21:59:59.160099",
->>>>>>> d4b995af04 (fix: default show navigation button)
  "modified_by": "Administrator",
  "module": "Core",
  "name": "User",
