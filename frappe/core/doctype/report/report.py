@@ -76,9 +76,14 @@ class Report(Document):
 			if frappe.session.user != "Administrator":
 				frappe.throw(_("Only Administrator can save a standard report. Please rename and save."))
 
+<<<<<<< HEAD
 			# Letter Head is visible only for non-standard reports.
 			# It should not remain set when it's invisible.
 			self.letter_head = None
+=======
+			if not cint(getattr(frappe.local.conf, "developer_mode", 0)):
+				frappe.throw(_("Standard reports can only be created in developer mode."))
+>>>>>>> 15966a78a6 (fix(report): prevent standard report creation when developer mode is off)
 
 		if self.report_type == "Report Builder":
 			self.update_report_json()
