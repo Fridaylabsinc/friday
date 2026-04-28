@@ -579,6 +579,7 @@ frappe.views.ReportView = class ReportView extends frappe.views.ListView {
 					options: y_fields,
 					description: __("Showing only Numeric fields from Report"),
 					default: defaults.y_axes ? defaults.y_axes.join(", ") : null,
+					include_default: true,
 				},
 				{
 					label: __("Chart Type"),
