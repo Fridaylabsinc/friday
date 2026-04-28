@@ -569,16 +569,17 @@ frappe.ui.Sidebar = class Sidebar {
 
 	expand_sidebar() {
 		let direction;
+		const is_rtl = frappe.utils.is_rtl();
 		if (this.sidebar_expanded) {
 			this.wrapper.addClass("expanded");
-			direction = "right";
+			direction = is_rtl ? "left" : "right";
 			$('[data-toggle="tooltip"]').tooltip("dispose");
 			this.wrapper.find(".avatar-name-email").show();
 			this.wrapper.find(".about-sidebar-link").show();
 			this.wrapper.find(".onboarding-sidebar span").show();
 		} else {
 			this.wrapper.removeClass("expanded");
-			direction = "left";
+			direction = is_rtl ? "right" : "left";
 			$('[data-toggle="tooltip"]').tooltip({
 				boundary: "window",
 				container: "body",
