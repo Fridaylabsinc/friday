@@ -77,6 +77,7 @@ class Report(Document):
 				frappe.throw(_("Only Administrator can save a standard report. Please rename and save."))
 
 <<<<<<< HEAD
+<<<<<<< HEAD
 			# Letter Head is visible only for non-standard reports.
 			# It should not remain set when it's invisible.
 			self.letter_head = None
@@ -84,6 +85,9 @@ class Report(Document):
 			if not cint(getattr(frappe.local.conf, "developer_mode", 0)):
 				frappe.throw(_("Standard reports can only be created in developer mode."))
 >>>>>>> 15966a78a6 (fix(report): prevent standard report creation when developer mode is off)
+=======
+			self.validate_standard_report_developer_mode()
+>>>>>>> acb342efad (refactor: add validate_standard_report_developer_mode method)
 
 		if self.report_type == "Report Builder":
 			self.update_report_json()
@@ -413,6 +417,53 @@ class Report(Document):
 
 		return data
 
+<<<<<<< HEAD
+=======
+	def validate_standard_report_developer_mode(self):
+		if not cint(frappe.conf.developer_mode):
+			frappe.throw(_("Standard reports can only be created in developer mode."))
+
+	def validate_default_print_format(self):
+		pf = frappe.db.get_value(
+			"Print Format",
+			self.default_print_format,
+			["report", "print_format_for", "print_format_type", "disabled"],
+			as_dict=True,
+		)
+
+		if (
+			not pf
+			or pf.report != self.name
+			or pf.print_format_for != "Report"
+			or pf.print_format_type != "JS"
+			or pf.disabled
+		):
+			frappe.throw(_("Selected Print Format is invalid for this Report."))
+
+	def validate_letter_head(self):
+		if not self.letter_head:
+			return
+
+		letter_head = frappe.db.get_value(
+			"Letter Head",
+			self.letter_head,
+			["letter_head_for", "standard", "disabled"],
+			as_dict=True,
+		)
+
+		if (
+			not letter_head
+			or letter_head.letter_head_for != "Report"
+			or (self.is_standard == "Yes" and letter_head.standard != "Yes")
+			or letter_head.disabled
+		):
+			frappe.throw(
+				_("Selected Letter Head '{0}' is invalid for '{1}' Report.").format(
+					self.letter_head, self.name
+				)
+			)
+
+>>>>>>> acb342efad (refactor: add validate_standard_report_developer_mode method)
 	@frappe.whitelist()
 	def toggle_disable(self, disable: bool):
 		if not self.has_permission("write"):
