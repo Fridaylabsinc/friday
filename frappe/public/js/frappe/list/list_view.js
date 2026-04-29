@@ -1110,7 +1110,7 @@ frappe.views.ListView = class ListView extends frappe.views.BaseList {
 		let left_width = list_row.find(".level-left").first().width();
 		let right_width = list_row.find(".level-right").first().width();
 
-		// if listview is not scrillable then hide border
+		// if listview is not scrollable then hide border
 		if (left_width < frappe_list_width - right_width) {
 			this.$result.find(".list-row-container .list-row .level-right").addClass("border-0");
 		}
