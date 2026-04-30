@@ -904,13 +904,16 @@ def call(fn, *args, **kwargs):
 
 
 def get_safe_filters(filters):
-	if isinstance(filters, str) and filters and filters[0] in '{["':
-		try:
-			return orjson.loads(filters)
-		except (TypeError, ValueError):
-			# filters are not passed, not json
-			pass
-	return filters
+	try:
+		parsed = orjson.loads(filters)
+	except (TypeError, ValueError):
+		# not a string, or not valid json
+		return filters
+	# numeric JSON is ambiguous: docnames like "3E002" parse as floats and
+	# would be corrupted by stringifying back, so keep the original string
+	if isinstance(parsed, int | float) and not isinstance(parsed, bool):
+		return filters
+	return parsed
 
 
 def create_batch(iterable: Iterable, size: int) -> Generator[Iterable]:

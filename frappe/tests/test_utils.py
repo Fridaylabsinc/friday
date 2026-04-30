@@ -366,6 +366,9 @@ class TestFilters(IntegrationTestCase):
 		self.assertEqual(get_safe_filters('[["name", "=", "ABC"]]'), [["name", "=", "ABC"]])
 		# FrappeClient encodes scalar filters via frappe.as_json — must still unwrap
 		self.assertEqual(get_safe_filters('"ABC"'), "ABC")
+		self.assertIsNone(get_safe_filters("null"))
+		self.assertIs(get_safe_filters("true"), True)
+		self.assertIs(get_safe_filters("false"), False)
 
 	def test_get_safe_filters_passes_through_non_strings(self):
 		self.assertEqual(get_safe_filters({"name": "ABC"}), {"name": "ABC"})
