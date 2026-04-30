@@ -292,7 +292,7 @@ class TestClient(IntegrationTestCase):
 		for doc in docs:
 			frappe.delete_doc("Note", doc)
 
-	def test_get_value_with_scientific_notation_docname(self):
+	def test_get_value_scientific_notation_docname(self):
 		from frappe.client import get_value
 
 		tag = frappe.get_doc({"doctype": "Tag", "name": "3E002"}).insert(ignore_if_duplicate=True)
