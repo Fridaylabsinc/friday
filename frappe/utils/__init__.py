@@ -904,7 +904,7 @@ def call(fn, *args, **kwargs):
 
 
 def get_safe_filters(filters):
-	if isinstance(filters, str) and filters and filters[0] in "{[":
+	if isinstance(filters, str) and filters and filters[0] in '{["':
 		try:
 			return orjson.loads(filters)
 		except (TypeError, ValueError):
