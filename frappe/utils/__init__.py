@@ -904,12 +904,10 @@ def call(fn, *args, **kwargs):
 
 
 def get_safe_filters(filters):
+	if not isinstance(filters, str) or not filters or filters[0] not in "{[":
+		return filters
 	try:
 		filters = orjson.loads(filters)
-
-		if isinstance(filters, int | float):
-			filters = frappe.as_unicode(filters)
-
 	except (TypeError, ValueError):
 		# filters are not passed, not json
 		pass
