@@ -75,7 +75,12 @@ class FormTour(Document):
 
 
 @frappe.whitelist()
+<<<<<<< HEAD
 def reset_tour(tour_name):
+=======
+def reset_tour(tour_name: str):
+	frappe.only_for("System Manager")
+>>>>>>> 1b2cf94563 (fix: restrict resetting of form tours (#39026))
 	for user in frappe.get_all("User", pluck="name"):
 		onboarding_status = frappe.parse_json(frappe.db.get_value("User", user, "onboarding_status"))
 		onboarding_status.pop(tour_name, None)
