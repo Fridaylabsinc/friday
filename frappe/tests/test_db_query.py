@@ -1232,14 +1232,8 @@ class TestDBQuery(IntegrationTestCase):
 			fields=fields,
 		).get_sql()
 
-		self.assertIn(
-			self.normalize_sql("LEFT JOIN `tabSelf Linked DocType` `tabSelf Linked DocType_parent_ref`"),
-			self.normalize_sql(query),
-		)
-		self.assertIn(
-			self.normalize_sql("LEFT JOIN `tabSelf Linked DocType` `tabSelf Linked DocType_sibling_ref`"),
-			self.normalize_sql(query),
-		)
+		self.assertIn("LEFT JOIN `tabSelf Linked DocType` `tabSelf Linked DocType_parent_ref`", query)
+		self.assertIn("LEFT JOIN `tabSelf Linked DocType` `tabSelf Linked DocType_sibling_ref`", query)
 
 	def test_select_star_expansion(self):
 		count = frappe.get_list("Language", [{"SUM": 1}, {"COUNT": "*"}], as_list=1, order_by=None)[0]
