@@ -2027,7 +2027,8 @@ class LinkTableField(DynamicTableField):
 
 	def _get_joined_table(self):
 		table = frappe.qb.DocType(self.doctype)
-		table = table.as_(f"tab{self.doctype}_{self.link_fieldname}")
+		if self.doctype == self.parent_doctype:
+			table = table.as_(f"tab{self.doctype}_{self.link_fieldname}")
 		return table
 
 	def apply_select(self, query: QueryBuilder, engine: "Engine" = None) -> QueryBuilder:
