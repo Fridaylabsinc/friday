@@ -768,9 +768,10 @@ frappe.views.QueryReport = class QueryReport extends frappe.views.BaseList {
 				this.execution_time = data.execution_time || 0.1;
 
 				const check_if_report_is_stale = () => {
-					let generated_at = this.prepared_report
-						? this.prepared_report_document.report_end_time
-						: this.refreshed_at;
+					let generated_at =
+						this.prepared_report && this.prepared_report_document
+							? this.prepared_report_document.report_end_time
+							: this.refreshed_at;
 					let pretty_diff = frappe.datetime.comment_when(generated_at);
 					const days_old = frappe.datetime.get_day_diff(
 						frappe.datetime.now_datetime(),
