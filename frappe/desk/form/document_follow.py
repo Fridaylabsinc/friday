@@ -52,6 +52,9 @@ def follow_document(doctype, doc_name, user):
 		frappe.toast(_("Administrator can't follow"))
 		return False
 
+	if user != frappe.session.user and not frappe.has_permission("Document Follow", "write"):
+		frappe.throw(_("You can only follow documents for yourself."), frappe.PermissionError)
+
 	if not frappe.db.get_value("User", user, "document_follow_notify", ignore=True, cache=True):
 		frappe.toast(_("Document follow is not enabled for this user."))
 		return False
@@ -68,6 +71,9 @@ def follow_document(doctype, doc_name, user):
 
 @frappe.whitelist()
 def unfollow_document(doctype, doc_name, user):
+	if user != frappe.session.user and not frappe.has_permission("Document Follow", "write"):
+		frappe.throw(_("You can only unfollow documents for yourself."), frappe.PermissionError)
+
 	doc = frappe.get_all(
 		"Document Follow",
 		filters={"ref_doctype": doctype, "ref_docname": doc_name, "user": user},

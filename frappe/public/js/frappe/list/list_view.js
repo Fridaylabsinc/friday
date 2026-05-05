@@ -1106,11 +1106,12 @@ frappe.views.ListView = class ListView extends frappe.views.BaseList {
 
 		// if no scroll then remove borders
 		let list_row = this.$result.find(".list-row-container .list-row").first();
-		let result_container_width = this.$result.width();
-		let left_width = list_row.find(".level-left").width();
-		let right_width = list_row.find(".level-right").width();
+		let frappe_list_width = this.$frappe_list.width();
+		let left_width = list_row.find(".level-left").first().width();
+		let right_width = list_row.find(".level-right").first().width();
 
-		if (result_container_width - right_width > left_width) {
+		// if listview is not scrollable then hide border
+		if (left_width < frappe_list_width - right_width) {
 			this.$result.find(".list-row-container .list-row .level-right").addClass("border-0");
 		}
 	}
