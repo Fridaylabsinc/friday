@@ -340,6 +340,9 @@ def save_page(name, public, new_widgets, blocks):
 	public = frappe.parse_json(public)
 
 	doc = frappe.get_doc("Workspace", name)
+	if not (is_workspace_manager() and doc.for_user == frappe.session.user):
+		return
+
 	if not doc.type:
 		doc.type = "Workspace"
 
