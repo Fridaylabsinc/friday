@@ -212,8 +212,8 @@ class User(Document):
 		frappe.cache.delete_key("enabled_users")
 
 	def validate(self):
-		# clear new password
-		self.__new_password = self.new_password
+		if self.new_password:
+			self.__new_password = self.new_password
 		self.new_password = ""
 
 		if not frappe.in_test:
