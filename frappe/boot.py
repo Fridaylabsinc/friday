@@ -591,7 +591,12 @@ def get_sidebar_items(allowed_workspaces):
 					"route_options": item.route_options,
 					"tab": item.navigate_to_tab,
 				}
-				if item.link_type == "Report" and item.link_to and frappe.db.exists("Report", item.link_to):
+				if (
+					item.link_type == "Report"
+					and item.link_to
+					and frappe.db.exists("Report", item.link_to)
+					and not frappe.db.get_value("Report", item.link_to, "disabled")
+				):
 					report_type, ref_doctype = frappe.db.get_value(
 						"Report", item.link_to, ["report_type", "ref_doctype"]
 					)
