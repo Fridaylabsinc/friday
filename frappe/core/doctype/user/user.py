@@ -282,6 +282,10 @@ class User(Document):
 		"""This handles old role_profile_name field if programatically set.
 
 		This behaviour will be removed in future versions."""
+		if not self.role_profiles:
+			self.role_profile_name = None
+			return
+
 		if not self.role_profile_name:
 			return
 
