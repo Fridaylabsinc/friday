@@ -73,25 +73,11 @@ class Report(Document):
 				frappe.throw(_("Cannot edit a standard report. Please duplicate and create a new report"))
 
 		if self.is_standard == "Yes":
-<<<<<<< HEAD
-			if frappe.session.user != "Administrator":
-				frappe.throw(_("Only Administrator can save a standard report. Please rename and save."))
+			self.validate_standard_report()
 
-<<<<<<< HEAD
-<<<<<<< HEAD
 			# Letter Head is visible only for non-standard reports.
 			# It should not remain set when it's invisible.
 			self.letter_head = None
-=======
-			if not cint(getattr(frappe.local.conf, "developer_mode", 0)):
-				frappe.throw(_("Standard reports can only be created in developer mode."))
->>>>>>> 15966a78a6 (fix(report): prevent standard report creation when developer mode is off)
-=======
-			self.validate_standard_report_developer_mode()
->>>>>>> acb342efad (refactor: add validate_standard_report_developer_mode method)
-=======
-			self.validate_standard_report()
->>>>>>> a1383ed98f (refactor: extract standard report validation into dedicated method)
 
 		if self.report_type == "Report Builder":
 			self.update_report_json()
@@ -421,16 +407,10 @@ class Report(Document):
 
 		return data
 
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
-	def validate_standard_report_developer_mode(self):
-=======
 	def validate_standard_report(self):
 		if frappe.session.user != "Administrator":
 			frappe.throw(_("Only Administrator can save a standard report. Please rename and save."))
 
->>>>>>> a1383ed98f (refactor: extract standard report validation into dedicated method)
 		if not cint(frappe.conf.developer_mode):
 			frappe.throw(_("Standard reports can only be created in developer mode."))
 
@@ -474,7 +454,6 @@ class Report(Document):
 				)
 			)
 
->>>>>>> acb342efad (refactor: add validate_standard_report_developer_mode method)
 	@frappe.whitelist()
 	def toggle_disable(self, disable: bool):
 		if not self.has_permission("write"):
