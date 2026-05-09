@@ -146,11 +146,7 @@ def attach_print(
 	is_weasyprint_print_format = False
 	if print_format and print_format != "Standard":
 		print_format_doc = frappe.get_cached_doc("Print Format", print_format)
-		is_weasyprint_print_format = not (
-			print_format_doc.custom_format
-			or print_format_doc.get("print_format_builder")
-			or print_format_doc.get("print_designer_print_format")
-		)
+		is_weasyprint_print_format = print_format_doc.get("print_format_builder_beta")
 
 	with print_language(lang or frappe.local.lang):
 		content = ""
