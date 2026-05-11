@@ -584,7 +584,6 @@ def get_sidebar_items(allowed_workspaces):
 					"collapsible": item.collapsible,
 					"indent": item.indent,
 					"keep_closed": item.keep_closed,
-					"display_depends_on": item.display_depends_on,
 					"url": item.url,
 					"show_arrow": item.show_arrow,
 					"filters": item.filters,

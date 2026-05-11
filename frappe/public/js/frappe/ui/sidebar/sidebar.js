@@ -460,9 +460,7 @@ frappe.ui.Sidebar = class Sidebar {
 		this.empty();
 		if (items && items.length > 0) {
 			items.forEach((w) => {
-				if (!w.display_depends_on || frappe.utils.eval(w.display_depends_on)) {
-					this.add_item(this.$items_container, w);
-				}
+				this.add_item(this.$items_container, w);
 			});
 		} else {
 			let no_items_message = $(
