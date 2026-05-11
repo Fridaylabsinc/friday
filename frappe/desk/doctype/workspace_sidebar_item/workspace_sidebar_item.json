@@ -167,11 +167,7 @@
  "index_web_pages_for_search": 1,
  "istable": 1,
  "links": [],
-<<<<<<< HEAD
- "modified": "2026-01-12 15:35:56.930873",
-=======
  "modified": "2026-05-11 10:13:54.279416",
->>>>>>> 77088950d3 (fix(sidebar): remove display depends on)
  "modified_by": "Administrator",
  "module": "Desk",
  "name": "Workspace Sidebar Item",
