@@ -101,6 +101,9 @@ class File(Document):
 			self.name = frappe.generate_hash(length=10)
 
 	def before_insert(self):
+		if self.attached_to_doctype and not self.attached_to_name:
+			self.attached_to_doctype = None
+			self.attached_to_field = None
 		# Ensure correct formatting and type
 		self.file_url = unquote(self.file_url) if self.file_url else ""
 
