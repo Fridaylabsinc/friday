@@ -33,11 +33,11 @@ Phase 1 must also establish the product feel: bench remains the operational CLI,
 - A single Frappe site dedicated to Friday
 
 ### Friday Framework Shell
-- Frappe-derived repository with Friday-facing README, LICENSE, and CONTRIBUTING.md
-- Friday-facing agent commands (as a `friday` entrypoint, bench plugin commands, or thin wrappers around bench/Frappe internals)
+- Friday repository forked from Frappe v16 stable, with Friday-facing README, LICENSE, and CONTRIBUTING.md
+- Friday-facing agent commands (`friday` entrypoint or bench command group); `bench` retained for site/framework operations
 - Friday Control Room workspace as the default operator surface
 - Agent Kernel modules created: `gateway`, `agents`, `skills`, `tasks`, `messaging`, `permissions`
-- Core Frappe internals kept close to upstream unless an agent-native framework behavior requires a deliberate patch
+- Agent-native primitives built into framework core; every divergence documented in `docs/core-divergences.md`
 
 ### DocTypes (minimum viable set)
 1. **Agent Profile** — name, assigned_roles, model_provider, model_name, system_prompt, status
@@ -177,4 +177,4 @@ A "no" on any of these is a signal to redesign **before** open-sourcing.
 | LLM tool-calling is unreliable with our schema | Iterate on schema design; consider structured-output models |
 | Frappe app lifecycle clashes with long-running gateway | Run gateway as separate process (not Frappe worker); communicate via REST + pubsub |
 | Scope creep | Strict adherence to "out of scope" list; everything else is Phase 2 |
-| Fork drift from Frappe substrate | Keep core patches minimal; document every divergence; prefer Friday modules unless framework-level behavior is required |
+| Fork drift from Frappe engine | Document every core divergence in `docs/core-divergences.md`; tag all core commits `[friday-core]`; domain features stay in Friday apps not core |

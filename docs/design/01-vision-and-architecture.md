@@ -2,7 +2,7 @@
 
 ## Vision
 
-Friday is an open-source, Frappe-derived agentic framework that combines:
+Friday is an open-source agentic framework that runs on a hard fork of Frappe v16 stable, combining:
 - **Hermes Agent's agentic capabilities** — agent loop, skills system, learning loop, multi-platform messaging, Kanban orchestration, voice, vision, browser automation, MCP integration.
 - **Frappe Framework's enterprise backbone** — role-based permissions, structured DocTypes, workflows, real-time notifications, background workers, audit trails.
 
@@ -45,7 +45,7 @@ The goal: an agentic framework that enterprises can actually deploy because gove
              └──────────────┼──────────────┘
                             ▼
 ┌─────────────────────────────────────────────────────────────────┐
-│  FRIDAY FRAMEWORK BACKEND (Frappe-derived substrate)             │
+│  FRIDAY FRAMEWORK BACKEND (Frappe v16 fork — agent-native core)  │
 │  ─ DocTypes: Agent Profile, Skill, Task, Chat Message, etc.     │
 │  ─ Role-based permissions                                       │
 │  ─ Workflows (Pending → Assigned → Executing → Review → Done)   │
@@ -80,11 +80,11 @@ The goal: an agentic framework that enterprises can actually deploy because gove
 
 ## Framework Positioning
 
-Friday is not merely a custom app installed into an otherwise generic Frappe site. The intended product is a Frappe-derived framework:
+Friday is a framework. The Friday repository is a hard fork of Frappe v16 stable:
 
-- Frappe supplies the runtime substrate: DocTypes, ORM, permissions, users, workflows, scheduler, workers, files, realtime, and Desk.
-- Friday reshapes the default developer and operator experience around governed AI agents.
-- Friday-native primitives (Agent Profile, Skill, Execution Log, Permission Decision Log, Workflow Request, Sandbox Execution) are treated as core concepts.
+- Frappe supplies the engine: DocTypes, ORM, permissions, users, workflows, scheduler, workers, files, realtime, bench ecosystem, and Desk.
+- Friday builds agent-native primitives directly into framework core: agent identity, execution trace, governed skill dispatch, sandboxed execution.
+- Friday-native DocTypes (Agent Profile, Skill, Execution Log, Permission Decision Log, Workflow Request, Sandbox Execution) are core framework concepts, not a removable app.
 - The control room is the product surface; the agent runtime is the engine.
 
 See `39-friday-framework-strategy.md` for the framework strategy and fork discipline.

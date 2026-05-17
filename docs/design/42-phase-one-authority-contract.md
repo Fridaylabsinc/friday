@@ -36,11 +36,11 @@ This is the foundation. ERPNext Purchase Order automation remains inside the Pha
 
 ### Framework Shell
 
-- Frappe-derived Friday repository and product identity
-- bench remains available for operations
+- Friday repository forked from Frappe v16 stable, with full bench ecosystem retained
+- bench remains available and documented for site/framework operations
 - Friday-facing agent commands or bench command group
 - Friday Control Room workspace
-- minimal, documented core divergence only where app/module hooks are insufficient
+- agent-native primitives built into framework core (actor context, trace, audit hooks, sandboxed execution); documented in `docs/core-divergences.md`
 
 ### Agent Kernel
 
@@ -193,4 +193,4 @@ Phase 1 is not "build all of Friday."
 
 Phase 1 is:
 
-> Build the smallest Friday that proves agents can operate inside a typed, permissioned, auditable Frappe-derived framework.
+> Build the smallest Friday that proves agents can operate inside a typed, permissioned, auditable framework — running on a Frappe v16 fork with agent-native primitives in core.

@@ -1,21 +1,23 @@
 # 39 — Friday Framework Strategy
 
-> **Purpose:** Clarify the architectural direction after the initial dossier: Friday is not merely a Frappe app. Friday is a Frappe-derived agentic framework that uses Frappe's source and primitives as its starting substrate, then reshapes the developer and operator experience around governed AI agents.
+> **Purpose:** Clarify the architectural direction: Friday is a framework. Under the hood it runs on a hard fork of Frappe v16 stable, retaining the full bench ecosystem while building agent-native primitives directly into core.
 
 ---
 
 ## 1. Decision
 
-Friday should feel like a framework from day one.
+Friday is a framework. It runs on a hard fork of Frappe v16 stable.
 
-The project may begin from Frappe Framework source code, but the product identity is Friday:
+This is not conditional on a spike outcome. The Friday repository **is** a fork of Frappe v16 stable. Agent-native primitives are built into framework core. The full Frappe bench ecosystem is retained — `bench init`, `bench new-site`, apps, migrations, site operations — because it is excellent operational infrastructure.
 
-- The CLI should be Friday-facing for agentic workflows, while respecting that Frappe already has `bench` as the mature operational CLI.
-- The default workspace should be a Friday Control Room, not a generic Frappe Desk.
-- Agent Profile, Skill, Execution Log, Permission Decision, Sandbox Execution, and Workflow Request should be treated as native platform primitives.
-- Frappe remains the technical substrate: DocTypes, permissions, ORM, scheduler, workers, auth, files, realtime, and workflows.
+The product identity is Friday:
 
-This is a deliberate framework strategy, not a casual fork.
+- The CLI is Friday-facing for agentic workflows; `bench` remains available and documented for site/framework operations.
+- The default workspace is the Friday Control Room, not generic Frappe Desk.
+- Agent Profile, Skill, Execution Log, Permission Decision, Sandbox Execution, and Workflow Request are native framework primitives — built into core, not installed as a removable app.
+- Frappe provides the engine: DocTypes, ORM, permissions, workflows, scheduler, workers, auth, files, realtime.
+
+Users and developers interact with Friday. Frappe is the engine.
 
 ---
 
@@ -62,53 +64,44 @@ The user experiences one framework. Internally, boundaries remain strict so Frid
 
 ## 4. Fork Discipline
 
-Friday may diverge from upstream Frappe where needed for framework identity and agent-native behavior, but divergence must be intentional.
+Friday develops directly on the Frappe v16 fork. Core modifications are made freely wherever agent-native behavior requires it — no "earn the right" gating.
 
-Core modifications are allowed when they:
+The line is not "can an app do this?" The line is **framework vs domain**:
 
-- make agents first-class actors in permission, audit, workflow, or job execution;
-- provide framework-level hooks that apps cannot safely add;
-- improve the Friday control-room experience at the platform shell level;
-- simplify the developer/operator experience with Friday-facing commands where they add meaning beyond raw `bench`.
+**Core (modify freely):**
+- Agent identity as a first-class actor across requests, jobs, and workflows
+- Trace ID propagation from gateway → execution → audit
+- Framework-level audit hooks for Permission Decision Log and Execution Log
+- Agent-scoped API key authentication baked into the auth layer
+- Friday shell: control-room workspace, CLI entrypoint, navigation
 
-Core modifications should be avoided when the behavior can live cleanly in a Friday app/module.
+**Friday apps (never in core):**
+- ERPNext Purchase Order automation
+- Raven War Room integration
+- pgvector memory and knowledge graph
+- Auto-research agents
+- Analytical and predictive agents
+- Multi-site ACP
+- Industry-specific skill templates
 
-Examples that belong in core:
-
-- actor context propagation across requests, jobs, and workflows;
-- trace IDs linking gateway event -> job -> sandbox -> audit row;
-- framework-level audit hooks;
-- bench command wrappers, aliases, or extensions that make Friday workflows coherent without hiding Frappe's operational model.
-
-Examples that belong in apps/modules:
-
-- ERPNext Purchase Order automation;
-- Raven War Room integration;
-- pgvector memory and knowledge graph;
-- auto-research;
-- analytical agents;
-- multi-site ACP;
-- industry-specific templates.
+Every core modification is documented in `docs/core-divergences.md`, tagged `[friday-core]` in git, and covered by a test. See `45-fork-policy.md` for the full discipline.
 
 ---
 
 ## 5. Upstream Relationship
 
-Friday should treat Frappe as an upstream source of proven engineering, not as a product boundary.
+Friday treats upstream Frappe as a source of proven engineering to cherry-pick from, not a release train to track.
 
-The project should periodically review upstream Frappe releases and selectively merge or reimplement improvements that affect:
+Upstream patches are absorbed **manually**:
 
-- security;
-- permissions;
-- DocType engine;
-- workflow;
-- scheduler/workers;
-- Desk/Workspace shell;
-- database support;
-- realtime;
-- performance.
+- **Security releases** — reviewed within 48 hours; cherry-picked into `friday/main` if Friday is affected.
+- **Bug fixes** — cherry-picked when Friday hits the same bug.
+- **Improvements** — reviewed quarterly; incorporated if they benefit Friday's substrate without conflicting with agent-native architecture.
+- **Major releases** (v17+) — project-level decision: plan migration, stay, or skip.
 
-Friday does not need to remain a drop-in-compatible Frappe distribution if that blocks the framework vision. However, every divergence should be documented with rationale so future engineers know whether to keep, revise, or remove it.
+There is no automatic sync. The Frappe bench ecosystem core moves slowly. Most upstream Frappe activity is in ERPNext and community apps, which Friday does not track.
+
+Every divergence is documented in `docs/core-divergences.md` so future engineers know what Friday changed and why.
 
 ---
 
@@ -147,7 +140,7 @@ ERPNext autonomous operations remains the north-star use case, but the first eng
 ## 8. Open Questions
 
 1. Which workflows deserve `friday` commands versus remaining plain `bench` commands?
-2. Which upstream Frappe version is the initial substrate: v15 for ecosystem stability or v16 for longer support and newer architecture?
+2. ~~Which upstream Frappe version is the initial substrate?~~ **Decided: Frappe v16 stable.**
 3. What is the minimum core patch set needed to make agents first-class without scattering Friday logic across the framework?
 4. What compatibility promise does Friday make to existing Frappe apps?
 5. Should the public name be "Friday Framework" while the hosted product remains "FridayLabs"?
@@ -156,6 +149,4 @@ ERPNext autonomous operations remains the north-star use case, but the first eng
 
 ## 9. Summary
 
-Friday is a Frappe-derived agentic framework.
-
-Frappe supplies the proven enterprise substrate. Hermes and OpenClaw supply agentic runtime patterns. Friday's job is to fuse them into a coherent framework where agents are governed business actors, not loose scripts with chat attached.
+Friday is an agentic framework. Under the hood it runs on a hard fork of Frappe v16 stable, retaining the full bench ecosystem. Agent-native primitives — actor context, execution trace, governed skill dispatch, sandbox execution — are built directly into framework core. Frappe supplies the proven enterprise substrate. Friday adds the governed-agent layer the enterprise ecosystem doesn't yet have.

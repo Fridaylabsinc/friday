@@ -1,8 +1,8 @@
-# Friday — A Frappe-Derived Agentic Framework, Made in India
+# Friday — An Agentic Framework Built on Frappe, Made in India
 
-> **Tagline:** Enterprise agentic intelligence, governed by a Frappe-derived backbone — for Indian growing businesses, by Indian builders.
+> **Tagline:** Enterprise agentic intelligence, powered by a Frappe v16 engine — for Indian growing businesses, by Indian builders.
 
-Friday is an open-source, Frappe-derived agentic framework that re-engineers proven agent patterns (Hermes by Nous Research, OpenClaw) into an enterprise application substrate. The goal is enterprise-grade agent governance — role-based permissions, audit trails, sandboxing, structured skill schemas — that today's agent frameworks lack out of the box.
+Friday is an open-source agentic framework that runs on a hard fork of Frappe v16 stable, re-engineering proven agent patterns (Hermes by Nous Research, OpenClaw) into an enterprise application substrate. Agent-native primitives — actor identity, execution trace, governed skill dispatch, sandboxed execution — are built directly into framework core, not bolted on as apps. The goal is enterprise-grade agent governance — role-based permissions, audit trails, sandboxing, structured skill schemas — that today's agent frameworks lack out of the box.
 
 **The mission:** every Indian SMB owner gets a back-office team that never sleeps, runs on their ERPNext, and operates within auditable boundaries.
 
@@ -100,14 +100,14 @@ Documents that guide any AI coding agent (Claude Code, Cursor, Aider, etc.) thro
 | 42 | [Phase One Authority Contract](./42-phase-one-authority-contract.md) | Single source of truth for Friday v0.1 scope |
 | 43 | [Control Room Product Spec](./43-control-room-product-spec.md) | Operator-facing trust UX: live activity, approvals, replay, pause/revoke |
 | 44 | [Technical Feasibility Spike](./44-technical-feasibility-spike.md) | Timeboxed stack decisions before Phase 1 implementation |
-| 45 | [Fork Policy](./45-fork-policy.md) | Discipline for Frappe-derived core divergence and upstream updates |
+| 45 | [Fork Policy](./45-fork-policy.md) | Hard fork of Frappe v16: what lives in core, patch discipline, manual upstream policy |
 
 ---
 
 ## Quick Summary
 
 **What Friday is:**
-- A Frappe-derived agentic framework, made in India
+- An agentic framework running on a hard fork of Frappe v16 stable, made in India
 - Re-implements Hermes/OpenClaw patterns inside a governed enterprise substrate
 - Framework-first from day one: bench-aware Friday agent commands, Friday Control Room, agent-native primitives
 - Turns Hermes-style multi-agent Kanban into flexible Frappe workflows: Kanban is a view, not the workflow

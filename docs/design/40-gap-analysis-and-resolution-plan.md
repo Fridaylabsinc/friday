@@ -63,7 +63,7 @@ Doc `39` now states the strategy, but implementation needs concrete fork rules:
 
 **Resolution needed:** Add `FORK_POLICY.md` or a dedicated section in the Phase 1 contract.
 
-**Recommended decision:** Thin core divergence, app/module-heavy implementation. Modify framework core only for agent-native identity, audit, permission, workflow, job, trace, or product-shell behavior that cannot be safely implemented as modules.
+**Decision:** Hard fork of Frappe v16 stable. Friday IS the fork — the Friday repository begins from Frappe v16 and develops the agentic framework directly in core. The full bench ecosystem is retained. Agent-native primitives (actor context, trace propagation, audit hooks, sandboxed execution) are built into framework core, not as removable modules. Domain features (ERPNext, Raven, memory, analytics) live in Friday apps. Upstream Frappe patches are applied manually when needed. See `45-fork-policy.md` for operating rules.
 
 ---
 
@@ -175,6 +175,6 @@ Completed:
 
 Friday should be understood as:
 
-> A Frappe-derived framework for governed AI agents, with a control-room product surface and ERPNext operations as the first flagship use case.
+> Friday is an agentic framework that runs on a hard fork of Frappe v16 stable, with the full bench ecosystem intact, agent-native primitives built into core, and ERPNext operations as the first flagship use case delivered through a Friday app.
 
 This framing preserves the ambition while giving implementation a sane starting point.

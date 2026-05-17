@@ -2,14 +2,14 @@
 
 ## Build Strategy
 
-Friday is built as a **Frappe-derived framework** with a strong app/module boundary. Early development may still use Frappe app mechanics internally, but the product must feel like Friday from day one: Friday CLI, Friday Control Room, and agent-native primitives.
+Friday is a framework built on a **hard fork of Frappe v16 stable**. The Friday repository starts from Frappe v16 and develops agent-native primitives directly in core. The full bench ecosystem is retained. Domain capabilities live in Friday apps.
 
 The strategy is:
 
-- Start from Frappe source and preserve its proven substrate where it serves Friday.
-- Add or wrap framework-level behavior only where agents need first-class support.
-- Keep domain capabilities as Friday apps/modules so the core does not become unmaintainable.
-- Periodically review upstream Frappe releases and selectively merge security, performance, permission, workflow, worker, and Desk improvements.
+- Fork Frappe v16 stable as the starting point. Friday develops on that fork.
+- Build agent-native primitives (actor context, trace, audit hooks, sandboxed execution) directly into framework core — not as bolt-on apps.
+- Keep domain capabilities (ERPNext operations, Raven, memory, analytics) as Friday apps so core stays focused.
+- Manually absorb upstream Frappe patches when relevant — security releases within 48 hours, other improvements as needed.
 
 See `39-friday-framework-strategy.md` for fork discipline, `41-porting-strategy-hermes-erpnext-raven.md` for the workflow/Kanban translation, and `42-phase-one-authority-contract.md` for v0.1 scope.
 
@@ -17,7 +17,7 @@ See `39-friday-framework-strategy.md` for fork discipline, `41-porting-strategy-
 
 | Layer | Owns |
 |---|---|
-| Friday Framework Core | Frappe-derived runtime, CLI wrapper, site/app lifecycle, Desk shell, auth, DocTypes, permissions, workflows, jobs, files, realtime |
+| Friday Framework Core | Frappe v16 fork — runtime, bench/site/app lifecycle, Desk shell, auth, DocTypes, permissions, workflows, jobs, files, realtime, agent-native primitives |
 | Friday Agent Kernel | Agent Profile, Agent Role Profile, Skill, Execution Log, Permission Decision Log, Workflow Request, Gateway, Dispatcher, Sandbox, LLM Provider |
 | Friday Apps | ERPNext operations, Raven bridge, memory/wiki, analytics, specialist agents, auto-research, multi-site communication |
 
@@ -25,7 +25,7 @@ See `39-friday-framework-strategy.md` for fork discipline, `41-porting-strategy-
 
 ```
 friday/                                  ← framework repo root
-├── framework/                           ← Frappe-derived substrate (kept close to upstream where possible)
+├── framework/                           ← Frappe v16 fork (Friday develops here; agent-native patches documented in docs/core-divergences.md)
 ├── friday/
 │   ├── __init__.py
 │   ├── hooks.py                         ← app-level hooks (events, scheduler, fixtures)

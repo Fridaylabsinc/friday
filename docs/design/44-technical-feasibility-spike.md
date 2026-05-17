@@ -22,14 +22,14 @@ The cost of a spike is days. The cost of discovering these problems mid-implemen
 
 | # | Decision | Default if spike fails to resolve |
 |---|---|---|
-| D1 | Frappe v15 vs v16 substrate | v15 (ecosystem maturity wins) |
+| D1 | Frappe v15 vs v16 substrate | **v16 stable — decided. Friday forks Frappe v16.** |
 | D2 | PostgreSQL vs MariaDB | MariaDB (Frappe default; defer pgvector) |
 | D3 | Raven inclusion in v0.1 | Excluded; CLI-first; bridge in v0.2 |
 | D4 | ERPNext as dependency vs ported DocTypes | Ported DocTypes (Friday-native) |
 | D5 | CLI strategy: extend bench vs wrap bench vs new entrypoint | Extend bench with `friday` command group |
 | D6 | LLM provider abstraction first vs single provider first | Single provider (Anthropic) with abstraction interface |
 | D7 | Sandbox backend: Docker vs alternative | Docker; gVisor/Firecracker deferred per doc 42 §5 |
-| D8 | Friday repo: fork Frappe vs custom app + minimal kernel | Fork required if v0.1 needs to modify Frappe core for actor context, trace propagation, or product shell |
+| D8 | Friday repo: fork Frappe vs custom app + minimal kernel | **Fork — decided. Friday IS a hard fork of Frappe v16 stable. No app-only path. Bench ecosystem retained. Agent-native primitives in core.** |
 
 Each decision must produce a recorded outcome with rationale, even if the outcome is "stay with the default."
 
@@ -153,23 +153,21 @@ Test: a skill that tries to escape (mounts /, opens network, forks bombs). All s
 
 Doc 42 §5 minimum bar applies. Hardened sandbox (warm pool, egress allowlist, etc.) is explicitly out of scope for the spike.
 
-### D8 — Fork Necessity
+### D8 — Fork Strategy
 
-This is the most strategic decision. The spike must answer: **can v0.1 be built without modifying Frappe core source?**
+**Decided: Friday is a hard fork of Frappe v16 stable. This is not a spike question.**
 
-Test each of these requirements in the spike app:
+The Friday repository starts from the Frappe v16 stable tag. Agent-native primitives — actor context propagation, trace ID propagation, audit hooks, agent-scoped auth — are built directly into core. The bench ecosystem is fully retained. There is no app-only path.
 
-- Actor context propagation across request → background job → sandbox (does Frappe's existing user context handle agent identity?)
-- Trace ID propagation from gateway → execution → audit (can Frappe hooks emit consistent trace IDs without core changes?)
-- Friday Control Room workspace as default landing (achievable via Frappe Workspace customization without core change?)
-- Permission check before background job dispatch (achievable via hooks?)
-- Bench command extension via `friday` namespace (achievable via app commands?)
+The spike still validates the five technical requirements to confirm that the planned core modifications are sufficient and correctly scoped:
 
-If all five are achievable as app/module work: Friday starts as a Frappe app, not a fork. Doc 39's framework feel comes through Workspace branding and CLI extensions, with no core modification required for v0.1.
+- Actor context propagation across request → background job → sandbox
+- Trace ID propagation from gateway → execution → audit
+- Friday Control Room workspace as default landing
+- Permission check before background job dispatch
+- Bench command extension via `friday` namespace
 
-If any of the five requires core modification: Friday begins as a Frappe-derived fork with a documented, minimal patch set. Doc 45 (Fork Policy) governs the discipline.
-
-This is a real fork-or-not decision and the spike's most important job is making it correctly.
+The question is not "do we fork?" — that is answered. The question is "where exactly in core do these changes land, and are there surprises?" See `45-fork-policy.md` for the operating discipline.
 
 ---
 

@@ -1,257 +1,160 @@
 # 45 — Fork Policy
 
-> **Purpose:** Define the discipline by which Friday derives from Frappe Framework source without becoming an unmaintainable private fork. Doc 39 declares Friday "Frappe-derived"; this document is the operating manual for what that means in practice over time.
+> **Purpose:** Define how Friday develops on its Frappe v16 fork — what we freely change in core, what we keep stable, and how we manually absorb upstream Frappe patches when needed.
 
 ---
 
-## 1. The Risk Being Managed
+## 1. The Architectural Decision
 
-Forking an active upstream framework is one of the most common ways open-source projects collapse over five years:
+**Friday is a framework. Under the hood it runs on a hard fork of Frappe v16 stable.**
 
-- The fork accumulates local modifications scattered through dozens of files.
-- Upstream releases become harder and harder to merge.
-- After 18 months, the maintainer can no longer cleanly absorb upstream security fixes.
-- After 36 months, the fork is effectively a private framework with no upstream relationship.
-- Contributors fork ecosystems, not codebases — they will not join a project whose foundation is a slow-drifting fork.
+This is not a conditional decision pending a spike. It is the starting point.
 
-Friday's vision (per doc 39) requires some Frappe-derived feel from day one. The risk is that "framework feel" becomes "framework rewrite by accident."
+What this means concretely:
 
-This document prevents that.
+- The Friday repository **is** a fork of `frappe/frappe` at the Frappe v16 stable tag.
+- Friday development happens directly on that fork — agent-native primitives are built into core, not bolted on top.
+- The Frappe **bench ecosystem is fully retained**: `bench init`, `bench new-site`, apps, migrations, site operations, and the full Frappe app developer experience all work exactly as they do in upstream Frappe.
+- Frappe's runtime substrate is preserved: DocTypes, ORM, permissions, workflows, scheduler, RQ workers, files, realtime, Desk.
+- Friday adds agent identity, execution trace, governed skill dispatch, and sandbox execution as **first-class framework primitives** — not as a separate app layer that can be uninstalled.
+- Upstream Frappe improvements are absorbed **manually** when they are relevant — security patches, critical bug fixes, or improvements the Friday project wants. There is no automatic merge cadence.
 
----
-
-## 2. The Two-Path Decision (Set by the Spike)
-
-Doc 44 (Technical Feasibility Spike) decides whether Friday begins as:
-
-- **Path A — Frappe app + Workspace branding.** No fork of Frappe core. Friday is a custom app installed on standard Frappe, with deep Workspace customization for the Control Room and bench command extensions for the `friday` CLI.
-- **Path B — Friday-derived fork of Frappe.** Friday begins from Frappe source, applies a documented minimal patch set, and tracks upstream releases.
-
-If the spike chooses Path A, **this document still applies** as a forward-looking discipline in case future requirements force a partial fork later. Sections 5–10 become relevant only if Friday ever modifies Frappe core.
-
-If the spike chooses Path B, this document is operationally binding from day one.
+Users and developers interact with **Friday**. Frappe is the engine.
 
 ---
 
-## 3. The Forking Principle
+## 2. Why a Hard Fork
 
-> **Fork for identity and extension points. Do not fork into chaos.**
+Agents must be first-class actors in the permission engine, job system, audit layer, and request context. That requires modifying Frappe's core — not wrapping it from outside.
 
-Friday may modify Frappe core source only when:
+Trying to treat agents as first-class citizens through app/module hooks alone would mean:
 
-1. The behavior cannot be safely achieved as an app, module, hook, or DocType override.
-2. The behavior makes agents first-class actors in identity, permission, audit, workflow, or job execution.
-3. The benefit is universal across Friday — not specific to one feature or one customer.
-4. The maintainer has documented the rationale, the alternatives considered, and the upstream incompatibility this creates.
+- Fragile monkey-patching of framework internals from an app.
+- Agent context injected into request cycles through hacks rather than designed interfaces.
+- Two competing identities (Frappe user, Friday agent) with no coherent model in the permission engine.
+- A "Friday app" that modifies behavior Frappe didn't intend to expose — which is worse than an explicit fork because the surface is undocumented and fragile.
 
-Modifications that fail any of these tests belong in a Friday app, not in core.
+A hard fork is the honest position: Friday **is** a new framework. It starts from proven Frappe engineering and adds the governed-agent layer. The bench ecosystem is retained because it is excellent operational infrastructure. The core is ours.
+
+---
+
+## 3. What We Change in Core
+
+### First-class agent primitives (core modifications, always)
+
+- **Actor context propagation** — agent identity flows through request context, background jobs, and workflows alongside human user context.
+- **Trace ID propagation** — a consistent trace ID links: gateway event → permission check → job dispatch → sandbox execution → audit row.
+- **Audit hook surface** — framework-level hooks for `Permission Decision Log` and `Execution Log` emission, fired from the permission engine and job system.
+- **Agent-scoped API key authentication** — agent profiles authenticate via scoped API keys; the framework's auth layer understands agent vs human actor distinction.
+- **Friday shell** — default workspace, CLI entrypoint branding, and control-room navigation registered at the framework level.
+
+### Domain features (Friday apps, not core)
+
+- ERPNext Purchase Order automation
+- Raven War Room integration
+- pgvector memory and knowledge graph
+- Auto-research agents
+- Analytical and predictive agents
+- Multi-site ACP
+- Industry-specific skill templates
+
+The line: **framework identity and cross-cutting execution infrastructure live in core. Domain features live in Friday apps.**
 
 ---
 
 ## 4. Branch Strategy
 
-If Path B is chosen, the friday repository uses this branch model:
+```
+upstream/v16     ← read-only mirror of frappe/frappe v16 stable tag
+upstream/v16-sec ← read-only tracking branch for upstream security releases
+friday/main      ← Friday's main development branch (derived from upstream/v16)
+friday/release-X.Y
+```
 
-- `upstream/main` — read-only mirror of `frappe/frappe:develop` or the chosen Frappe branch
-- `upstream/v15` — read-only mirror of Frappe v15 branch
-- `upstream/v16` — read-only mirror of Frappe v16 branch (or whichever version the spike chose)
-- `friday/main` — Friday's main development branch
-- `friday/release-X.Y` — Friday release branches
-
-Friday changes never go on `upstream/*`. The `upstream/*` branches exist solely to make merging upstream releases tractable.
-
-Merging upstream into `friday/main` happens on a scheduled cadence (see §6), never ad-hoc, never silently.
+`upstream/*` branches exist solely to make manual patch review tractable. Friday development never happens on `upstream/*`.
 
 ---
 
-## 5. What May and May Not Be Modified in Core
+## 5. Upstream Patch Policy
 
-### Permitted (with documentation)
+Upstream Frappe patches are absorbed **manually and selectively**. There is no automatic sync.
 
-- **Actor context propagation** — making agent identity a first-class actor type across requests, jobs, and workflows
-- **Trace ID propagation** — assigning consistent trace IDs from request entry through to audit log
-- **Audit hook surface** — adding hook points for Permission Decision Log and Execution Log emission
-- **Workspace shell** — branding, default landing, navigation skeleton (when Frappe's existing Workspace API is insufficient)
-- **bench command namespace** — registering `friday` subcommand group (if Frappe's command extension API does not suffice)
-- **Permission check signature** — extending Frappe's permission check to receive agent context, only if app-level hooks cannot
-
-### Forbidden (or requires escalation)
-
-- **DocType engine internals** — never. Use DocType extension, not modification.
-- **ORM internals** — never. Use Frappe's existing extension surfaces.
-- **Database adapter code** — only via upstream contribution
-- **Authentication/session core** — only via documented extension API
-- **Frontend Desk JS core** — only via Workspace customization or app-level overrides
-- **Setup/install/migration logic** — only via app hooks
-- **Anything that breaks existing Frappe apps' compatibility** — never without explicit project-owner approval and a compatibility audit
-
-If a Friday feature seems to require a forbidden modification, that is a signal to redesign the feature, not to make the modification.
-
----
-
-## 6. Upstream Cadence
-
-Friday reviews upstream Frappe releases on a fixed cadence:
-
-| Cadence | Action |
+| Trigger | Action |
 |---|---|
-| **Within 48 hours of upstream security release** | Review CVE; if affected, prepare emergency merge or patch |
-| **Monthly** | Review upstream patch releases on the chosen Frappe version; merge into `friday/main` if no conflict |
-| **Quarterly** | Review upstream minor releases; plan integration if relevant |
-| **At each Frappe major release** | Project-level decision: stay on current major, plan migration, or skip |
+| Upstream security release (CVE) | Maintainer reviews within 48 hours; if Friday is affected, cherry-pick or reimplement the fix into `friday/main` |
+| Upstream bug fix we hit | Cherry-pick into `friday/main` when encountered |
+| Upstream performance or architectural improvement | Reviewed quarterly; incorporated if it benefits Friday's substrate |
+| Upstream feature | Incorporated only if Friday wants it and it doesn't conflict with agent-native architecture |
+| Upstream major release (v17+) | Project-level decision: plan migration, stay on current, or skip |
 
-Security releases are non-negotiable. Other releases follow the calendar.
-
-The maintainer documents each upstream review in a `docs/upstream-log.md` even if the conclusion is "skipped, not relevant to Friday's substrate."
+This is intentionally lightweight. The Frappe bench ecosystem moves slowly at the core level. Most upstream activity is in ERPNext and apps, which Friday does not track.
 
 ---
 
-## 7. Divergence Registry
+## 6. Divergence Registry
 
-If Path B is chosen, the repo maintains a living document: `docs/core-divergences.md`.
+The repo maintains `docs/core-divergences.md` — a living record of every place Friday's fork differs from the Frappe v16 base.
 
-Each modification to Frappe core gets one entry:
+Each entry:
 
 ```
 ## Divergence: <short name>
 
-- **File(s):** path/to/file.py:42-67, other/file.js:120
+- **File(s):** path/to/file.py:42-67
 - **Date:** YYYY-MM-DD
-- **Author:** name
-- **Why:** explanation
-- **Alternatives considered:** what app/module/hook paths were tried first and why they were insufficient
+- **Why:** what agent-native behavior this enables
 - **Upstream conflict risk:** Low / Medium / High
-- **Reversibility:** how hard would it be to remove this if upstream provides an extension point
 - **Tests:** which tests cover this divergence
 ```
 
-The registry is reviewed quarterly. Divergences with Low reversibility and Low upstream conflict that have lived for over 12 months are candidates for upstream contribution.
+Entries are added when a divergence lands. Reviewed quarterly for candidates to retire (upstream added an equivalent, or the feature was removed).
 
 ---
 
-## 8. Patch Discipline
+## 7. Patch Discipline
 
-If Path B is chosen, every core modification follows these rules:
+Every core modification:
 
-1. **Minimal scope.** Touch the smallest possible surface. A 3-line change is preferred over a 30-line refactor.
-2. **Documented in code.** Every modified line near a Friday divergence has a comment: `# friday-divergence: see docs/core-divergences.md#<name>`.
-3. **Tested.** The divergence has a test that asserts the Friday-specific behavior; if upstream removes/changes the surrounding code, the test fails loudly.
-4. **Tagged in git.** Every commit that modifies core has a `[friday-core]` prefix and references the divergence registry entry.
-5. **Reviewed.** No core modification merges without the project owner's explicit review and approval.
-
----
-
-## 9. App vs Core Decision Tree
-
-When a new Friday capability is proposed, decide where it lives by walking this tree:
-
-```
-1. Can it be a Friday app?
-   YES → Build as app. Stop.
-   NO → continue.
-2. Can it be implemented via a Frappe hook, override, or extension point?
-   YES → Build as app using that mechanism. Stop.
-   NO → continue.
-3. Can it be implemented by extending Workspace, command, or DocType primitives that already exist?
-   YES → Build as app. Stop.
-   NO → continue.
-4. Would the modification benefit all Friday features (not just this one)?
-   YES → continue.
-   NO → redesign feature to fit one of the above paths. Stop.
-5. Does the modification fall into the "Permitted" list in §5?
-   YES → propose as a core divergence. Document in the registry. Project owner review.
-   NO → redesign or escalate.
-```
-
-A clear default in this tree: ship as an app whenever possible.
+1. **Tagged in git.** Commit prefix `[friday-core]` with a reference to the divergence registry entry.
+2. **Marked in code.** A comment `# friday-core: <name>` on or near the changed lines.
+3. **Tested.** A test asserts the Friday-specific behavior; if upstream later changes the surrounding code, the test fails loudly.
+4. **Reviewed.** No core modification merges without project owner approval.
 
 ---
 
-## 10. Compatibility Promise
+## 8. What Stays Untouched
 
-Friday makes a public compatibility promise:
+These areas of Frappe core are not modified in Friday unless a critical security or correctness reason forces it:
 
-- **Existing Frappe apps installed on a Friday substrate should continue to work** unless they directly modify the same core surface Friday has modified.
-- **Friday will document any breaking changes** to Frappe's public APIs that Friday introduces.
-- **Friday will provide a migration guide** for each release that changes core behavior visible to apps.
+- DocType engine internals
+- ORM internals
+- Database adapter code
+- Setup / install / migration logic
+- Frontend Desk JS internals beyond workspace customization
 
-This promise is what lets community Frappe developers consider Friday seriously. Without it, Friday becomes a private framework with no ecosystem.
-
-If a Friday feature would require breaking this promise, the feature is redesigned. The promise is more valuable than the feature.
-
----
-
-## 11. Failure Modes to Prevent
-
-Common ways forks die. We name them explicitly:
-
-| Failure Mode | Prevention |
-|---|---|
-| **Scope creep into core** | Strict §5 list; require project owner approval for every core modification |
-| **Silent drift** | Divergence registry; quarterly review |
-| **Security lag** | 48-hour CVE response; monthly upstream review |
-| **App incompatibility** | Compatibility promise §10; CI tests against popular Frappe apps |
-| **Lost upstream relationship** | Annual review of upstream maintainer relationship; contribute back where divergences match upstream needs |
-| **Maintainer burnout** | Upstream cadence is calendar-driven, not on-demand; no heroics required |
+If a Friday feature seems to require touching these, redesign the feature first.
 
 ---
 
-## 12. Contributing Back Upstream
+## 9. Compatibility Promise
 
-Friday should actively contribute improvements back to Frappe when:
+Existing Frappe apps installed on a Friday site should continue to work unless they directly conflict with a Friday core divergence. Friday documents breaking changes to Frappe's public APIs and provides migration guidance per release.
 
-- A divergence solves a problem that other Frappe users also have
-- The divergence has stable design and would survive review
-- The Frappe maintainers signal interest
-
-This shrinks Friday's private patch set and strengthens the upstream relationship. Both sides benefit.
-
-The maintainer reviews the divergence registry quarterly and flags candidates for upstream PR.
+This promise is practical, not absolute. Friday is a new framework. If a Frappe app relies on an internal that Friday needs to change for agent-native reasons, Friday's framework needs win. The promise covers public APIs and expected behavior, not implementation internals.
 
 ---
 
-## 13. End-of-Life for Divergences
+## 10. Naming and Attribution
 
-A divergence is retired when:
+- The framework is called **Friday** in all user-facing material.
+- Documentation and the README acknowledge: "Friday is derived from Frappe Framework (https://github.com/frappe/frappe), distributed under GPL v3."
+- The Frappe NOTICE file is preserved and extended in Friday's repo.
+- Frappe Technologies and The Commit Company are credited as the upstream authors.
 
-- Upstream Frappe adds an equivalent extension point
-- The Friday feature requiring the divergence is removed
-- The divergence is contributed back to upstream and accepted
-
-Retired divergences are removed from the registry and from the codebase. A note remains in `docs/upstream-log.md` recording the date and reason.
-
----
-
-## 14. Naming
-
-If Path B is chosen and Friday distributes a Frappe-derived runtime:
-
-- The Friday distribution is called **Friday Framework** in user-facing material.
-- The upstream is called **Frappe Framework** in attribution and in all documentation acknowledging the substrate.
-- The Friday repo's README clearly states: "Friday is derived from Frappe Framework (https://github.com/frappe/frappe), distributed under GPL v3."
-- The Frappe NOTICE file content is preserved and extended, never removed.
-
-This is not optional. GPL v3 requires preservation of copyright and attribution, and good faith requires more.
+GPL v3 requires this. Good faith requires it too.
 
 ---
 
-## 15. Open Questions
+## 11. Summary
 
-1. If the spike chooses Path A (no fork), does this document still apply? Lean: archive sections 4–9 as "if needed later." Keep sections 1–3, 10–14 as standing principles.
-2. What is the upstream contribution etiquette specifically with Frappe Technologies and The Commit Company (now part of Frappe)? Establish direct relationship before contributing significant patches.
-3. Should Friday maintain a public list of "Frappe versions we test against"? Yes, in `docs/compatibility-matrix.md` once Path A or Path B is decided.
-4. How does the fork policy interact with FridayLabs SaaS distribution? FridayLabs runs Friday; the fork policy applies to the upstream relationship regardless of how FridayLabs distributes.
-
----
-
-## 16. Summary
-
-A fork dies by a thousand small cuts. This document tries to make every cut deliberate, documented, reversible, and rare.
-
-If Friday becomes a private framework that cannot absorb upstream Frappe improvements, the project has failed even if every product feature ships on time.
-
-The fork policy is therefore not bureaucracy. It is the discipline that lets Friday remain a framework that the Frappe community recognizes as one of their own — even as it adds the governed-agent layer they don't yet have.
-
----
-
-**This document is binding from the moment doc 44's spike chooses Path B. Until then, it is forward-looking guidance.**
+Friday forks Frappe v16 stable and develops the agentic framework directly in core. The bench ecosystem is kept intact. Agent-native primitives — actor context, trace propagation, audit hooks, sandboxed execution — are built into the framework, not bolted on. Upstream Frappe patches are applied manually when Friday needs them. The fork is the starting point, not a last resort.

@@ -1,6 +1,6 @@
 # 14 — Integrated Architecture: Friday Framework + Frappe Substrate + Raven + ERPNext Project/Task + Hermes
 
-> **Purpose:** Define how the foundational layers of Friday — **Frappe-derived framework substrate**, **Raven**, **ported ERPNext Project/Task/Issue**, and **Hermes' gateway/agent loop patterns** — fit together as one coherent system.
+> **Purpose:** Define how the foundational layers of Friday — **Frappe v16 fork as the framework engine**, **Raven**, **ported ERPNext Project/Task/Issue**, and **Hermes' gateway/agent loop patterns** — fit together as one coherent system.
 
 This document supersedes any earlier assumptions that Friday builds Project/Task/Issue from scratch or builds chat from scratch. The unified stack reuses battle-tested Frappe-ecosystem apps wherever possible and reserves custom code for what's genuinely new (the agentic layer).
 
@@ -10,12 +10,12 @@ This document supersedes any earlier assumptions that Friday builds Project/Task
 
 | Layer | Source | Role in Friday |
 |---|---|---|
-| **Friday Framework Core** | Frappe-derived source substrate | Foundation: DocTypes, permissions, workflows, real-time, scheduler, RQ, REST API, bench operations, Friday agent commands, control-room shell |
+| **Friday Framework Core** | Hard fork of Frappe v16 stable | Foundation: DocTypes, permissions, workflows, real-time, scheduler, RQ, REST API, bench ecosystem, Friday agent commands, agent-native core primitives, control-room shell |
 | **Raven** | `The-Commit-Company/raven` | Communication and War Room workspaces |
 | **Project + Task + Issue** | Ported from `frappe/erpnext` | Orchestration backbone for multi-agent work |
 | **Friday Core (Hermes-derived)** | New code, inspired by `NousResearch/hermes-agent` | Agent loop, gateway, skills, dispatcher, isolation |
 
-Friday is the assembly point and product identity. Frappe remains the proven substrate, but Friday owns the framework experience. Upstream Frappe improvements are reviewed and selectively merged where they strengthen Friday's core.
+Friday is the framework. The Friday repository is a hard fork of Frappe v16 stable — Frappe is the engine underneath. Upstream Frappe patches are absorbed manually when relevant (security, bug fixes, improvements). Agent-native primitives are built into core; domain features live in Friday apps.
 
 ---
 
@@ -364,7 +364,7 @@ These TODOs are noted explicitly to prevent silent guesses during implementation
 
 Friday is the **assembly** of:
 
-- **Friday Framework Core** for the Frappe-derived data, permission, workflow, bench operations, Friday agent commands, workspace, and real-time substrate
+- **Friday Framework Core** for the Frappe v16 fork engine: data, permission, workflow, bench operations, Friday agent commands, workspace, real-time, and agent-native core primitives
 - **Raven** for human-agent and agent-agent collaboration via War Rooms
 - **Ported Project / Task / Issue** for orchestration scaffolding
 - **Friday Core** for the agentic layer (gateway, dispatcher, skills, isolation, permission gate)
