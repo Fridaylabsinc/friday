@@ -90,7 +90,7 @@ Git:           2.40 or higher
 
 ```bash
 pip install frappe-bench
-bench init friday-bench --frappe-branch version-15 --python python3.11 --db-type postgres
+bench init friday-bench --frappe-branch version-16 --python python3.11 --db-type postgres
 cd friday-bench
 bench new-site friday.localhost --db-type postgres --admin-password [secure]
 bench --site friday.localhost set-config developer_mode 1
