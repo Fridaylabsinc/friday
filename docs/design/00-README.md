@@ -98,6 +98,9 @@ Documents that guide any AI coding agent (Claude Code, Cursor, Aider, etc.) thro
 | 40 | [Gap Analysis & Resolution Plan](./40-gap-analysis-and-resolution-plan.md) | Contradictions, missing decisions, and pre-implementation resolution order |
 | 41 | [Porting Strategy: Hermes, ERPNext, Raven](./41-porting-strategy-hermes-erpnext-raven.md) | Real-world Hermes Kanban lessons translated into Friday's workflow, profile, skill, and War Room strategy |
 | 42 | [Phase One Authority Contract](./42-phase-one-authority-contract.md) | Single source of truth for Friday v0.1 scope |
+| 43 | [Control Room Product Spec](./43-control-room-product-spec.md) | Operator-facing trust UX: live activity, approvals, replay, pause/revoke |
+| 44 | [Technical Feasibility Spike](./44-technical-feasibility-spike.md) | Timeboxed stack decisions before Phase 1 implementation |
+| 45 | [Fork Policy](./45-fork-policy.md) | Discipline for Frappe-derived core divergence and upstream updates |
 
 ---
 
@@ -133,7 +136,7 @@ Friday proves the governed framework loop, then uses it for the ERPNext Purchase
 
 **If you want the vision and why-Friday-exists:** Read 01, 02, 18, 39.
 
-**If you're an engineer implementing Phase 1:** Read 39, 40, 41, and 42 first, then 06, then 08-11 in order, then 14, 24, 30.
+**If you're an engineer implementing Phase 1:** Read 39, 40, 41, 42, 43, 44, and 45 first, then 06, then 08-11 in order, then 14, 24, 30.
 
 **If you're a security reviewer:** Read 04, 23, 24, 37.
 
@@ -151,9 +154,9 @@ Friday proves the governed framework loop, then uses it for the ERPNext Purchase
 
 All documents in this set are design specifications, not implementation manuals. They describe what Friday should be, how its parts fit together, and what trade-offs were considered. Implementation will inevitably surface details that require revisions; these documents will be updated as design contact with reality refines them.
 
-Documents 39, 40, 41, 42, 06, 11, and 19 are the most operationally precise (framework strategy, gap resolution, porting strategy, Phase 1 authority, scope, validation, metrics). Documents 12 onward represent design depth that informs Phase 1 priorities but extends into Phase 2-4 as noted in each.
+Documents 39, 40, 41, 42, 43, 44, 45, 06, 11, and 19 are the most operationally precise (framework strategy, gap resolution, porting strategy, Phase 1 authority, Control Room, feasibility spike, fork policy, scope, validation, metrics). Documents 12 onward represent design depth that informs Phase 1 priorities but extends into Phase 2-4 as noted in each.
 
-**Total content:** 42 design documents, ~9,000+ lines of markdown.
+**Total content:** 45 design documents, ~10,000+ lines of markdown.
 
 ---
 

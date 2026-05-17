@@ -146,34 +146,28 @@ Docs say GPL v3 now, AGPL v3 under consideration later.
 
 ## 3. Missing Documents
 
-The dossier should add these before implementation:
+The dossier has added the main authority documents. Remaining pre-implementation gap:
 
-1. `42-phase-one-authority-contract.md`
-   - Single source of truth for v0.1 scope.
-
-2. `43-control-room-product-spec.md`
-   - Operator-facing trust UX: permissions, live activity, approvals, audit replay, pause/revoke.
-
-3. `44-technical-feasibility-spike.md`
-   - Frappe version, DB, Raven, ERPNext, bench/Friday command strategy.
-
-4. `45-fork-policy.md`
-   - Core divergence rules and upstream update discipline.
-
-5. `docs/security-claims-audit.md`
+1. `docs/security-claims-audit.md`
    - Source verification for public claims about Hermes/OpenClaw/security posture.
+
+Completed:
+
+- `42-phase-one-authority-contract.md` — single source of truth for v0.1 scope.
+- `43-control-room-product-spec.md` — operator-facing trust UX: permissions, live activity, approvals, audit replay, pause/revoke.
+- `44-technical-feasibility-spike.md` — Frappe version, DB, Raven, ERPNext, bench/Friday command strategy.
+- `45-fork-policy.md` — core divergence rules and upstream update discipline.
 
 ---
 
 ## 4. Recommended Order of Work
 
-1. Write the Phase 1 Authority Contract.
-2. Run the technical feasibility spike.
-3. Write the Control Room product spec.
-4. Write the fork policy.
-5. Audit public security claims.
-6. Update downstream docs (`14`, `16`, `19`, `24`, `26`, `30`, `34`, `35`) to align with the authority contract.
-7. Only then start implementation.
+1. Run the technical feasibility spike using doc 44.
+2. Record spike decisions in `docs/decisions/spike-results.md`.
+3. Update doc 42 if the spike changes Raven, ERPNext, database, or fork assumptions.
+4. Audit public security claims.
+5. Update downstream docs (`14`, `16`, `19`, `24`, `26`, `30`, `34`, `35`) if the spike or authority contract changes them.
+6. Only then start implementation.
 
 ---
 
