@@ -162,12 +162,12 @@ Completed:
 
 ## 4. Recommended Order of Work
 
-1. Run the technical feasibility spike using doc 44.
-2. Record spike decisions in `docs/decisions/spike-results.md`.
-3. Update doc 42 if the spike changes Raven, ERPNext, database, or fork assumptions.
-4. Audit public security claims.
-5. Update downstream docs (`14`, `16`, `19`, `24`, `26`, `30`, `34`, `35`) if the spike or authority contract changes them.
-6. Only then start implementation.
+1. ~~Run the technical feasibility spike using doc 44.~~ **Done.**
+2. ~~Record spike decisions in `docs/decisions/spike-results.md`.~~ **Done — see `docs/decisions/spike-results.md`.**
+3. ~~Update doc 42 if the spike changes Raven, ERPNext, database, or fork assumptions.~~ **Done — doc 42 updated.**
+4. ~~Audit public security claims.~~ **Done — see `46-security-claims-audit.md`.**
+5. Update downstream docs (`14`, `16`, `19`, `24`, `26`, `30`, `34`, `35`) if needed.
+6. **Start implementation. ← We are here.**
 
 ---
 

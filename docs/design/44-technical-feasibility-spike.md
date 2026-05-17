@@ -20,18 +20,18 @@ The cost of a spike is days. The cost of discovering these problems mid-implemen
 
 ## 2. Decisions This Spike Must Resolve
 
-| # | Decision | Default if spike fails to resolve |
+| # | Decision | Outcome |
 |---|---|---|
-| D1 | Frappe v15 vs v16 substrate | **v16 stable — decided. Friday forks Frappe v16.** |
-| D2 | PostgreSQL vs MariaDB | MariaDB (Frappe default; defer pgvector) |
-| D3 | Raven inclusion in v0.1 | Excluded; CLI-first; bridge in v0.2 |
-| D4 | ERPNext as dependency vs ported DocTypes | Ported DocTypes (Friday-native) |
-| D5 | CLI strategy: extend bench vs wrap bench vs new entrypoint | Extend bench with `friday` command group |
-| D6 | LLM provider abstraction first vs single provider first | Single provider (Anthropic) with abstraction interface |
-| D7 | Sandbox backend: Docker vs alternative | Docker; gVisor/Firecracker deferred per doc 42 §5 |
-| D8 | Friday repo: fork Frappe vs custom app + minimal kernel | **Fork — decided. Friday IS a hard fork of Frappe v16 stable. No app-only path. Bench ecosystem retained. Agent-native primitives in core.** |
+| D1 | Frappe v15 vs v16 substrate | **v16 stable** |
+| D2 | PostgreSQL vs MariaDB | **PostgreSQL + pgvector** |
+| D3 | Raven inclusion in v0.1 | **Excluded — v0.2. CLI-first.** |
+| D4 | ERPNext as dependency vs ported DocTypes | **Not relevant this phase** |
+| D5 | CLI strategy | **Extend bench with `friday` command group** |
+| D6 | LLM provider abstraction | **Provider-agnostic from day one. Minimax as primary.** |
+| D7 | Sandbox backend | **Docker** |
+| D8 | Friday repo: fork vs app | **Hard fork of Frappe v16 stable** |
 
-Each decision must produce a recorded outcome with rationale, even if the outcome is "stay with the default."
+All decisions resolved. See `docs/decisions/spike-results.md` for full rationale.
 
 ---
 
