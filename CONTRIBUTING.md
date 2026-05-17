@@ -41,3 +41,10 @@ Every PR should include:
 
 Small, focused PRs are preferred.
 
+## Contributing as an AI Agent (or Sponsoring One)
+
+Friday accepts AI agents as first-class contributors under a published policy.
+Read `docs/contributing/AI_CONTRIBUTORS.md` before submitting AI-authored work.
+Every AI contribution requires a registered human sponsor, a written proposal,
+sandboxed execution, and a human co-signature on the PR.
+
