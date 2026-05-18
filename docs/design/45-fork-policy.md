@@ -6,20 +6,57 @@
 
 ## 1. The Architectural Decision
 
-**Friday is a framework. Under the hood it runs on a hard fork of Frappe v16 stable.**
+**Friday is a framework. Under the hood it runs on a hard fork of Frappe v16 stable. Today.**
 
-This is not a conditional decision pending a spike. It is the starting point.
+This is not a conditional decision pending a spike. It is the starting point — but it is intentionally architected to preserve optionality. Frappe is the substrate we leverage now. The agent governance model, contributor model, and Friday's identity are designed to outlive any single substrate.
 
-What this means concretely:
+### Two-Repo Topology
 
-- The Friday repository **is** a fork of `frappe/frappe` at the Frappe v16 stable tag.
-- Friday development happens directly on that fork — agent-native primitives are built into core, not bolted on top.
+Friday lives across two GitHub repositories:
+
+| Repo | Role | Lifecycle |
+|---|---|---|
+| `Friday-Labs-Inc/frappe` | Friday's hard fork of Frappe v16 stable. Agent-native core primitives (actor context, trace propagation, audit hooks, agent-scoped auth) are patched directly into this fork. | Independent — we cherry-pick from upstream Frappe selectively per §5. |
+| `Friday-Labs-Inc/friday` | Friday's agent kernel app + design docs + governance + contributor policies + scripts. Slice 1 onward, agent kernel modules live here. | Independent — evolves with Friday's roadmap, not Frappe's. |
+
+Both repos are public, GPL v3, and contribute to the same `friday-bench` at runtime — but they are not entangled at the git level.
+
+### Why Two Repos, Not One
+
+Two repos cost slightly more operational glue today but preserve the path to **Friday's own kernel later.** If the community evolves Friday toward an agent-native runtime that doesn't need Frappe as substrate (software 3.0: vector-first storage, ambient UX, dedicated agent runtimes), the agent kernel repo can be ported. With a merged repo, that future requires git surgery on hundreds of MB of Frappe history.
+
+The architectural promise: *Friday's agent governance model is portable. The Frappe substrate is what we use today.*
+
+### What "Friday IS the fork" Means In Practice
+
+- The Friday framework (the `Friday-Labs-Inc/frappe` fork) **is** a hard fork of `frappe/frappe` at the Frappe v16 stable tag.
+- Friday's core team develops directly on that fork — agent-native primitives are built into core, not bolted on top.
 - The Frappe **bench ecosystem is fully retained**: `bench init`, `bench new-site`, apps, migrations, site operations, and the full Frappe app developer experience all work exactly as they do in upstream Frappe.
 - Frappe's runtime substrate is preserved: DocTypes, ORM, permissions, workflows, scheduler, RQ workers, files, realtime, Desk.
-- Friday adds agent identity, execution trace, governed skill dispatch, and sandbox execution as **first-class framework primitives** — not as a separate app layer that can be uninstalled.
+- Friday adds agent identity, execution trace, governed skill dispatch, and sandbox execution as **first-class framework primitives** — not as a separate app layer that can be uninstalled. They live in the framework fork, not the kernel app.
+- Domain features (Agent Profile DocType, Skill DocType, Execution Log, etc.) live in the `friday` agent kernel app — installable on any site running the Friday framework.
 - Upstream Frappe improvements are absorbed **manually** when they are relevant — security patches, critical bug fixes, or improvements the Friday project wants. There is no automatic merge cadence.
 
 Users and developers interact with **Friday**. Frappe is the engine.
+
+### Every Site Is An Agentic Deployment
+
+The two-repo layout would normally require two install steps when provisioning a site:
+
+```bash
+bench new-site mybusiness.localhost
+bench --site mybusiness.localhost install-app friday
+```
+
+That friction is unacceptable for a framework that calls itself "agentic." Friday eliminates it with a bench wrapper:
+
+```bash
+bench friday-new-site mybusiness.localhost
+```
+
+Internally this runs both commands — provisioning a site and installing the agent kernel app in one step. From the operator's point of view, **every new site is automatically an agentic deployment.** This matches the UX of a single-repo framework while preserving the architectural cleanliness of two repos.
+
+The wrapper is defined as a custom bench command shipped with the agent kernel app. See `CODEX.md` §4 for the implementation specification.
 
 ---
 

@@ -104,12 +104,39 @@ CREATE EXTENSION IF NOT EXISTS vector;
 CREATE EXTENSION IF NOT EXISTS pg_trgm;
 ```
 
-### 4.4 Create the Friday App
+### 4.4 Create the Friday Agent Kernel App
+
+The agent kernel lives in a separate repo (`Friday-Labs-Inc/friday`) from the framework fork (`Friday-Labs-Inc/frappe`). See `docs/design/45-fork-policy.md` §1 for why.
 
 ```bash
 bench new-app friday
 bench --site friday.localhost install-app friday
 ```
+
+After Slice 1 lands the kernel scaffolding, point this new app's git remote at `Friday-Labs-Inc/friday`:
+
+```bash
+cd apps/friday
+git remote add origin https://github.com/Friday-Labs-Inc/friday.git
+git fetch origin
+# subsequent commits push to this repo
+```
+
+### 4.4a Implement the `bench friday-new-site` wrapper (Slice 1 task)
+
+To honor the architectural promise that every new site is automatically agentic, the agent kernel app ships a custom bench command that wraps `bench new-site` and `install-app friday` into one step:
+
+```bash
+bench friday-new-site mybusiness.localhost --admin-password <secure>
+```
+
+Implementation: register a Click command in `apps/friday/friday/commands.py` and wire it into bench via `apps/friday/friday/hooks.py` (Frappe exposes `app/commands.py` to bench's command discovery). The command:
+
+1. Calls `frappe.commands.site.new_site` programmatically with the user's options
+2. After the site exists, calls `install_app` for `friday`
+3. Optionally runs first-boot configuration (default Agent Role Profiles, default Skills marked `Active`)
+
+Tests: a Slice 9 test asserts `bench friday-new-site test.localhost` produces a site with the Friday app installed and the default Agent Role Profile present.
 
 ### 4.5 Verify Setup
 
