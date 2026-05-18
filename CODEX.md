@@ -60,29 +60,46 @@ Before writing any code, set up the local development environment.
 
 ### 4.1 System Requirements
 
+Verified working combination (see `docs/project/IMPLEMENTATION_LOG.md` for the discovery trail):
+
 ```
-Python:       3.11 or higher
-Node.js:      18 LTS or higher
-PostgreSQL:   15 or higher with pgvector extension
+Python:       3.14   (Frappe v16 version-16 branch requires >=3.14,<3.15)
+Node.js:      24 LTS (frontend yarn install fails on Node 22 and older)
+PostgreSQL:   15+ with pgvector (PG 18.3 confirmed working)
 Redis:        7 or higher
-Docker:       24 or higher (daemon must be running)
+Docker:       24 or higher (daemon running)
 Git:          2.40 or higher
+Bench:        5.29.1 or compatible
 ```
+
+**Heads-up:** if your machine has a Conda base environment active, deactivate it before running `bench init`. Conda's compilers cause the `mysqlclient` native build to fail in subtle ways.
 
 ### 4.2 Install Bench and Initialize
 
 ```bash
 pip install frappe-bench
-bench init friday-bench --frappe-branch version-16 --python python3.11 --db-type postgres
+
+# bench 5.x init does NOT accept --db-type; set the db type on the site instead.
+bench init friday-bench --frappe-branch version-16 --python python3.14
+
 cd friday-bench
+
+# If PostgreSQL is on a non-default port (commonly 5433 when 5432 is held by Docker):
+bench set-config -g db_host 127.0.0.1
+bench set-config -g db_port 5433
+
+# bench new-site for postgres first connects to a maintenance DB matching the root username.
+# If you see "database <name> does not exist", create it once and retry:
+#   sudo -u postgres createdb <root-username>
 bench new-site friday.localhost --db-type postgres --admin-password admin
+
 bench --site friday.localhost set-config developer_mode 1
 ```
 
 ### 4.3 Enable PostgreSQL Extensions
 
 ```sql
--- Run as PostgreSQL superuser on the friday.localhost database
+-- Run on the friday.localhost database
 CREATE EXTENSION IF NOT EXISTS vector;
 CREATE EXTENSION IF NOT EXISTS pg_trgm;
 ```
@@ -98,8 +115,9 @@ bench --site friday.localhost install-app friday
 
 ```bash
 bench --site friday.localhost migrate       # must run clean
-bench --site friday.localhost run-tests --app friday   # must pass (zero tests = OK at start)
-bench start                                 # Desk must load at http://friday.localhost:8000
+bench --site friday.localhost run-tests --app friday   # zero tests = OK at start
+source ~/.nvm/nvm.sh && nvm use 24          # activate Node 24 before bench start
+bench start                                 # Desk loads at http://friday.localhost:8000
 ```
 
 ---

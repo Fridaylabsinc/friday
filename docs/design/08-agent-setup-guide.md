@@ -78,23 +78,42 @@ The agent must verify or set up the following before any code is written:
 ### 2.1 System Prerequisites
 
 ```
-Python:        3.11 or higher
-Node.js:       18 LTS or higher
-PostgreSQL:    15 or higher with pgvector extension
+Python:        3.14 (Frappe v16's version-16 branch requires >=3.14,<3.15)
+Node.js:       24 LTS (Frappe v16 frontend requires Node >=24; older versions fail yarn install)
+PostgreSQL:    15+ with pgvector extension (PG 18 confirmed working)
 Redis:         7 or higher
 Docker:        24 or higher with running daemon
 Git:           2.40 or higher
 ```
 
+**Verified working combination (from `docs/project/IMPLEMENTATION_LOG.md` 2026-05-18):**
+- Python 3.14.4
+- Node 24.15.0 / npm 11.12.1 / yarn 1.22.22
+- PostgreSQL 18.3 with pgvector 0.8.1 and pg_trgm 1.6
+- Frappe 16.18.2 / Bench 5.29.1
+
 ### 2.2 Frappe Bench
 
 ```bash
 pip install frappe-bench
-bench init friday-bench --frappe-branch version-16 --python python3.11 --db-type postgres
+
+# Note: bench 5.x init does NOT support --db-type; set the db type on the site instead.
+bench init friday-bench --frappe-branch version-16 --python python3.14
+
 cd friday-bench
+
+# If PostgreSQL is on a non-default port (e.g. 5433 because 5432 is held by Docker):
+bench set-config -g db_host 127.0.0.1
+bench set-config -g db_port 5433
+
 bench new-site friday.localhost --db-type postgres --admin-password [secure]
 bench --site friday.localhost set-config developer_mode 1
 ```
+
+**Gotchas captured during initial setup (see IMPLEMENTATION_LOG.md):**
+- If a Conda base environment is active, deactivate it before `bench init` — Conda's compilers break the `mysqlclient` native build.
+- `bench new-site` with `--db-type postgres` first connects to a maintenance database named after the root login. Create it manually if missing (`createdb <rolename>`).
+- Activate Node 24 in every shell before `bench start` or any frontend command: `source ~/.nvm/nvm.sh && nvm use 24`.
 
 ### 2.3 PostgreSQL Extensions
 
