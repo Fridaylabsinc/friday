@@ -1,0 +1,189 @@
+# Friday Implementation Log
+
+This file tracks setup and implementation progress for the Friday repository.
+Keep entries append-only where practical: add new dated notes instead of rewriting
+history, except for correcting factual mistakes.
+
+## 2026-05-18
+
+### Environment Setup
+
+- Host OS confirmed as Ubuntu 26.04.
+- PostgreSQL was not installed initially.
+- Installed native PostgreSQL from Ubuntu packages:
+  - `postgresql`
+  - `postgresql-18-pgvector`
+- PostgreSQL version installed: 18.3.
+- PostgreSQL service is enabled and active.
+- PostgreSQL cluster `18/main` is online on port `5433`.
+- Port `5432` is already occupied by Docker Desktop (`com.docker.back`), so Friday setup should use PostgreSQL port `5433`.
+- `pgvector` and `pg_trgm` are available to install into databases:
+  - `vector` default version 0.8.1
+  - `pg_trgm` default version 1.6
+- The `friday.localhost` PostgreSQL database does not exist yet, so database extensions were not created yet.
+
+### Database Auth Notes
+
+- Existing PostgreSQL role: `postgres`.
+- No password was set for the `postgres` database role during installation.
+- Local socket access uses peer authentication.
+- TCP access on `127.0.0.1` requires `scram-sha-256` password authentication.
+- Recommended later: create a dedicated Friday database user instead of using the `postgres` superuser.
+
+### Bench Setup Findings
+
+- Installed Bench version observed: 5.29.1.
+- `bench init` in this version does not support `--db-type`.
+- Attempted command:
+
+  ```bash
+  bench init friday-bench --frappe-branch version-16 --python python3.11
+  ```
+
+- The attempt failed during Frappe editable install because current Frappe `version-16` declares:
+
+  ```text
+  requires-python = ">=3.14,<3.15"
+  ```
+
+- The failure was caused by Python 3.12+ syntax in Frappe being parsed by Python 3.11:
+
+  ```python
+  type ConfType = _dict[str, Any]
+  ```
+
+- Python 3.14 is available on the host:
+
+  ```text
+  /usr/bin/python3.14
+  Python 3.14.4
+  ```
+
+- Retried Bench initialization with Python 3.14:
+
+  ```bash
+  bench init friday-bench --frappe-branch version-16 --python python3.14
+  ```
+
+- The retry passed the Python syntax requirement but failed while building Frappe's `mysqlclient==2.2.7` dependency.
+- The system MySQL development package is already installed and provides the missing header:
+
+  ```text
+  libmysqlclient-dev: /usr/include/mysql/udf_registration_types.h
+  ```
+
+- Root cause found: the active Conda base environment is exporting Conda compilers:
+
+  ```text
+  CONDA_PREFIX=/home/friday/conda
+  CC=/home/friday/conda/bin/x86_64-conda-linux-gnu-cc
+  CXX=/home/friday/conda/bin/x86_64-conda-linux-gnu-c++
+  ```
+
+- This causes the native `mysqlclient` build to use Conda's compiler/sysroot instead of the normal Ubuntu compiler environment.
+- `bench set-config` failed inside the partial bench because Frappe was not installed:
+
+  ```text
+  ModuleNotFoundError: No module named 'frappe'
+  ```
+
+- After deactivating Conda and retrying with Python 3.14, Frappe Python dependencies installed successfully, but `yarn install --check-files` failed because Node was too old:
+
+  ```text
+  error frappe-framework@: The engine "node" is incompatible with this module.
+  Expected version ">=24". Got "22.22.2"
+  ```
+
+- Installed Node 24 with `nvm` and set it as the default:
+
+  ```text
+  Node.js v24.15.0
+  npm 11.12.1
+  yarn 1.22.22
+  ```
+
+- Bench initialization succeeded after activating Node 24:
+
+  ```bash
+  source ~/.nvm/nvm.sh
+  nvm use 24
+  bench init friday-bench --frappe-branch version-16 --python python3.14
+  ```
+
+- Result:
+
+  ```text
+  SUCCESS: Bench friday-bench initialized
+  ```
+
+- Verified the bench virtual environment:
+
+  ```text
+  Python 3.14.4
+  Frappe 16.18.2
+  ```
+
+- `bench new-site --help` confirms this Bench version supports PostgreSQL site creation with:
+
+  ```text
+  --db-type [mariadb|postgres|sqlite]
+  --db-host TEXT
+  --db-port INTEGER
+  --db-root-username TEXT
+  --db-root-password TEXT
+  --db-socket TEXT
+  ```
+
+- Non-interactive shells still need an explicit `nvm use 24` before commands that run Frappe's frontend build.
+
+### Next Actions
+
+- Create a PostgreSQL role for the Linux `friday` user so local peer authentication can create the site without storing a database root password.
+- Create the Friday site using PostgreSQL on port `5433`.
+- After the `friday.localhost` database exists, enable:
+
+  ```sql
+  CREATE EXTENSION IF NOT EXISTS vector;
+  CREATE EXTENSION IF NOT EXISTS pg_trgm;
+  ```
+
+### Site Creation
+
+- First PostgreSQL site creation attempt failed because TCP auth to `127.0.0.1:5433` requires a password.
+- Set a local-development password on the `friday` PostgreSQL role.
+- Second attempt failed because Frappe's PostgreSQL setup first connects to a maintenance database matching the root login name; database `friday` did not exist.
+- Created maintenance database `friday` owned by role `friday`.
+- Removed the partial `sites/friday.localhost` directory left by the failed attempt.
+- Created site `friday.localhost` successfully using PostgreSQL:
+
+  ```text
+  db_type = postgres
+  db_host = 127.0.0.1
+  db_port = 5433
+  ```
+
+- Enabled required extensions in the generated site database:
+
+  ```text
+  pg_trgm 1.6
+  vector 0.8.1
+  ```
+
+- Ran migration successfully:
+
+  ```bash
+  bench --site friday.localhost migrate
+  ```
+
+- Enabled developer mode for the site:
+
+  ```text
+  developer_mode = 1
+  ```
+
+## Log Maintenance
+
+- Add a new dated section whenever setup, implementation, validation, or a blocker changes.
+- Record exact commands only when they affect future reproducibility.
+- Record blockers with the observed error, root cause, and next action.
+- Do not place secrets, passwords, API keys, or tokens in this file.
