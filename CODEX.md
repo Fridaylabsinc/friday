@@ -104,39 +104,22 @@ CREATE EXTENSION IF NOT EXISTS vector;
 CREATE EXTENSION IF NOT EXISTS pg_trgm;
 ```
 
-### 4.4 Create the Friday Agent Kernel App
+### 4.4 The Friday Kernel — Already Present
 
-The agent kernel lives in a separate repo (`Friday-Labs-Inc/friday`) from the framework fork (`Friday-Labs-Inc/frappe`). See `docs/design/45-fork-policy.md` §1 for why.
+There is **no separate "Friday app" to create**. The Friday repository IS the kernel — a hard fork of Frappe v16 with agent-native modifications. See `docs/design/45-fork-policy.md` §1.
 
-```bash
-bench new-app friday
-bench --site friday.localhost install-app friday
-```
-
-After Slice 1 lands the kernel scaffolding, point this new app's git remote at `Friday-Labs-Inc/friday`:
+After `bench init friday-bench --frappe-branch version-16 --python python3.14`, point `apps/frappe` at the Friday kernel:
 
 ```bash
-cd apps/friday
-git remote add origin https://github.com/Friday-Labs-Inc/friday.git
+cd friday-bench/apps/frappe
+git remote set-url origin https://github.com/Friday-Labs-Inc/friday.git
 git fetch origin
-# subsequent commits push to this repo
+git checkout main          # the Friday kernel branch
 ```
 
-### 4.4a Implement the `bench friday-new-site` wrapper (Slice 1 task)
+Now `apps/frappe/` IS the Friday kernel. Any `bench new-site` against this kernel produces an agentic site by default — no install-app step, no wrapper command.
 
-To honor the architectural promise that every new site is automatically agentic, the agent kernel app ships a custom bench command that wraps `bench new-site` and `install-app friday` into one step:
-
-```bash
-bench friday-new-site mybusiness.localhost --admin-password <secure>
-```
-
-Implementation: register a Click command in `apps/friday/friday/commands.py` and wire it into bench via `apps/friday/friday/hooks.py` (Frappe exposes `app/commands.py` to bench's command discovery). The command:
-
-1. Calls `frappe.commands.site.new_site` programmatically with the user's options
-2. After the site exists, calls `install_app` for `friday`
-3. Optionally runs first-boot configuration (default Agent Role Profiles, default Skills marked `Active`)
-
-Tests: a Slice 9 test asserts `bench friday-new-site test.localhost` produces a site with the Friday app installed and the default Agent Role Profile present.
+Agent kernel modules (Agent Profile, Skill, Execution Log, etc.) live **inside the Frappe source tree** under a module path such as `frappe/friday_core/` or appropriate sub-modules — added in Slice 1 by extending Frappe's own modules.txt, not by creating a new app.
 
 ### 4.5 Verify Setup
 
