@@ -181,6 +181,85 @@ history, except for correcting factual mistakes.
   developer_mode = 1
   ```
 
+### Development Server Port Conflict
+
+- `bench start` initially failed because ports used by the generated `friday-bench` config were already occupied:
+
+  ```text
+  127.0.0.1:11000 redis_queue
+  127.0.0.1:13000 redis_cache
+  0.0.0.0:8000 web
+  *:9000 socketio
+  ```
+
+- The conflicting processes belonged to an older running bench at `/home/friday/frappe-dev`, not the new `friday-bench`.
+- To avoid killing the other bench, moved `friday-bench` to alternate local ports:
+
+  ```text
+  webserver_port = 8002
+  socketio_port = 9002
+  file_watcher_port = 6788
+  redis_queue = redis://127.0.0.1:11002
+  redis_cache = redis://127.0.0.1:13002
+  redis_socketio = redis://127.0.0.1:13002
+  ```
+
+- Regenerated Redis config:
+
+  ```bash
+  bench setup redis
+  ```
+
+- Regenerated `Procfile` with Node 24 active so socketio uses `/home/friday/.nvm/versions/node/v24.15.0/bin/node`:
+
+  ```bash
+  source ~/.nvm/nvm.sh
+  nvm use 24
+  bench setup procfile
+  ```
+
+- Current Friday dev URL is:
+
+  ```text
+  http://friday.localhost:8002
+  ```
+
+- `bench start` succeeded after the port changes.
+- Browser reached the Frappe setup wizard at:
+
+  ```text
+  http://friday.localhost:8002/desk/setup-wizard/0
+  ```
+
+- Completed first-run setup with:
+
+  ```text
+  Language = English
+  Country = India
+  Time Zone = Asia/Kolkata
+  Currency = INR
+  ```
+
+- Desk loaded successfully at:
+
+  ```text
+  http://friday.localhost:8002/desk
+  ```
+
+- Current Desk state shows only the base Framework workspace. The Friday app has not been created or installed yet.
+
+### Next Slice 1 Setup Actions
+
+- Create and install the Friday app inside the bench:
+
+  ```bash
+  cd /home/friday/friday/friday-bench
+  source ~/.nvm/nvm.sh
+  nvm use 24
+  bench new-app friday
+  bench --site friday.localhost install-app friday
+  ```
+
 ## Log Maintenance
 
 - Add a new dated section whenever setup, implementation, validation, or a blocker changes.
