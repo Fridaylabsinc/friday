@@ -1,62 +1,60 @@
 # 45 — Fork Policy
 
-> **Purpose:** Define how Friday develops on its Frappe v16 fork — what we freely change in core, what we keep stable, and how we manually absorb upstream Frappe patches when needed.
+> **Purpose:** Define how Friday develops on its Frappe kernel — what we change in core, what we keep stable, and how we absorb upstream Frappe patches when relevant.
 
 ---
 
 ## 1. The Architectural Decision
 
-**Friday is a framework. Under the hood it runs on a hard fork of Frappe v16 stable. Today.**
+**Friday's kernel is a hard fork of Frappe v16 stable. The Friday repository and the kernel are one.**
 
-This is not a conditional decision pending a spike. It is the starting point — but it is intentionally architected to preserve optionality. Frappe is the substrate we leverage now. The agent governance model, contributor model, and Friday's identity are designed to outlive any single substrate.
+The fork is not a substrate we sit on top of — it IS Friday. The community modifies its core directly to suit agentic framework requirements. Every change to the kernel is a change to Friday. There is no separate "Friday app" layer.
 
-### Two-Repo Topology
+### Why One Repo, Why Kernel-Level Ownership
 
-Friday lives across two GitHub repositories:
+The leverage Frappe gives Friday today is real and worth using: DocTypes, ORM, permissions, workflow engine, scheduler, RQ workers, Desk, real-time pubsub, file management, REST API, bench operational tooling. Years of proven engineering.
 
-| Repo | Role | Lifecycle |
-|---|---|---|
-| `Friday-Labs-Inc/frappe` | Friday's hard fork of Frappe v16 stable. Agent-native core primitives (actor context, trace propagation, audit hooks, agent-scoped auth) are patched directly into this fork. | Independent — we cherry-pick from upstream Frappe selectively per §5. |
-| `Friday-Labs-Inc/friday` | Friday's agent kernel app + design docs + governance + contributor policies + scripts. Slice 1 onward, agent kernel modules live here. | Independent — evolves with Friday's roadmap, not Frappe's. |
+But Friday will not stay static. As Friday matures, we anticipate infrastructure changes that **cannot be made from an external app**:
 
-Both repos are public, GPL v3, and contribute to the same `friday-bench` at runtime — but they are not entangled at the git level.
+- A secondary lightweight data store (SQLite, embedded) for agent state that doesn't belong in the primary database
+- A different message queue (Kafka) replacing Redis when scale demands it
+- Vector storage tightly integrated with the DocType layer
+- Agent-native execution primitives — sandboxed worker pools, warm container management — wired into the framework
+- Custom auth flows for agent-to-agent authentication
+- Trace propagation, actor context, and audit hooks integrated into every request and job cycle
 
-### Why Two Repos, Not One
+These are kernel concerns. An app on top of Frappe **cannot** swap the queue layer. An app cannot introduce a parallel data store. An app cannot add framework-level execution primitives. Only modifying core can.
 
-Two repos cost slightly more operational glue today but preserve the path to **Friday's own kernel later.** If the community evolves Friday toward an agent-native runtime that doesn't need Frappe as substrate (software 3.0: vector-first storage, ambient UX, dedicated agent runtimes), the agent kernel repo can be ported. With a merged repo, that future requires git surgery on hundreds of MB of Frappe history.
+**Therefore the kernel must be ours. One repo. Full control.**
 
-The architectural promise: *Friday's agent governance model is portable. The Frappe substrate is what we use today.*
+Today the kernel uses PostgreSQL + Redis (Frappe defaults). Tomorrow, when scale or specific workloads demand it, the community modifies the kernel — adds SQLite as a secondary store for some use case, swaps Redis for Kafka under load, integrates a new infrastructure component natively. The fork is not a substrate; it is the body of the framework.
 
-### What "Friday IS the fork" Means In Practice
+### What Lives In The Repo
 
-- The Friday framework (the `Friday-Labs-Inc/frappe` fork) **is** a hard fork of `frappe/frappe` at the Frappe v16 stable tag.
-- Friday's core team develops directly on that fork — agent-native primitives are built into core, not bolted on top.
-- The Frappe **bench ecosystem is fully retained**: `bench init`, `bench new-site`, apps, migrations, site operations, and the full Frappe app developer experience all work exactly as they do in upstream Frappe.
-- Frappe's runtime substrate is preserved: DocTypes, ORM, permissions, workflows, scheduler, RQ workers, files, realtime, Desk.
-- Friday adds agent identity, execution trace, governed skill dispatch, and sandbox execution as **first-class framework primitives** — not as a separate app layer that can be uninstalled. They live in the framework fork, not the kernel app.
-- Domain features (Agent Profile DocType, Skill DocType, Execution Log, etc.) live in the `friday` agent kernel app — installable on any site running the Friday framework.
-- Upstream Frappe improvements are absorbed **manually** when they are relevant — security patches, critical bug fixes, or improvements the Friday project wants. There is no automatic merge cadence.
+The single `Friday-Labs-Inc/friday` repository contains:
 
-Users and developers interact with **Friday**. Frappe is the engine.
+- **Frappe v16 source code** absorbed from upstream (`frappe/frappe`) at v16.18.2 as the base
+- **Agent-native modifications to Frappe core**: actor context, trace propagation, audit hooks, agent-scoped auth, infrastructure adaptations
+- **Friday's agent kernel modules** — Agent Profile, Skill, Execution Log, Permission Decision Log, Agent Task, etc. — built into the Frappe source tree (e.g. under `frappe/friday_core/` or appropriate module paths)
+- **Friday's design docs** (`docs/`)
+- **Governance and policies** (`CODEX.md`, `START_HERE.md`, `docs/contributing/AI_CONTRIBUTORS.md`)
+- **Scripts**, GitHub templates, project infrastructure
 
-### Every Site Is An Agentic Deployment
+There is no separate "Friday app." There is one framework, called Friday, that began as a Frappe v16 fork and continues to evolve as a unified codebase.
 
-The two-repo layout would normally require two install steps when provisioning a site:
+### Every `bench new-site` Is Automatically Agentic
+
+Because the agent kernel is part of the framework, not an installable app:
 
 ```bash
 bench new-site mybusiness.localhost
-bench --site mybusiness.localhost install-app friday
 ```
 
-That friction is unacceptable for a framework that calls itself "agentic." Friday eliminates it with a bench wrapper:
+…produces a fully agentic site by default. No `install-app friday` step. No wrapper command. The framework itself is the agentic kernel.
 
-```bash
-bench friday-new-site mybusiness.localhost
-```
+### Upstream Frappe Becomes A Read-Only Resource
 
-Internally this runs both commands — provisioning a site and installing the agent kernel app in one step. From the operator's point of view, **every new site is automatically an agentic deployment.** This matches the UX of a single-repo framework while preserving the architectural cleanliness of two repos.
-
-The wrapper is defined as a custom bench command shipped with the agent kernel app. See `CODEX.md` §4 for the implementation specification.
+`frappe/frappe` is no longer a partner project for Friday — it is a reference we selectively absorb from. See §5 for the absorption workflow. The Friday community owns the kernel's future.
 
 ---
 
