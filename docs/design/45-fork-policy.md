@@ -79,6 +79,10 @@ friday/release-X.Y
 
 Upstream Frappe patches are absorbed **manually and selectively**. There is no automatic sync.
 
+**This is the protection a hard fork buys us.** Upstream Frappe cannot push to our fork. If Frappe drops Redis, deprecates a feature, restructures their permission engine, or releases v17 with breaking changes — none of that reaches Friday unless we choose to pull it. Our lifecycle is independent.
+
+The price of independence: we own all maintenance of what we kept. We assess every upstream change. We cherry-pick what we want. We refuse what we don't.
+
 | Trigger | Action |
 |---|---|
 | Upstream security release (CVE) | Maintainer reviews within 48 hours; if Friday is affected, cherry-pick or reimplement the fix into `friday/main` |
@@ -88,6 +92,77 @@ Upstream Frappe patches are absorbed **manually and selectively**. There is no a
 | Upstream major release (v17+) | Project-level decision: plan migration, stay on current, or skip |
 
 This is intentionally lightweight. The Frappe bench ecosystem moves slowly at the core level. Most upstream activity is in ERPNext and apps, which Friday does not track.
+
+### 5.1 Selective Absorption Workflow
+
+The concrete day-to-day for watching upstream without being controlled by it.
+
+**One-time setup** (on any clone of our fork):
+
+```bash
+cd <bench>/apps/frappe   # or wherever our fork lives locally
+git remote add upstream https://github.com/frappe/frappe.git
+git fetch upstream
+```
+
+After this, `origin` points at Friday's fork (we control), `upstream` points at frappe/frappe (read-only for us).
+
+**Weekly / monthly: watch what upstream is doing**
+
+```bash
+git fetch upstream
+git log upstream/version-16 --oneline --since="2 weeks ago"
+```
+
+Read the commit messages. No code is pulled into our fork by this — `git fetch` only updates remote-tracking references locally. Nothing on GitHub changes.
+
+**When a specific upstream commit looks relevant** (CVE fix, bug we hit, improvement we want):
+
+```bash
+git checkout friday/main           # work on our branch
+git cherry-pick <upstream-sha>     # pull only that commit in
+# resolve conflicts if any
+bench --site friday.localhost migrate
+bench --site friday.localhost run-tests --app friday
+# if clean:
+git push origin friday/main
+```
+
+Tag the cherry-picked commit with `[upstream-absorb: <reason>]` in the message so the divergence registry can track origin.
+
+**When upstream does something we explicitly reject** (e.g. drops Redis, removes a feature Friday depends on):
+
+```bash
+# Do nothing. Our fork is unaffected.
+# Optionally: open an issue at Friday-Labs-Inc/friday documenting the decision
+# so future contributors know we deliberately diverged from this upstream change.
+```
+
+**When upstream releases a new minor version** (e.g. v16.1, v16.2):
+
+1. Read their changelog.
+2. List the changes that matter to Friday.
+3. Cherry-pick each in its own commit, test in isolation.
+4. If a change is too entangled to cherry-pick safely, defer or reimplement.
+
+**When upstream releases a new major version** (v17+):
+
+Project-level decision under §5 table. Not a routine task.
+
+### 5.2 What Independence Looks Like In Practice
+
+A concrete scenario, for clarity.
+
+> *Upstream Frappe announces in their v17 plan: "We are dropping Redis. Background jobs will move to a Postgres-backed queue."*
+
+Friday's response:
+
+1. **Read the announcement.** Decide whether Redis matters to Friday's roadmap.
+2. **If we keep Redis:** do nothing. Our fork still uses Redis. The upstream v17 commits never reach us. Our v16 fork lives on.
+3. **If we follow:** plan it as a major version migration of our own fork. Cherry-pick or rewrite the queue layer. Test heavily. Ship as Friday vX.Y when ready.
+4. **The decision is ours, not theirs.**
+
+This is the architectural promise of a hard fork. Anyone evaluating Friday — sponsor, contributor, downstream user — can rely on it.
 
 ---
 
