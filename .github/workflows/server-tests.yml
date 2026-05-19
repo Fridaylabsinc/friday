@@ -73,7 +73,7 @@ jobs:
       - name: Download artifacts
         uses: actions/download-artifact@v7.0.0
       - name: Upload coverage data
-        uses: codecov/codecov-action@v5
+        uses: codecov/codecov-action@v6
         with:
           name: Server
           token: ${{ secrets.CODECOV_TOKEN }}
