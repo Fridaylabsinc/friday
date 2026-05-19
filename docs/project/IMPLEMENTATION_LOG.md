@@ -260,6 +260,44 @@ history, except for correcting factual mistakes.
   bench --site friday.localhost install-app friday
   ```
 
+## 2026-05-19
+
+### Friday Repository Becomes Source Of Truth
+
+- The active bench kernel checkout at `/home/friday/friday/friday-bench/apps/frappe` was moved to the Friday project repository:
+
+  ```text
+  origin = https://github.com/Friday-Labs-Inc/friday.git
+  ```
+
+- Fetched Friday project branches from `origin`.
+- Checked out `main` and set it to track `origin/main`.
+- Current active kernel commit:
+
+  ```text
+  fa2e7c2741 Suggest Absorb Frappe v16 as Friday kernel base
+  ```
+
+- Kept the previous local `version-16` branch available as a reference:
+
+  ```text
+  version-16 e61c3950fa chore(release): Bumped to Version 16.18.2
+  ```
+
+- Ran migration successfully after switching to Friday `main`:
+
+  ```bash
+  bench --site friday.localhost migrate
+  ```
+
+- Verified installed app state:
+
+  ```text
+  frappe 16.18.2 main
+  ```
+
+- This supersedes the earlier temporary remote note that pointed at `Friday-Labs-Inc/frappe.git`. The intended project remote for ongoing Friday work is `Friday-Labs-Inc/friday.git`.
+
 ## Log Maintenance
 
 - Add a new dated section whenever setup, implementation, validation, or a blocker changes.
