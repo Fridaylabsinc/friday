@@ -1,0 +1,47 @@
+{
+ "actions": [],
+ "allow_rename": 1,
+ "autoname": "field:skill_name",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "skill_name",
+  "description",
+  "when_to_use",
+  "instructions",
+  "parameters_schema",
+  "required_doctypes",
+  "risk_level",
+  "requires_approval",
+  "status",
+  "usage_count",
+  "last_used",
+  "created_by_agent"
+ ],
+ "fields": [
+  {"fieldname": "skill_name", "fieldtype": "Data", "in_list_view": 1, "label": "Skill Name", "reqd": 1, "unique": 1},
+  {"fieldname": "description", "fieldtype": "Text", "label": "Description", "reqd": 1},
+  {"fieldname": "when_to_use", "fieldtype": "Long Text", "label": "When To Use"},
+  {"fieldname": "instructions", "fieldtype": "Long Text", "label": "Instructions"},
+  {"fieldname": "parameters_schema", "fieldtype": "JSON", "label": "Parameters Schema (JSON)"},
+  {"fieldname": "required_doctypes", "fieldtype": "Table", "label": "Required DocTypes", "options": "Skill Required DocType"},
+  {"fieldname": "risk_level", "fieldtype": "Select", "in_list_view": 1, "label": "Risk Level", "options": "low\nmedium\nhigh\ncritical", "reqd": 1},
+  {"default": "0", "fieldname": "requires_approval", "fieldtype": "Check", "label": "Requires Approval"},
+  {"fieldname": "status", "fieldtype": "Select", "in_list_view": 1, "label": "Status", "options": "Draft\nExperimental\nActive\nRetired\nArchived", "reqd": 1},
+  {"default": "0", "fieldname": "usage_count", "fieldtype": "Int", "label": "Usage Count", "read_only": 1},
+  {"fieldname": "last_used", "fieldtype": "Datetime", "label": "Last Used", "read_only": 1},
+  {"fieldname": "created_by_agent", "fieldtype": "Link", "label": "Created By Agent", "options": "Agent Profile"}
+ ],
+ "links": [],
+ "module": "Friday Core",
+ "name": "Skill",
+ "naming_rule": "Set by user",
+ "permissions": [
+  {"create": 1, "delete": 1, "read": 1, "role": "System Manager", "write": 1},
+  {"create": 1, "read": 1, "role": "Agent Supervisor", "write": 1}
+ ],
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": [],
+ "track_changes": 1
+}

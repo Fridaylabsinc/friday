@@ -1,0 +1,26 @@
+{
+ "actions": [],
+ "allow_rename": 1,
+ "autoname": "field:platform_name",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": ["platform_name", "adapter_module", "enabled", "config_json"],
+ "fields": [
+  {"fieldname": "platform_name", "fieldtype": "Data", "in_list_view": 1, "label": "Platform Name", "reqd": 1, "unique": 1},
+  {"fieldname": "adapter_module", "fieldtype": "Data", "in_list_view": 1, "label": "Adapter Module", "reqd": 1},
+  {"default": "0", "fieldname": "enabled", "fieldtype": "Check", "label": "Enabled"},
+  {"fieldname": "config_json", "fieldtype": "JSON", "label": "Config (JSON)"}
+ ],
+ "links": [],
+ "module": "Friday Core",
+ "name": "Chat Platform",
+ "naming_rule": "Set by user",
+ "permissions": [
+  {"create": 1, "delete": 1, "read": 1, "role": "System Manager", "write": 1},
+  {"create": 1, "read": 1, "role": "Agent Supervisor", "write": 1}
+ ],
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": [],
+ "track_changes": 1
+}

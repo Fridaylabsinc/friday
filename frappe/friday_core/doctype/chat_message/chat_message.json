@@ -1,0 +1,37 @@
+{
+ "actions": [],
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "session_id",
+  "platform",
+  "direction",
+  "sender_id",
+  "agent_profile",
+  "content",
+  "timestamp",
+  "processed"
+ ],
+ "fields": [
+  {"fieldname": "session_id", "fieldtype": "Data", "in_list_view": 1, "label": "Session ID", "reqd": 1},
+  {"fieldname": "platform", "fieldtype": "Link", "label": "Platform", "options": "Chat Platform"},
+  {"fieldname": "direction", "fieldtype": "Select", "in_list_view": 1, "label": "Direction", "options": "inbound\noutbound", "reqd": 1},
+  {"fieldname": "sender_id", "fieldtype": "Data", "label": "Sender ID"},
+  {"fieldname": "agent_profile", "fieldtype": "Link", "label": "Agent Profile", "options": "Agent Profile"},
+  {"fieldname": "content", "fieldtype": "Long Text", "label": "Content"},
+  {"fieldname": "timestamp", "fieldtype": "Datetime", "in_list_view": 1, "label": "Timestamp", "reqd": 1},
+  {"default": "0", "fieldname": "processed", "fieldtype": "Check", "label": "Processed"}
+ ],
+ "links": [],
+ "module": "Friday Core",
+ "name": "Chat Message",
+ "naming_rule": "Autoincrement",
+ "permissions": [
+  {"create": 1, "delete": 1, "read": 1, "role": "System Manager", "write": 1},
+  {"create": 1, "read": 1, "role": "Agent Supervisor", "write": 1}
+ ],
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": [],
+ "track_changes": 1
+}

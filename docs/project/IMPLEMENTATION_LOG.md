@@ -298,6 +298,93 @@ history, except for correcting factual mistakes.
 
 - This supersedes the earlier temporary remote note that pointed at `Friday-Labs-Inc/frappe.git`. The intended project remote for ongoing Friday work is `Friday-Labs-Inc/friday.git`.
 
+### Slice 1 Execution Started
+
+- Pulled latest `origin/main` and received the dedicated Slice 1 instruction:
+
+  ```text
+  docs/contributing/slices/SLICE_1.md
+  ```
+
+- This instruction supersedes the earlier app-based note above. Friday Core now lives inside the kernel source tree, not in a separate `friday` app.
+- Created branch:
+
+  ```text
+  slice-1/friday-core-doctypes
+  ```
+
+- Added module registration:
+
+  ```text
+  frappe/modules.txt -> Friday Core
+  ```
+
+- Added kernel module package:
+
+  ```text
+  frappe/friday_core/
+  ```
+
+- Added 8 main DocTypes and 3 child-table DocTypes under `frappe/friday_core/doctype/`:
+
+  ```text
+  Agent Profile
+  Agent Profile Skill
+  Skill
+  Skill Required DocType
+  Agent Project
+  Agent Task
+  Agent Task Skill
+  Chat Message
+  Chat Platform
+  Execution Log
+  Permission Decision Log
+  ```
+
+- Added test module:
+
+  ```text
+  frappe/friday_core/tests/test_doctypes_exist.py
+  ```
+
+- Created local `Agent Supervisor` role. Frappe also creates missing roles referenced by DocType permissions during DocType installation.
+- Enabled tests for the local site:
+
+  ```bash
+  bench --site friday.localhost set-config allow_tests true
+  ```
+
+- Ran migration successfully:
+
+  ```bash
+  bench --site friday.localhost migrate
+  ```
+
+- Ran Slice 1 tests successfully:
+
+  ```bash
+  bench --site friday.localhost run-tests --module frappe.friday_core.tests.test_doctypes_exist
+  ```
+
+  Result:
+
+  ```text
+  Ran 2 tests in 0.113s
+  OK
+  ```
+
+- Verified metadata:
+
+  ```text
+  Module Def Friday Core exists
+  Execution Log -> module Friday Core, is_submittable = 1
+  Permission Decision Log -> module Friday Core, is_submittable = 1
+  Agent Supervisor role exists
+  ```
+
+- Created one local sanity row for each of the 8 main DocTypes through the Frappe ORM. The two audit logs submitted successfully.
+- Browser Desk create/list checks are still pending human verification.
+
 ## Log Maintenance
 
 - Add a new dated section whenever setup, implementation, validation, or a blocker changes.

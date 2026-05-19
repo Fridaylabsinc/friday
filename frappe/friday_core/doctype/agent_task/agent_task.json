@@ -1,0 +1,43 @@
+{
+ "actions": [],
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "title",
+  "description",
+  "project",
+  "assigned_to_profile",
+  "required_skills",
+  "workflow_state",
+  "dispatchable",
+  "priority",
+  "result",
+  "started_at",
+  "completed_at"
+ ],
+ "fields": [
+  {"fieldname": "title", "fieldtype": "Data", "in_list_view": 1, "label": "Title", "reqd": 1},
+  {"fieldname": "description", "fieldtype": "Long Text", "label": "Description"},
+  {"fieldname": "project", "fieldtype": "Link", "label": "Project", "options": "Agent Project"},
+  {"fieldname": "assigned_to_profile", "fieldtype": "Link", "label": "Assigned To Profile", "options": "Agent Profile"},
+  {"fieldname": "required_skills", "fieldtype": "Table", "label": "Required Skills", "options": "Agent Task Skill"},
+  {"fieldname": "workflow_state", "fieldtype": "Data", "label": "Workflow State"},
+  {"default": "0", "fieldname": "dispatchable", "fieldtype": "Check", "label": "Dispatchable"},
+  {"fieldname": "priority", "fieldtype": "Select", "in_list_view": 1, "label": "Priority", "options": "low\nnormal\nhigh\nurgent", "reqd": 1},
+  {"fieldname": "result", "fieldtype": "JSON", "label": "Result (JSON)"},
+  {"fieldname": "started_at", "fieldtype": "Datetime", "label": "Started At"},
+  {"fieldname": "completed_at", "fieldtype": "Datetime", "label": "Completed At"}
+ ],
+ "links": [],
+ "module": "Friday Core",
+ "name": "Agent Task",
+ "naming_rule": "Autoincrement",
+ "permissions": [
+  {"create": 1, "delete": 1, "read": 1, "role": "System Manager", "write": 1},
+  {"create": 1, "read": 1, "role": "Agent Supervisor", "write": 1}
+ ],
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": [],
+ "track_changes": 1
+}
