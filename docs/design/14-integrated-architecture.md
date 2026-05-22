@@ -17,6 +17,157 @@ This document supersedes any earlier assumptions that Friday builds Project/Task
 
 Friday is the framework. The Friday repository is a hard fork of Frappe v16 stable — Frappe is the engine underneath. Upstream Frappe patches are absorbed manually when relevant (security, bug fixes, improvements). Agent-native primitives are built into core; domain features live in Friday apps.
 
+### 1.1 Visual Blueprint
+
+#### Layer composition
+
+```mermaid
+flowchart TB
+    subgraph Platforms["Platform Adapters (inbound)"]
+        CLI["bench friday chat<br/>(Phase 1)"]
+        Raven_Chat["Raven channels<br/>(human ↔ agent)"]
+        Future["Telegram · Slack · Email<br/>(Phase 2+)"]
+    end
+
+    subgraph FridayCore["Friday Core — agentic layer (NEW CODE)"]
+        Gateway["Gateway<br/>(session manager + event router)"]
+        Dispatcher["Dispatcher<br/>(60s scheduled job)"]
+        PermEngine["Permission Engine<br/>matrix.check()"]
+        SkillLoader["Skill Loader<br/>(Redis-cached)"]
+        Sandbox["Docker Isolation<br/>(per-skill container)"]
+        LLM["LLM Provider Adapters<br/>(Minimax · Claude · OpenAI)"]
+    end
+
+    subgraph Ported["Orchestration (ported from ERPNext)"]
+        AgentProject["Agent Project"]
+        AgentTask["Agent Task<br/>(+ Friday fields)"]
+        AgentIssue["Agent Issue"]
+    end
+
+    subgraph RavenLayer["Raven (communication)"]
+        WarRoom["War Room<br/>(1 channel per project)"]
+        Timeline["Frappe Timeline<br/>(audit feed)"]
+        MsgActions["Message Actions<br/>(approve · escalate)"]
+    end
+
+    subgraph FrappeCore["Friday Framework Core — hard fork of Frappe v16"]
+        DocTypes["DocTypes + ORM"]
+        Roles["Role Permission Matrix"]
+        Workflow["Workflow Engine"]
+        RTPubSub["Realtime PubSub<br/>(Redis + socket.io)"]
+        RQ["RQ Background Workers"]
+        Scheduler["Scheduler"]
+        REST["REST API"]
+        AgentKernelMods["[friday-core] modifications<br/>actor context · trace ID · audit hooks · agent-scoped auth"]
+    end
+
+    subgraph Audit["Immutable Audit (submittable DocTypes)"]
+        ExecLog["Execution Log"]
+        PermLog["Permission Decision Log"]
+        WReq["Workflow Request"]
+    end
+
+    subgraph Persistence["Persistence"]
+        PG[("PostgreSQL<br/>+ pgvector")]
+        RedisStore[("Redis<br/>cache · queues · pubsub")]
+        Docker[("Docker runtime<br/>sandboxing")]
+    end
+
+    Platforms --> Gateway
+    Gateway --> PermEngine
+    Gateway --> SkillLoader
+    Gateway --> Dispatcher
+    Dispatcher -->|atomic claim| AgentTask
+    Gateway -->|spawn| Sandbox
+    Sandbox -->|scoped token| REST
+    Gateway --> LLM
+    PermEngine -->|submit row| PermLog
+    Sandbox -->|submit row| ExecLog
+    Gateway --> WarRoom
+    AgentTask --> WarRoom
+    WarRoom --> Timeline
+    MsgActions -->|state transitions| Workflow
+    Workflow --> AgentTask
+    AgentTask -->|hook| WarRoom
+    AgentProject -->|after_insert| WarRoom
+
+    FridayCore -.depends on.-> FrappeCore
+    Ported -.lives inside.-> FrappeCore
+    RavenLayer -.installed app.-> FrappeCore
+    Audit -.stored as.-> DocTypes
+
+    DocTypes --> PG
+    RTPubSub --> RedisStore
+    RQ --> RedisStore
+    SkillLoader --> RedisStore
+    Sandbox --> Docker
+
+    classDef new fill:#fef3c7,stroke:#d97706,stroke-width:2px
+    classDef ported fill:#dbeafe,stroke:#2563eb,stroke-width:2px
+    classDef raven fill:#fce7f3,stroke:#db2777,stroke-width:2px
+    classDef frappe fill:#dcfce7,stroke:#16a34a,stroke-width:2px
+    classDef audit fill:#fee2e2,stroke:#dc2626,stroke-width:2px
+
+    class Gateway,Dispatcher,PermEngine,SkillLoader,Sandbox,LLM new
+    class AgentProject,AgentTask,AgentIssue ported
+    class WarRoom,Timeline,MsgActions raven
+    class DocTypes,Roles,Workflow,RTPubSub,RQ,Scheduler,REST,AgentKernelMods frappe
+    class ExecLog,PermLog,WReq audit
+```
+
+**Legend:** 🟨 New code in Friday Core · 🟦 Ported from ERPNext · 🟪 Raven app · 🟩 Frappe v16 fork · 🟥 Immutable audit logs
+
+#### End-to-end request flow
+
+```mermaid
+sequenceDiagram
+    autonumber
+    actor Supervisor
+    participant Frappe as Frappe Hook
+    participant Dispatcher
+    participant Gateway
+    participant LLM
+    participant PermEngine as Permission Engine
+    participant Sandbox as Docker Sandbox
+    participant REST as Frappe REST API
+    participant Audit as Audit Logs<br/>(immutable DocTypes)
+    participant Raven as War Room
+
+    Supervisor->>Frappe: Create Agent Project + Tasks
+    Frappe->>Raven: after_insert hook<br/>→ create channel · pin brief
+    Dispatcher->>Dispatcher: Every 60s: query dispatchable Tasks
+    Dispatcher->>Frappe: Atomic claim<br/>SELECT ... FOR UPDATE SKIP LOCKED
+    Frappe-->>Dispatcher: Task assigned to profile
+    Dispatcher-)Gateway: emit 'agent_task.assigned'<br/>(Redis pubsub)
+    Gateway->>Raven: "@agent picked up task X 🚀"
+    Gateway->>Sandbox: spawn container<br/>(scoped API token)
+    Sandbox->>LLM: prompt + permitted skills
+    LLM-->>Sandbox: tool_call: send_welcome_email(...)
+    Sandbox->>PermEngine: check(profile, skill)
+    PermEngine->>Audit: submit Permission Decision Log
+    alt denied
+        PermEngine-->>Sandbox: REJECTED
+        Sandbox->>Raven: "❌ permission denied: reason"
+        Sandbox->>Audit: submit Execution Log (rejected)
+    else allowed
+        PermEngine-->>Sandbox: ALLOWED
+        Sandbox->>REST: invoke skill (with scoped token)
+        REST-->>Sandbox: result JSON
+        Sandbox->>Audit: submit Execution Log (success)
+        Sandbox->>Gateway: result
+        Gateway->>Frappe: update Task workflow_state
+        Gateway->>Raven: "✅ Task X completed"
+    end
+    Raven->>Frappe: push to Task Timeline
+    Supervisor->>Raven: Message Action: "Approve & close"
+    Raven->>Frappe: state → Completed
+```
+
+**Three invariants visible in this flow:**
+1. **Permission check happens BEFORE execution** (step 11 precedes 14). No bypass anywhere.
+2. **Every step writes to audit** — Permission Decision Log + Execution Log are both submittable (immutable once submitted).
+3. **War Room reflects every state change** — operator visibility is built into the path, not added later.
+
 ---
 
 ## 2. Why This Composition
