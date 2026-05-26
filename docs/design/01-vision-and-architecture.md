@@ -1,124 +1,154 @@
 # 01 — Vision & Architecture
 
+> See `00-glossary.md` for all term definitions.
+> See `39-friday-framework-strategy.md` for fork and framework identity decisions.
+> See `42-phase-one-authority-contract.md` for v0.1 scope.
+
+---
+
 ## Vision
 
-Friday is an open-source agentic framework that runs on a hard fork of Frappe v16 stable, combining:
-- **Hermes Agent's agentic capabilities** — agent loop, skills system, learning loop, multi-platform messaging, Kanban orchestration, voice, vision, browser automation, MCP integration.
-- **Frappe Framework's enterprise backbone** — role-based permissions, structured DocTypes, workflows, real-time notifications, background workers, audit trails.
+Friday is an open-source agentic framework built on a hard fork of Frappe v16 stable. It makes AI agents first-class primitives of an enterprise application platform — not an app you install on top, not a thin wrapper, but a native part of the framework itself.
 
-The goal: an agentic framework that enterprises can actually deploy because governance is built in, not bolted on. Friday should feel like its own framework from day one, while using Frappe source and primitives as the proven substrate.
+The goal: an agentic framework that enterprises can actually deploy because governance is built in, not bolted on. Permissions are architecture, not configuration. Audit is a property of every action, not a feature you add later.
+
+**The mission:** every Indian SMB owner gets a back-office agent team that never sleeps, runs on their own infrastructure, operates within auditable boundaries, and costs a fraction of hiring.
+
+---
 
 ## Design Principles
 
-1. **Frappe as the source of truth.** Every agent, skill, task, permission, and execution log is a DocType. No scattered markdown files, no ad-hoc JSON state.
-2. **Permission-first.** Every skill invocation passes through Frappe's role-based permission matrix before it ever hits a queue.
-3. **Sandboxed execution.** Every agent runs in an isolated Docker container with scoped credentials and resource quotas.
-4. **Structured over freeform.** Skills, profiles, and task states are defined by schemas — agents work with structured data, not loose prompts.
-5. **Framework-first product feel.** Friday owns the CLI, default workspace, agent primitives, and control-room experience; Frappe remains the substrate, not the product boundary.
-6. **Kanban is a view, not the workflow.** Business workflows are defined through Frappe Workflow and task types; Kanban renders those states instead of hardcoding a universal board.
-7. **Open-source by default.** Friday is GPL v3 / AGPL v3 from day one, developed in public.
+1. **Permission first.** Every skill invocation passes through Frappe's role-based permission engine before it executes. No exceptions. Denied calls are logged immutably.
 
-## High-Level Architecture
+2. **Frappe is the source of truth.** Every agent, skill, task, permission decision, and execution is a DocType row. No scattered files, no ad-hoc JSON state, no SQLite session databases.
+
+3. **Sandboxed execution.** Every skill runs in an isolated Docker container with scoped credentials, resource limits, and network restrictions. The Frappe REST API is the only permitted channel back to the framework.
+
+4. **Audit everything.** Execution Log and Permission Decision Log are submittable DocTypes — immutable once submitted. Every action is reconstructable from logs.
+
+5. **Kanban is a view, not the workflow.** Business workflows are defined in Frappe Workflow. Kanban renders whatever states are configured. Agents operate inside governed workflows; they do not invent them.
+
+6. **Framework-first product feel.** Users interact with Friday. Frappe is the engine. The Framework Console is the product surface.
+
+7. **Open source by default.** GPL v3 from day one, developed in public.
+
+---
+
+## System Architecture
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
 │  PLATFORM ADAPTERS                                              │
-│  Telegram · Discord · Slack · WhatsApp · CLI · Email · Web      │
+│  CLI (Phase 1) · Raven (Phase 2) · Telegram, Slack, etc.        │
 └────────────────────────────┬────────────────────────────────────┘
-                             │ (incoming messages → Chat Message DocType)
+                             │ (messages → Chat Message DocType)
                              ▼
 ┌─────────────────────────────────────────────────────────────────┐
-│  FRIDAY GATEWAY (orchestrator)                                  │
-│  ─ Session management                                           │
-│  ─ Dispatcher (matches tasks → agent profiles)                  │
-│  ─ Permission validation (against Frappe role matrix)           │
-│  ─ Real-time event handling (Frappe pubsub)                     │
+│  GUNICORN  —  Framework Console (HTTP + WebSocket)              │
+│  Serves the operator-facing web application                     │
+└────────────────────────────┬────────────────────────────────────┘
+                             │ (real-time events via Redis pubsub)
+                             ▼
+┌─────────────────────────────────────────────────────────────────┐
+│  AGENT CORE WORKER  —  Dedicated RQ worker, custom queue        │
+│  Runs the Hermes-derived AIAgent.run_conversation() loop        │
+│  ─ Dispatcher (claims dispatchable Agent Tasks)                 │
+│  ─ Permission gate (checks every skill before dispatch)         │
+│  ─ Skill loader (Redis-cached Skill DocTypes)                   │
+│  ─ LLM provider adapter (Minimax Phase 1; provider-agnostic)    │
+│  ─ Sandbox orchestrator (spawns Docker containers)              │
 └────────────────────────────┬────────────────────────────────────┘
                              │
               ┌──────────────┼──────────────┐
               ▼              ▼              ▼
         ┌──────────┐   ┌──────────┐   ┌──────────┐
-        │ Agent A  │   │ Agent B  │   │ Agent N  │   ← Docker-isolated
-        │ (Docker) │   │ (Docker) │   │ (Docker) │     agent runners
-        └────┬─────┘   └────┬─────┘   └────┬─────┘
-             │              │              │
+        │ Sandbox  │   │ Sandbox  │   │ Sandbox  │   ← Docker containers
+        │ (skill A)│   │ (skill B)│   │ (skill N)│     scoped creds
+        └────┬─────┘   └────┬─────┘   └────┬─────┘     resource caps
+             │              │              │             network isolated
              └──────────────┼──────────────┘
+                            │ (Frappe REST API only)
                             ▼
 ┌─────────────────────────────────────────────────────────────────┐
-│  FRIDAY FRAMEWORK BACKEND (Frappe v16 fork — agent-native core)  │
-│  ─ DocTypes: Agent Profile, Skill, Task, Chat Message, etc.     │
-│  ─ Role-based permissions                                       │
-│  ─ Workflows (Pending → Assigned → Executing → Review → Done)   │
-│  ─ Native Kanban view on Tasks                                  │
-│  ─ Background workers (RQ)                                      │
-│  ─ Real-time notifications                                      │
+│  FRIDAY FRAMEWORK CORE  —  Frappe v16 fork                      │
+│  DocTypes · ORM · Role Permissions · Workflows · Scheduler      │
+│  RQ Workers · Realtime pubsub · REST API · Bench ecosystem      │
+│  + Agent-native patches: actor context, trace ID, audit hooks   │
 └────────────────────────────┬────────────────────────────────────┘
                              │
               ┌──────────────┼──────────────┐
               ▼              ▼              ▼
        ┌────────────┐  ┌──────────┐  ┌──────────────┐
-       │ PostgreSQL │  │  Redis   │  │   Docker     │
-       │ + pgvector │  │ (cache + │  │   runtime    │
-       │ (durable + │  │  queues+ │  │ (sandboxing) │
-       │  semantic) │  │  pubsub) │  │              │
-       └────────────┘  └──────────┘  └──────────────┘
+       │ PostgreSQL │  │  Redis   │  │    Docker    │
+       │ + pgvector │  │ cache +  │  │  runtime     │
+       │ (all state)│  │ queues + │  │ (sandboxing) │
+       └────────────┘  │ pubsub   │  └──────────────┘
+                       └──────────┘
 ```
 
-## Request Flow (end-to-end)
+**Two processes, one site.** Gunicorn and the Agent Core Worker run as separate processes on the same bench, communicating through PostgreSQL, Redis, and the Frappe REST API. They do not share execution context. Each can be stopped, restarted, and scaled independently.
 
-1. **Inbound message** — a user sends a message via Telegram (or any adapter).
-2. **Adapter → Frappe** — the adapter creates a `Chat Message` DocType row.
-3. **Notification fires** — Frappe's real-time pubsub wakes the Gateway.
-4. **Dispatcher matches** — Gateway loads the user/session, identifies the right Agent Profile based on intent + role permissions.
-5. **Skill resolution** — Gateway pulls cached Skill definitions from Redis (falling back to Frappe DocTypes on cache miss).
-6. **Permission check** — Gateway verifies the agent's role has access to the requested Skill/DocType. Rejects immediately if not.
-7. **Sandboxed execution** — Gateway spawns (or routes to) a Docker container scoped to that Agent Profile. The container only sees the API endpoints and data it is permitted to access.
-8. **Skill runs** — Agent invokes Frappe's REST API (or `bench execute` for trusted internal calls) to perform the work.
-9. **Result persisted** — Execution Log DocType records inputs, outputs, agent ID, timestamp, success/failure.
-10. **Response back** — Agent's reply written as a new Chat Message; adapter delivers it back to the user platform.
-11. **Audit trail** — Every step is queryable in Frappe for compliance and debugging.
+---
 
-## Framework Positioning
+## Request Flow (End-to-End)
 
-Friday is a framework. The Friday repository is a hard fork of Frappe v16 stable:
+1. **Inbound** — a user submits a task via CLI (Phase 1) or Raven channel (Phase 2+). A Chat Message DocType row is created.
+2. **Real-time event** — Frappe's Redis pubsub wakes the Agent Core Worker.
+3. **Session resolution** — Worker loads the Agent Profile and recent session context.
+4. **Skill loading** — Worker pulls permitted Skills from Redis cache (fallback to DocType query on miss).
+5. **Permission check** — Worker calls the permission engine. If denied: log to Permission Decision Log, reject, post error. If allowed: continue.
+6. **LLM call** — Worker calls the configured LLM provider with the system prompt, skill definitions (L0 headers), and conversation history.
+7. **Tool dispatch** — LLM returns a tool call. Worker verifies permission again. Spawns Docker sandbox.
+8. **Sandboxed execution** — Container authenticates with a scoped API token, calls Frappe REST API, executes the skill, returns structured JSON.
+9. **Result persistence** — Execution Log row submitted (immutable). Agent Task workflow state updated. Result written back as outbound Chat Message.
+10. **Console update** — Framework Console receives real-time event; task state and execution log update live.
 
-- Frappe supplies the engine: DocTypes, ORM, permissions, users, workflows, scheduler, workers, files, realtime, bench ecosystem, and Desk.
-- Friday builds agent-native primitives directly into framework core: agent identity, execution trace, governed skill dispatch, sandboxed execution.
-- Friday-native DocTypes (Agent Profile, Skill, Execution Log, Permission Decision Log, Workflow Request, Sandbox Execution) are core framework concepts, not a removable app.
-- The control room is the product surface; the agent runtime is the engine.
+**Every step is auditable.** Every permission decision is a submitted row. Every skill execution is a submitted row. Nothing happens silently.
 
-See `39-friday-framework-strategy.md` for the framework strategy and fork discipline.
-See `41-porting-strategy-hermes-erpnext-raven.md` for the Hermes Kanban lessons and the Friday translation.
+---
 
-## Multi-Agent Collaboration
+## Multi-Agent Coordination
 
-Instead of reimplementing Hermes' fixed Kanban, Friday leverages Frappe's native Project / Task / Workflow / Kanban stack:
+Agents coordinate through Frappe DocTypes, not through direct calls to each other.
 
-- **Project DocType** = an agentic workflow (e.g. "Q4 Customer Onboarding").
-- **Task DocType** = a unit of work, linked to an Agent Profile and a Workflow.
-- **Workflow states** are fully customisable per project (e.g. `Pending → Assigned → Executing → Blocked → Review → Completed`).
-- **Frappe's Kanban view** renders workflow states as columns.
-- **Real-time notifications** push state changes to agents and supervisors.
+**Agent Project** = a workflow context with associated agent profiles and tasks.
 
-The Dispatcher is a query against validated Frappe records: dispatchable workflow state, complete dependencies, active skills, eligible Agent Profile, permission pass, and quota availability. It does not ask an agent to invent the operating model at runtime.
+**Agent Task** = a unit of work moving through a configurable Frappe Workflow (e.g. `Pending → Assigned → Executing → Blocked → Review → Completed`). States are fully configurable per project type.
 
-## Learning Loop
+**Dispatcher** = a Frappe scheduled job (60-second interval) that atomically claims dispatchable tasks for eligible Agent Profiles.
 
-- Successful executions logged to `Execution Log` get analysed by a periodic background job.
-- The job extracts patterns and drafts new Skill suggestions as `Skill Draft` DocTypes.
-- A human (or supervisor agent) reviews drafts in Frappe's standard UI.
-- Approved drafts promote to active `Skill` DocTypes.
-- Each Skill carries a `status` field (Active, Draft, Experimental, Retired, Archived) and a usage counter — unused skills auto-archive over time.
+**War Room** (Raven channel, Phase 2+) = the human-visible communication surface for a project. Agents post status updates; humans post instructions; escalations surface here. The War Room reflects truth; it does not own it.
+
+Agents never call each other directly. Inter-agent work flows through Agent Task delegation — one agent creates a sub-task, the dispatcher claims it for another profile, and that profile executes it with its own permissions.
+
+---
 
 ## What Makes Friday Different
 
 | Concern | Hermes / OpenClaw | Friday |
 |---|---|---|
-| Skill storage | Markdown files on disk | Structured DocTypes |
-| Permissions | Per-tool config, easy to misconfigure | Frappe role matrix, enforced at gateway |
-| Multi-agent board | Custom Kanban + SQLite | Frappe Project/Task/Workflow/Kanban |
-| Audit trail | Log files | DocType-level immutable history |
-| Isolation | Process-level | Docker + Frappe API boundary |
-| Memory | File-based + optional vector | PostgreSQL + pgvector, queryable |
+| Skill storage | Markdown files on disk | Structured DocType rows |
+| Permission model | Per-tool config, easy to misconfigure | Frappe role matrix, enforced at gateway before every execution |
+| Multi-agent board | Custom Kanban + SQLite | Frappe Workflow + configurable Kanban view |
+| Audit trail | Log files | Submittable DocTypes — immutable, queryable, exportable |
+| Isolation | Process-level | Docker + Frappe REST API boundary |
+| Memory | File-based + optional vector | PostgreSQL + pgvector (Phase 2+) |
 | Real-time | Custom WebSocket | Frappe's built-in pubsub |
-| Background jobs | Custom cron + scheduler | Frappe RQ workers |
+| Background jobs | Custom cron | Frappe RQ workers |
+| Approval flow | Ad-hoc Slack buttons | Frappe Workflow on Workflow Request DocType |
+
+---
+
+## Framework Positioning
+
+Friday is a framework, not a product feature or an installable app.
+
+The Friday repository is a hard fork of Frappe v16 stable:
+- Frappe supplies the engine: DocTypes, ORM, permissions, users, workflows, scheduler, workers, files, realtime, bench, and Desk.
+- Friday adds agent-native primitives to framework core: agent identity, execution trace, governed skill dispatch, sandboxed execution.
+- Friday-native DocTypes are core framework concepts — present in every site, not removable apps.
+- The Framework Console is the product surface. The agent runtime is the engine.
+
+See `39-friday-framework-strategy.md` for fork discipline.
+See `41-porting-strategy-hermes-erpnext-raven.md` for the Hermes port decisions.
+See `45-fork-policy.md` for upstream absorption rules.

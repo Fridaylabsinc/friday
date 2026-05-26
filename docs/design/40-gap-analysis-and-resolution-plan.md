@@ -1,180 +1,156 @@
 # 40 — Gap Analysis & Resolution Plan
 
-> **Purpose:** Capture the gaps, contradictions, and missing decisions discovered after reading the full Friday dossier. This document is not a new feature spec. It is a control document for deciding what must be clarified before implementation begins.
+> **Status:** All gaps resolved. Implementation can begin.
+> This document is a control record — it shows what was ambiguous and how each ambiguity was resolved. Do not reopen resolved gaps without a documented reason.
 
 ---
 
-## 1. Executive Summary
+## Executive Summary
 
-Friday's core thesis is strong: use a Frappe-derived framework substrate to make AI agents governed, auditable, permission-bound business actors.
+Friday's core thesis is sound: use a Frappe-derived framework to make AI agents governed, auditable, and permission-bound business actors. Before implementation started, the dossier had one structural problem — several documents defined different versions of "Phase 1." That is now resolved by `42-phase-one-authority-contract.md`.
 
-The current dossier has one major issue: several documents define different versions of "Phase 1." If implementation starts without resolving this, a coding agent will bounce between incompatible targets.
-
-The immediate resolution is to establish a **Phase 1 Authority Contract** that decides which capabilities are required for v0.1 and which are vision/roadmap.
+All eight stack decisions are resolved in `docs/decisions/spike-results.md`. All documents requiring updates from those decisions are marked below.
 
 ---
 
-## 2. Highest-Priority Gaps
+## Resolved Gaps
 
-### Gap 1 — Competing Phase 1 Definitions
+### G1 — Competing Phase 1 Definitions
 
-There are three Phase 1 shapes in the docs:
+**Was:** Three documents defined conflicting Phase 1 scopes (docs 06/10/11 = CLI MVP; docs 14/16/24 = integrated platform with Raven; docs 19/30/35 = ERPNext business automation).
 
-| Source | Phase 1 Meaning |
+**Resolution:** `42-phase-one-authority-contract.md` is the single source of truth for v0.1 scope. Phase 1 proves the governed framework loop. ERPNext PO automation is the Phase 1 flagship track that starts after v0.1 is complete. All other documents calling something "Phase 1" are roadmap context unless explicitly included in doc 42.
+
+---
+
+### G2 — Framework Strategy Was Under-Specified
+
+**Was:** Doc 05 described a Friday app architecture. Doc 39 described a framework strategy. These were inconsistent.
+
+**Resolution:** `39-friday-framework-strategy.md` is authoritative on framework identity. Friday is a hard fork of Frappe v16. Agent-native primitives go in core. Domain features go in Friday apps. The two-worker model (Gunicorn for the Framework Console, dedicated Agent Core Worker for the agent loop) is the deployment shape. Single-site model is the Phase 1 constraint.
+
+---
+
+### G3 — Frappe Version Was Open
+
+**Was:** Earlier documents targeted Frappe v15. Doc 13 discussed v16 as a future upgrade.
+
+**Resolution:** **Frappe v16 stable.** Confirmed by the feasibility spike (`44-technical-feasibility-spike.md`, decision D1). The implementation log (`docs/project/IMPLEMENTATION_LOG.md`) confirms Frappe 16.18.2 running on the development machine.
+
+---
+
+### G4 — Database Was Open
+
+**Was:** Frappe defaults to MariaDB. PostgreSQL was described as the target but not confirmed viable.
+
+**Resolution:** **PostgreSQL + pgvector.** Confirmed by spike (D2). PostgreSQL 18.3 with pgvector 0.8.1 running. Note: Frappe PostgreSQL support is described as experimental by upstream maintainers. Friday owns this choice and accepts the maintenance responsibility. Pin pgvector at v0.8.2 or later (CVE-2026-3172 buffer overflow fix).
+
+---
+
+### G5 — Raven Scope in v0.1
+
+**Was:** Docs 14 and 16 included Raven in Phase 1. Docs 06 and 10 were CLI-first.
+
+**Resolution:** **Raven excluded from v0.1.** Spike decision D3. Friday v0.1 is CLI-first. Raven is a v0.2 feature. If the feasibility spike had proven Raven low-risk to include, doc 42 §3 would have been updated. It was not — Raven is v0.2.
+
+---
+
+### G6 — ERPNext as Dependency vs Ported DocTypes
+
+**Was:** Multiple documents were unclear whether Friday depends on ERPNext or ports selected DocTypes.
+
+**Resolution:** **No ERPNext dependency.** Spike decision D4: ERPNext is not relevant to Phase 1. Specific DocTypes (Agent Project from ERPNext Project, Agent Task from ERPNext Task) are ported into the Friday app. See `41-porting-strategy-hermes-erpnext-raven.md` §3 for the field-level porting decision.
+
+---
+
+### G7 — Memory / pgvector Scope
+
+**Was:** Docs 26, 28, 33, 34 described pgvector-backed memory as Phase 1. Doc 06 deferred it.
+
+**Resolution:** **PostgreSQL + pgvector installed on Day 1; semantic memory feature deferred to Phase 2.** The database is PostgreSQL with the pgvector extension enabled. No memory DocTypes, no embedding calls, and no vector search queries are required for v0.1. Phase 1 may use basic Frappe full-text search if needed.
+
+---
+
+### G8 — Sandbox Scope
+
+**Was:** Doc 24 described a hardened production sandbox (warm pool, egress allowlist, full security test suite) as Phase 1. Doc 06 described a minimal sandbox.
+
+**Resolution:** **Doc 42 §5 minimum bar applies to v0.1.** Non-root container, resource limits, timeout/OOM handling, no host mounts, no Docker socket, scoped credentials, structured result capture, cleanup path, Execution Log per attempt. Warm pool, egress allowlist, and full security attack suite are Phase 1.5.
+
+---
+
+### G9 — Security Claims
+
+**Was:** Docs 04 and 20 contained specific CVE numbers, vulnerability counts, and audit dates about Hermes and OpenClaw that were not sourced.
+
+**Resolution:** `46-security-claims-audit.md` audits every claim. Claims with specific CVE numbers and vulnerability counts are replaced with architectural-pattern language. Docs 04 and 20 require follow-up edits per doc 46 §5 before public release.
+
+---
+
+### G10 — License Decision
+
+**Was:** Docs described GPL v3 now, AGPL v3 under consideration.
+
+**Resolution:** **GPL v3 for Phase 1 (private).** AGPL v3 to be evaluated before public launch (Phase 2). Spike decision D8 confirms the hard fork strategy; GPL v3 is the natural license for a Frappe derivative.
+
+---
+
+### G11 — CLI Strategy
+
+**Was:** Unclear whether Friday used its own `friday` entrypoint, a bench wrapper, or something else.
+
+**Resolution:** **Extend bench with a `friday` command group.** Spike decision D5. `bench friday <command>` for agent-specific operations. `bench` unchanged for site and framework operations. No new CLI tool to install.
+
+---
+
+### G12 — LLM Provider
+
+**Was:** Unclear which provider to implement first and how abstraction should work.
+
+**Resolution:** **Provider-agnostic from day one. Minimax as the first provider.** Spike decision D6. The provider interface must support swapping with a config change. Phase 1 implements Minimax; Claude, OpenAI, Gemini, and local models use the same interface in Phase 2+.
+
+---
+
+### G13 — Fork Strategy
+
+**Was:** Whether Friday should be a hard fork of Frappe or a Frappe app.
+
+**Resolution:** **Hard fork of Frappe v16 stable.** Spike decision D8. The Friday repository IS the fork. Full bench ecosystem retained. Agent-native primitives in core. Domain features in Friday apps. See `39-friday-framework-strategy.md` and `45-fork-policy.md`.
+
+---
+
+## Missing Documents (Completed)
+
+| Document | Status |
 |---|---|
-| `06`, `10`, `11` | Governed runtime MVP: CLI, Agent Profile, Skill, permission check, Docker execution, logs |
-| `14`, `16`, `24` | Integrated platform: Raven, ported ERPNext Project/Task/Issue, Agent Role Profile, file-mirrored skills, hardened sandbox |
-| `19`, `30`, `35` | ERPNext business autonomy: 7-day Purchase Order workflow with Procurement/Inventory/Coordinator agents |
-
-**Resolution:** Created `42-phase-one-authority-contract.md`.
-
-**Recommended decision:** Phase 1 proves the governed framework loop and Friday product feel. ERPNext PO automation becomes the first flagship demo/use case after the runtime is proven, not the definition of v0.1 completion.
-
----
-
-### Gap 2 — Product Surface Is Under-Specified
-
-The architecture is strong, but the product surface is not yet described sharply enough.
-
-Friday should not merely expose records. Operators need a control-room experience:
-
-- What can this agent access?
-- What is it doing now?
-- What did it do?
-- Why did it do that?
-- What will happen if I approve?
-- How do I pause or revoke it?
-
-**Resolution needed:** Add a Control Room product spec.
-
-**Recommended decision:** The Control Room is the primary product surface. The agent runtime is the engine.
+| `42-phase-one-authority-contract.md` | Complete — single source of truth for v0.1 scope |
+| `43-control-room-product-spec.md` | Complete — operator-facing product surface |
+| `44-technical-feasibility-spike.md` | Complete — all 8 stack decisions resolved |
+| `45-fork-policy.md` | Complete — core divergence rules and upstream absorption |
+| `46-security-claims-audit.md` | Complete — source verification; follow-up edits to docs 04 and 20 pending |
+| `00-glossary.md` | Complete — single definition for all terms |
+| `docs/decisions/spike-results.md` | Complete — all 8 decisions recorded |
 
 ---
 
-### Gap 3 — Frappe-Derived Framework Strategy Needs Implementation Rules
+## Pending Follow-Up Edits
 
-Doc `39` now states the strategy, but implementation needs concrete fork rules:
+These items are resolved at the decision level but require follow-up commits before public release:
 
-- Which upstream Frappe branch is the substrate?
-- What files/modules may be changed in core?
-- How are divergences documented?
-- How often are upstream releases reviewed?
-- What compatibility promise exists for existing Frappe apps?
-
-**Resolution needed:** Add `FORK_POLICY.md` or a dedicated section in the Phase 1 contract.
-
-**Decision:** Hard fork of Frappe v16 stable. Friday IS the fork — the Friday repository begins from Frappe v16 and develops the agentic framework directly in core. The full bench ecosystem is retained. Agent-native primitives (actor context, trace propagation, audit hooks, sandboxed execution) are built into framework core, not as removable modules. Domain features (ERPNext, Raven, memory, analytics) live in Friday apps. Upstream Frappe patches are applied manually when needed. See `45-fork-policy.md` for operating rules.
+1. `04-security-model.md` — replace lines 5–20 per `46-security-claims-audit.md` §4. Replace `HERMES_HOME`-specific claims and CVE numbers with architectural-pattern language.
+2. `20-brainstorm-session-tree.md` — replace lines 42–44 per doc 46 §4.
+3. Documents 12–38 — review for any "Phase 1" references that contradict doc 42. Mark them as roadmap context or update per doc 42.
 
 ---
 
-### Gap 4 — Tech Stack Version Decision Is Still Open
+## Current Status
 
-The docs target Frappe v15, while research shows v16 is real and has longer support, but also raises setup requirements and compatibility risk.
-
-Open decisions:
-
-- Frappe v15 vs v16 substrate
-- PostgreSQL from day one vs MariaDB first
-- Raven from day one vs later
-- ERPNext dependency vs ported DocTypes vs runtime-only first
-
-**Resolution needed:** Run a technical feasibility spike before coding product features.
-
-**Recommended decision:** Test Frappe v16 + PostgreSQL + Raven + minimal Friday DocTypes. If smooth, choose v16. If rough, use v15 or a reduced stack for v0.1.
+> **All gaps resolved. Implementation in progress. Slice 1 (DocType scaffolding) complete per `docs/project/IMPLEMENTATION_LOG.md`.**
 
 ---
 
-### Gap 5 — Raven Scope Conflicts
+## The Friday Architecture Statement
 
-Docs `06` and `10` define CLI-first messaging. Docs `14` and `16` bring Raven and War Rooms into Phase 1.
+Friday is an agentic framework that runs on a hard fork of Frappe v16 stable, with the full bench ecosystem intact, agent-native primitives built into framework core, and ERPNext operations as the first flagship business use case delivered through a Friday app.
 
-**Resolution needed:** Decide whether Raven is part of v0.1 or v0.2.
-
-**Recommended decision:** Control Room first. Raven is included only if it directly supports the first trust experience. Otherwise, start with Frappe Workspace/Desk + CLI and add Raven bridge next.
-
----
-
-### Gap 6 — Memory / pgvector Scope Conflicts
-
-Doc `06` defers pgvector memory. Docs `26`, `28`, `33`, and `34` include pgvector-backed docs/wiki/memory in Phase 1.
-
-**Resolution needed:** Separate "PostgreSQL chosen for future vector capability" from "memory feature shipped in Phase 1."
-
-**Recommended decision:** Phase 1 may install PostgreSQL/pgvector if the stack uses it, but no semantic memory, wiki search, framework doc lookup, or knowledge graph is required for v0.1.
-
----
-
-### Gap 7 — Sandbox Scope Conflicts
-
-Doc `06` says Phase 1 uses basic Docker resource caps and defers full network isolation. Doc `24` requires hardened Docker, egress allowlist, warm pool, janitor, observability, and security tests in Phase 1.
-
-**Resolution needed:** Define a minimum sandbox bar for v0.1.
-
-**Recommended decision:** Phase 1 must include non-root container execution, resource limits, timeout/OOM handling, no host mounts, structured result capture, and Execution Log recording. Warm pool, egress proxy, and full security test suite can be Phase 1.5 unless needed for trust demo.
-
----
-
-### Gap 8 — Approval / Autopilot Scope Conflicts
-
-Doc `06` defers approval workflows except schema. Docs `19`, `30`, and `35` require approval gates and discuss autopilot-style behavior.
-
-**Resolution needed:** Distinguish approval infrastructure from autopilot.
-
-**Recommended decision:** Phase 1 supports manual approval records/workflow requests only for high-risk skill calls if needed. No autopilot. Autopilot remains Phase 2+ after real execution evidence exists.
-
----
-
-### Gap 9 — Security Claims Need Evidence
-
-Docs `04` and `20` make strong claims about Hermes/OpenClaw CVEs and vulnerability counts.
-
-**Resolution needed:** Either add citations from primary sources or soften the claims before public release.
-
-**Recommended decision:** Replace uncited competitor-specific security claims with broader architectural risk statements until sources are verified.
-
----
-
-### Gap 10 — Legal / License Decision Remains Open
-
-Docs say GPL v3 now, AGPL v3 under consideration later.
-
-**Resolution needed:** Pick launch license before public release.
-
-**Recommended decision:** Keep GPL v3 for private/internal Phase 1 while evaluating AGPL v3 before public release, especially if hosted/SaaS protection matters.
-
----
-
-## 3. Missing Documents
-
-The dossier has added the main authority documents. Remaining pre-implementation gap:
-
-1. `docs/security-claims-audit.md`
-   - Source verification for public claims about Hermes/OpenClaw/security posture.
-
-Completed:
-
-- `42-phase-one-authority-contract.md` — single source of truth for v0.1 scope.
-- `43-control-room-product-spec.md` — operator-facing trust UX: permissions, live activity, approvals, audit replay, pause/revoke.
-- `44-technical-feasibility-spike.md` — Frappe version, DB, Raven, ERPNext, bench/Friday command strategy.
-- `45-fork-policy.md` — core divergence rules and upstream update discipline.
-
----
-
-## 4. Recommended Order of Work
-
-1. ~~Run the technical feasibility spike using doc 44.~~ **Done.**
-2. ~~Record spike decisions in `docs/decisions/spike-results.md`.~~ **Done — see `docs/decisions/spike-results.md`.**
-3. ~~Update doc 42 if the spike changes Raven, ERPNext, database, or fork assumptions.~~ **Done — doc 42 updated.**
-4. ~~Audit public security claims.~~ **Done — see `46-security-claims-audit.md`.**
-5. Update downstream docs (`14`, `16`, `19`, `24`, `26`, `30`, `34`, `35`) if needed.
-6. **Start implementation. ← We are here.**
-
----
-
-## 5. Current Architectural Take
-
-Friday should be understood as:
-
-> Friday is an agentic framework that runs on a hard fork of Frappe v16 stable, with the full bench ecosystem intact, agent-native primitives built into core, and ERPNext operations as the first flagship use case delivered through a Friday app.
-
-This framing preserves the ambition while giving implementation a sane starting point.
+Single-site. Two-worker model. Framework Console as the product surface. Agent Core Worker as the engine. Permission first, always. Audit everything. Kanban is a view, not the workflow.

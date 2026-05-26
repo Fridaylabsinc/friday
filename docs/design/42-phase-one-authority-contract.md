@@ -1,189 +1,174 @@
 # 42 — Phase One Authority Contract
 
-> **Purpose:** Establish the single source of truth for Friday v0.1 / Phase 1 scope. Where older documents describe a broader Phase 1, this contract wins.
+> **Status:** Highest authority for v0.1 scope. Where any other document describes "Phase 1" and conflicts with this contract, this document wins. No exceptions.
 
 ---
 
-## 1. Authority
+## 1. Authority Hierarchy
 
-This document resolves the Phase 1 contradictions identified in `40-gap-analysis-and-resolution-plan.md`.
-
-Implementation priority:
+When implementation decisions conflict, resolve in this order:
 
 1. `39-friday-framework-strategy.md` — framework identity and fork discipline
 2. `41-porting-strategy-hermes-erpnext-raven.md` — Hermes / ERPNext / Raven translation
-3. This document — v0.1 scope authority
+3. **This document** — v0.1 scope authority
 4. `06-phase-one-scope.md`, `10-agent-execution-guide.md`, `11-agent-validation-checklist.md`
-5. Other design documents as roadmap context
-
-If any older document says "Phase 1" and conflicts with this contract, read it as roadmap context unless this document explicitly includes it.
+5. Other design documents — roadmap context only
 
 ---
 
 ## 2. Phase 1 Goal
 
-Phase 1 proves the governed framework loop and Friday product feel.
+Phase 1 proves the governed framework loop and the Friday product feel.
 
-The required proof:
+**The required proof:**
 
-> A user can create or send work into Friday, Friday resolves an Agent Profile, loads governed Skills from DocTypes, checks permissions, executes one approved skill in a sandboxed path, records immutable logs, updates an Agent Task through a configurable workflow, and shows the result in the Control Room.
+> A user can create or send work into Friday. Friday resolves an Agent Profile, loads governed Skills from DocTypes, checks permissions, executes one approved skill in a sandboxed path, records immutable logs, updates an Agent Task through a configurable workflow, and shows the result in the Framework Console.
 
-This is the foundation. ERPNext Purchase Order automation remains inside the Phase 1 program as the flagship dogfood track, but it starts after the governed framework loop is green. The mistake to avoid is making PO automation the first thing we code before the framework has identity, permissions, workflow, and audit.
+That is the foundation. Everything else is breadth, not depth.
+
+ERPNext Purchase Order automation remains inside the Phase 1 program as the flagship dogfood track — but it starts **after** the governed framework loop is proven. The mistake to avoid: making PO automation the first engineering slice, before the framework has identity, permissions, workflow, and audit.
 
 ---
 
-## 3. In Scope For v0.1
+## 3. In Scope for v0.1
 
 ### Framework Shell
+- Friday repository forked from Frappe v16 stable
+- Full bench ecosystem retained and documented
+- `friday` command group (or bench plugin) for agent-specific operations
+- Framework Console workspace as the default operator surface
+- Agent-native primitives in framework core: actor context, trace propagation, audit hooks, agent-scoped auth
+- Core divergences documented in `docs/core-divergences.md`
 
-- Friday repository forked from Frappe v16 stable, with full bench ecosystem retained
-- bench remains available and documented for site/framework operations
-- Friday-facing agent commands or bench command group
-- Friday Control Room workspace
-- agent-native primitives built into framework core (actor context, trace, audit hooks, sandboxed execution); documented in `docs/core-divergences.md`
-
-### Agent Kernel
-
+### Agent Kernel DocTypes
 - `Agent Profile`
-- `Agent Role Profile` if Frappe Role Profile is insufficient after spike
+- `Agent Role Profile` (if Frappe Role Profile is insufficient after evaluation)
 - `Skill`
-- `Execution Log`
-- `Permission Decision Log`
+- `Execution Log` (submittable — immutable audit trail)
+- `Permission Decision Log` (submittable — immutable audit trail)
 - `Workflow Request` schema
 - `Agent Project`
 - `Agent Task`
-- `Agent Task Event` or equivalent timeline/event record
+- `Agent Task Event` (or equivalent event/timeline record)
 
-### Workflow And Board
-
-- configurable `Agent Task` workflow
-- first workflow template may be simple
+### Workflow and Board
+- Configurable Agent Task workflow (first template may be simple)
 - Kanban renders workflow states as columns
-- states can be marked dispatchable
-- dispatcher claims only dispatchable tasks
-- blocked / completed / failed outcomes are explicit
+- States marked dispatchable; dispatcher claims only dispatchable tasks
+- Explicit outcomes: blocked / completed / failed
 
 ### Execution
+- One end-to-end skill (e.g. `create_note`)
+- Permission check before execution
+- Sandboxed execution path (Docker, minimum bar per §5)
+- Structured result capture
+- Immutable Execution Log
+- Immutable Permission Decision Log
 
-- one end-to-end skill, such as `create_note`
-- permission check before skill execution
-- sandboxed execution path
-- structured result capture
-- immutable Execution Log
-- immutable Permission Decision Log
-
-### Product Surface
-
-- Control Room shows at minimum:
-  - active tasks
-  - active / suspended agents
-  - recent executions
-  - permission denials
-  - task state changes
-  - pause / suspend path for agents
+### Framework Console (minimum)
+- Active tasks
+- Active / suspended agents
+- Recent executions
+- Permission denials
+- Task state changes
+- Pause / suspend path for agents
 
 ### Raven
-
-Raven is optional for v0.1 unless the technical feasibility spike proves it is low-risk to include.
+Raven is **optional for v0.1** unless the feasibility spike confirms it is low-risk to include.
 
 If included, Raven is a War Room bridge only:
-
-- conversation surface
-- task / execution event posting
-- message actions routed through Friday permission checks
+- Conversation surface
+- Task and execution event posting
+- Message Actions routed through Friday permission checks
 
 Raven does not own task truth, execution truth, permissions, or audit.
 
 ---
 
-## 4. Out Of Scope For v0.1
+## 4. Out of Scope for v0.1
 
-- autopilot
-- autonomous profile activation
-- autonomous skill activation
-- autonomous workflow activation
-- learning loop that changes active skills
-- semantic memory / wiki / knowledge graph
-- cross-site agent communication
-- multi-platform adapters beyond CLI or Raven if included
-- deep Raven fork
-- full ERPNext domain-agent suite
-- production-grade multi-host scaling
+These are not "nice to have later" — they are explicit exclusions from v0.1 that will not be considered even if a document calls them Phase 1.
+
+- Autopilot mode
+- Autonomous profile activation
+- Autonomous skill activation or learning loop that changes active skills
+- Semantic memory / pgvector queries (installed but not used)
+- Wiki / knowledge graph
+- Cross-site agent communication
+- Multi-platform adapters beyond CLI or Raven (if Raven is included)
+- Deep Raven fork
+- Full ERPNext domain-agent suite (PO flagship comes after v0.1)
+- Production-grade multi-host scaling
 
 ---
 
 ## 5. Sandbox Minimum Bar
 
-Phase 1 must not be unsafe, but it does not need the final production sandbox.
+Phase 1 must not be unsafe. The minimum bar is not the production sandbox.
 
-Required:
-
-- non-root container user
-- resource limits
-- timeout handling
+**Required for v0.1:**
+- Non-root container user
+- CPU and memory resource limits
+- Timeout handling
 - OOM handling
-- no host source or Docker socket mounts
-- scoped credentials
-- structured stdout/stderr/result capture
-- cleanup / janitor path
-- Execution Log for every attempt
+- No host filesystem mounts
+- No Docker socket mount
+- Scoped credentials (short-lived API token, not long-lived)
+- Structured stdout/stderr/result capture
+- Cleanup path (no orphaned containers)
+- Execution Log row for every attempt
 
-Phase 1.5 / hardening:
-
-- warm pool
-- egress proxy / allowlist enforcement
-- read-only rootfs for every runtime
-- full automated security attack suite
-- multi-host orchestration
+**Deferred to Phase 1.5:**
+- Warm container pool
+- Egress proxy and allowlist enforcement
+- Read-only rootfs on all runtimes
+- Full automated security attack suite
+- Multi-host orchestration
 - gVisor / Firecracker backend
 
 ---
 
 ## 6. ERPNext PO Flagship Track
 
-ERPNext PO automation remains the first named business use case of Phase 1.
+The ERPNext Purchase Order workflow is the first named business use case of Phase 1. It is not v0.1. It begins after v0.1 proves the framework loop.
 
-It begins after v0.1 proves the framework loop:
+**Gate: v0.1 must be green before PO track starts.**
 
-1. Agent Project / Agent Task orchestration works.
-2. Agent Profile and Skill governance works.
-3. Permission and execution logs are reliable.
-4. The dispatcher handles configurable workflows.
-5. The Control Room lets a human understand and stop the system.
+v0.1 gates for PO track readiness:
+1. Agent Project / Agent Task orchestration works
+2. Agent Profile and Skill governance works
+3. Permission and execution logs are reliable
+4. Dispatcher handles configurable workflows
+5. Framework Console lets a human understand and stop the system
 
-Only then should Friday attempt the PO track.
-
-The PO dogfood is the **Phase 1 flagship validation**, not the **first engineering slice**.
-
-Minimum PO track:
-
+**Minimum PO track scope (after v0.1):**
 - Procurement Agent profile
 - Inventory read-only support or alerts
 - Coordinator Agent basic oversight
-- Operations Policy DocType
+- Operations Policy DocType (approval thresholds)
 - PO draft / supplier follow-up / GRN matching / variance flagging
-- human approval for high-risk or financially binding actions
-- zero unsafe actions
-- full audit traceability
+- Human approval for all high-risk and financially binding actions
+- Zero unsafe actions
+- Full audit traceability
 
 ---
 
 ## 7. Completion Gate
 
-v0.1 is complete when:
+v0.1 is complete when all of the following are true:
 
-- A Friday site installs and migrates cleanly.
-- Control Room exists.
-- Agent Profile, Skill, Agent Project, Agent Task, Execution Log, and Permission Decision Log exist.
-- A user can create or submit a task.
-- Dispatcher claims a dispatchable task once and only once.
-- Agent executes one approved skill through the governed path.
-- Denied skill calls are logged and rejected.
-- Task state changes are visible in list/report/Kanban views.
-- Execution and permission logs are sufficient to reconstruct what happened.
-- Tests cover permission checks, dispatcher claim safety, and the first end-to-end skill.
+- [ ] A Friday site installs and migrates cleanly from a fresh bench
+- [ ] Framework Console exists and is the default workspace
+- [ ] Agent Profile, Skill, Agent Project, Agent Task, Execution Log, and Permission Decision Log DocTypes exist
+- [ ] A user can create or submit a task
+- [ ] Dispatcher claims a dispatchable task exactly once (concurrency-safe)
+- [ ] Agent executes one approved skill through the governed path
+- [ ] Denied skill calls are logged to Permission Decision Log and rejected without execution
+- [ ] Task state changes are visible in list / report / Kanban views
+- [ ] Execution and permission logs are sufficient to reconstruct exactly what happened
+- [ ] Tests cover permission checks, dispatcher claim safety, and the first end-to-end skill
 
-After this, Friday starts the ERPNext PO flagship track with a stable foundation.
+After this gate is green, the PO flagship track begins.
 
 ---
 
@@ -193,4 +178,4 @@ Phase 1 is not "build all of Friday."
 
 Phase 1 is:
 
-> Build the smallest Friday that proves agents can operate inside a typed, permissioned, auditable framework — running on a Frappe v16 fork with agent-native primitives in core.
+> Build the smallest Friday that proves agents can operate inside a typed, permissioned, auditable Frappe-derived framework — running on Frappe v16 with agent-native primitives in core, with a Framework Console that lets a human understand and stop what the agents are doing.
