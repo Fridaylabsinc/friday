@@ -5,7 +5,6 @@ import unittest
 
 import frappe
 
-
 EXPECTED_DOCTYPES = {
 	"Agent Profile": {"profile_name", "status"},
 	"Agent Profile Skill": {"skill"},
