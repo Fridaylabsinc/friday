@@ -76,14 +76,18 @@ jobs:
             python_version="${2:-${{ inputs.python-version }}}"
 
             if [ -z "$version" ]; then
+                # Current PR commit lives in the friday fork, not upstream frappe.
                 ref="${{ github.sha }}"
+                fetch_url="https://github.com/${{ github.repository }}"
             else
+                # version-N-hotfix branches only exist in upstream frappe/frappe.
                 ref="version-$version-hotfix"
+                fetch_url="https://github.com/frappe/frappe"
             fi
 
-            echo "Updating to $ref"
+            echo "Updating to $ref from $fetch_url"
 
-            git -C apps/frappe fetch --depth 1 upstream "$ref":"$ref"
+            git -C apps/frappe fetch --depth 1 "$fetch_url" "$ref":"$ref"
             git -C apps/frappe checkout --quiet --force "$ref"
 
             if pgrep honcho > /dev/null; then
