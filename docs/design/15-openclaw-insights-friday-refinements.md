@@ -1,85 +1,86 @@
 # 15 — OpenClaw Insights and Friday Refinements
 
-> **Purpose:** Distill Alex Krentsel's "Principles for Autonomous System Design: OpenClaw Deep Dive" (UC Berkeley, March 2026) into specific refinements for Friday's architecture. Six insights, each mapped to a concrete change.
-
-Source: slide deck and recorded talk by Alexander Krentsel (UC Berkeley NetSys / Google Research). The talk dissects OpenClaw's internal architecture and extracts principles for autonomous system design.
+> See `00-glossary.md` for term definitions.
+>
+> Source: Alex Krentsel, "Principles for Autonomous System Design: OpenClaw Deep Dive" (UC Berkeley NEXT seminar, March 30, 2026; expanded talk April 2026). The talk dissects OpenClaw's internal architecture and extracts principles for autonomous system design. Friday is not affiliated with OpenClaw, Krentsel, or UC Berkeley — the talk is cited because it crystallises principles the agentic community is converging on, and Friday reflects those principles where they fit an enterprise focus.
 
 ---
 
-## 1. The Six Insights
+## 1. Six insights, six refinements
 
 ### Insight 1 — Three-layer architecture is the right shape
 
 OpenClaw decomposes into:
-- **Connectors** — platform interfaces (WhatsApp, Gmail, iMessage, plugins)
-- **Gateway Controller** — sessions, memory, configuration, cron
-- **Agent Runtime** — LLM calls, tools, skills, providers
 
-**Friday alignment:** our existing structure (Raven adapters → Friday Gateway → Agent Runner) is the same shape. No change required — confirmation.
+- **Connectors** — platform interfaces (WhatsApp, Gmail, iMessage, plugins).
+- **Gateway Controller** — sessions, memory, configuration, cron.
+- **Agent Runtime** — LLM calls, tools, skills, providers.
 
-**Refinement:** keep these three layers strictly separated. Tools should never bypass the Gateway. Connectors should never invoke skills directly.
+**Friday position:** the structure (Raven adapters → Gateway → Agent Runner) is already the same shape. Confirmation, not change. The layers stay strictly separated: tools never bypass the Gateway; connectors never invoke skills directly.
 
 ---
 
-### Insight 2 — Sessions are processes, plus a heartbeat session
+### Insight 2 — Sessions as processes, plus a heartbeat
 
-OpenClaw treats sessions like OS processes: own context, parallel execution, isolated permissions, optional sandboxing. Plus two special sessions:
-- **`main`** — admin session, full permissions, accessible via UI
-- **`heartbeat`** — auto-pings every 30 minutes, includes `HEARTBEAT.md` in context
+OpenClaw treats sessions like OS processes — own context, parallel execution, isolated permissions, optional sandboxing — plus two special sessions:
 
-The heartbeat is OpenClaw's "magic sauce" for autonomy: it gives the agent a periodic moment to check state, review pending work, and decide whether anything needs attention.
+- **`main`** — admin session, full permissions, accessible via UI.
+- **`heartbeat`** — auto-pings every 30 minutes, with a `HEARTBEAT.md` in context.
 
-**Friday refinement:** add a **Heartbeat Session** to Agent Profile. Implementation:
+The heartbeat is OpenClaw's mechanism for autonomy: a periodic moment for the agent to check state, review pending work, and decide whether anything needs attention.
+
+**Friday refinement:** add a Heartbeat Session pattern.
 
 | Component | Detail |
 |---|---|
-| New field on Agent Profile | `heartbeat_enabled` (Check), `heartbeat_interval_minutes` (Int, default 30) |
-| Frappe Scheduler job | Every N minutes, post a "heartbeat poll" message to the agent's queue |
-| Agent loop | On heartbeat: review recent Execution Logs, pending Tasks, escalations, return either an action or `HEARTBEAT_OK` |
+| New fields on Agent Profile | `heartbeat_enabled` (Check), `heartbeat_interval_minutes` (Int, default 30) |
+| Frappe Scheduler job | Every N minutes posts a "heartbeat poll" message to the agent's queue |
+| Agent loop | On heartbeat: review recent Execution Logs, pending Tasks, escalations; return an action or `HEARTBEAT_OK` |
 | New DocType | `Heartbeat Log` (submittable) records each heartbeat and what (if anything) the agent did |
 
-This makes agents proactively self-maintaining, not purely reactive.
+Agents become proactively self-maintaining, not purely reactive.
 
 ---
 
 ### Insight 3 — Memory as tools, not context injection
 
-OpenClaw deliberately does **not** inject memory into the system prompt. Memory is exposed only through `memory_search` and `memory_get` tools.
+OpenClaw deliberately does not inject memory into the system prompt. Memory is exposed only through `memory_search` and `memory_get` tools.
 
-Reasons cited:
-- **Relevance:** model fetches only when needed
-- **Token budget:** always-injecting memory burns context every request
-- **Freshness:** tool returns current indexed hits at decision time
-- **Safety:** broad auto-injection increases prompt-injection surface
+Reasons:
 
-**Friday refinement:** flip the memory model in doc 14 (integrated architecture). Make memory a tool, not a context block.
+- **Relevance:** the model fetches only when needed.
+- **Token budget:** always-injecting burns context every request.
+- **Freshness:** the tool returns current indexed hits at decision time.
+- **Safety:** broad auto-injection enlarges prompt-injection surface.
 
-Implementation:
+**Friday refinement:** memory is a tool, never an auto-injected context block.
 
 | Tool | Purpose |
 |---|---|
-| `memory_search(query, limit=5)` | Returns top-N relevant entries from semantic memory (pgvector) |
-| `memory_get(memory_id)` | Returns full content of a specific memory entry |
-| `memory_list(filter)` | Returns recent memories matching a structured filter (by agent, project, time) |
-| `memory_save(content, tags)` | Persists a new memory entry the agent decides is important |
+| `memory_search(query, limit=5)` | Top-N relevant entries from semantic memory (pgvector) |
+| `memory_get(memory_id)` | Full content of a specific Memory Entry |
+| `memory_list(filter)` | Recent memories matching a structured filter (agent, project, time) |
+| `memory_save(content, tags)` | Persists a new Memory Entry the agent decides is important |
 
-Skill files still reference memory tools in their `instructions` so the agent knows when to use them.
+Skills reference memory tools in `instructions` so the agent knows when to call them.
 
 ---
 
-### Insight 4 — Hard ceilings on skill context
+### Insight 4 — Hard ceilings on Skill context
 
 OpenClaw enforces:
-- **Max 150 skills** in context at any time
-- **Max 30,000 characters** of skill content in context
-- **Intelligent filter** decides which subset to include
+
+- Maximum 150 skills in context at any time.
+- Maximum 30,000 characters of skill content in context.
+- Intelligent filter decides the subset.
 
 Progressive disclosure:
-- **L0:** Header only (~3-4 lines) — always in context
-- **L1:** Body (skill instructions) — fetched on demand by the agent
-- **L2:** Linked files — fetched only when actually executing
 
-**Friday refinement:** bake these limits into the Skill Loader (doc 05, slice 3 of doc 10).
+- **L0:** header only (~3–4 lines), always in context.
+- **L1:** body (skill instructions), fetched on demand.
+- **L2:** linked files, fetched only when executing.
+
+**Friday refinement:** bake the limits into the Skill Loader from day one.
 
 | Constant | Value |
 |---|---|
@@ -88,86 +89,74 @@ Progressive disclosure:
 | `L0_HEADER_MAX_LINES` | 4 |
 
 Loader algorithm:
-1. Gather all Active skills permitted to the agent.
-2. Rank by recency-of-use × success-rate × relevance-to-task.
-3. Take top-K headers until either limit hits.
-4. Emit `skill_get(skill_name)` tool so the agent can pull L1/L2 on demand.
 
-This prevents context bloat as the skill library grows past 150.
+1. Gather all Active Skills permitted to the agent.
+2. Rank by recency-of-use × success-rate × relevance-to-task.
+3. Take top-K headers until either limit is reached.
+4. Expose `skill_get(skill_name)` so the agent can pull L1/L2 on demand.
+
+Cheap to enforce from day one. Expensive to retrofit.
 
 ---
 
 ### Insight 5 — Auto-configuration through conversation
 
-OpenClaw bootstraps itself via `BOOTSTRAP.md` — the agent's first action is to **talk to the user** and discover its identity, persona, and preferences, writing them to `IDENTITY.md`, `USER.md`, `SOUL.md`.
+OpenClaw bootstraps itself via `BOOTSTRAP.md` — the agent's first action is to talk to the user and discover its identity, persona, and preferences, writing them to `IDENTITY.md`, `USER.md`, `SOUL.md`.
 
-Quote from the talk: "the agent is becoming the interface for configuring itself."
+> "The agent is becoming the interface for configuring itself."
 
-**Friday refinement:** Agent Profiles can self-configure via War Room conversation, not just DocType form-fill.
-
-Implementation:
+**Friday refinement:** Agent Profiles can self-configure via War Room conversation. The DocType form remains; conversation is an alternative onboarding path.
 
 | Step | Action |
 |---|---|
-| New Agent Profile created in `Draft` status | Gateway spawns a one-time bootstrap conversation in War Room |
-| Bootstrap agent uses a Skill called `bootstrap_profile` | Asks supervisor: name, purpose, expected workload, preferred LLM, risk tolerance |
-| Skill writes back to the Agent Profile DocType fields | Conversation persists as a normal Chat Message thread |
+| New Agent Profile in `Draft` status | Gateway spawns a one-time bootstrap conversation in War Room |
+| Bootstrap agent runs a Skill `bootstrap_profile` | Asks supervisor: name, purpose, expected workload, preferred LLM, risk tolerance |
+| Skill writes back to Agent Profile fields | Conversation persists as a normal Chat Message thread |
 | When complete | Profile transitions to `Active` |
 
-Operators who prefer the form UI still have it. Bootstrap-via-conversation is an alternative onboarding path, not a replacement.
-
 ---
 
-### Insight 6 — LLM-as-policy, don't be over-opinionated
+### Insight 6 — LLM-as-policy; don't over-prescribe
 
-Krentsel's "meta-observations":
-- "Code quality" is dead — design abstractions matter more than implementation
-- Don't over-prescribe architecture; let the LLM be the policy layer
-- Unclear what should be prompts vs skills vs tools — leave it pluggable
+Krentsel's meta-observations:
 
-**Friday refinement:** audit our specs for over-prescription. Specifically:
+- Design abstractions matter more than implementation polish.
+- Don't over-prescribe architecture — let the LLM be the policy layer.
+- The boundary between prompts, skills, and tools is unsettled — leave it pluggable.
 
-| Current Spec | Refinement |
+**Friday refinement:** audit specs for over-prescription.
+
+| Spec | Refinement |
 |---|---|
-| Detailed dispatcher matching algorithm | Specify the contract (input/output), not the algorithm — let it evolve |
-| Hard-coded skill ranking heuristic | Make it pluggable so different deployments can swap policies |
-| Approval threshold logic | Move from hard-coded enums to user-configurable rules |
-| Heartbeat behaviour | Don't prescribe what the agent does on heartbeat — let the model decide given context |
+| Detailed dispatcher matching algorithm | Specify the contract (inputs / outputs), not the algorithm — let it evolve |
+| Hard-coded skill ranking heuristic | Make pluggable so deployments swap policies |
+| Approval threshold logic | User-configurable rules, not hard-coded enums |
+| Heartbeat behaviour | Don't prescribe what the agent does on heartbeat; let the model decide given context |
 
-**General principle:** Friday provides primitives (skills, permissions, memory tools, sandbox). The LLM decides how to use them. Don't bake business logic into Python where a skill markdown would do.
+Friday provides primitives (skills, permissions, memory tools, sandbox). The LLM decides how to use them. Business logic does not get baked into Python where a Skill row would do the job.
 
 ---
 
-## 2. What We Explicitly Don't Adopt From OpenClaw
+## 2. OpenClaw choices Friday rejects
 
-Not every OpenClaw choice maps cleanly to Friday's enterprise focus.
+OpenClaw optimises for personal autonomy. Friday optimises for enterprise governance. Same architectural shape, opposite defaults.
 
-| OpenClaw Choice | Why Friday Differs |
+| OpenClaw choice | Friday position |
 |---|---|
-| `.openclaw/cron/jobs.json` for scheduling | Friday uses Frappe Scheduler — DocType-backed, role-permissioned, auditable |
-| Markdown-only persona files (USER.md, SOUL.md) | Friday persists persona as Agent Profile DocType fields with audit history |
-| Allow-all session permissions by default | Friday defaults to least-privilege; sessions inherit Agent Role Profile permissions |
-| SQLite session DB | Friday uses PostgreSQL + Frappe DocTypes for enterprise persistence |
-| Agent edits its own config files freely | Friday gates config changes through Workflow Request DocType |
-
-The pattern: OpenClaw optimises for **personal autonomy**. Friday optimises for **enterprise governance**. Same architectural shape, opposite defaults.
+| `.openclaw/cron/jobs.json` for scheduling | Frappe Scheduler — DocType-backed, role-permissioned, auditable |
+| Markdown-only persona files (`USER.md`, `SOUL.md`) | Agent Profile DocType fields with audit history |
+| Permissive session defaults | Least-privilege; sessions inherit Agent Role Profile permissions |
+| SQLite session DB | PostgreSQL + Frappe DocTypes |
+| Agent edits its own config files freely | Config changes gated through Workflow Request |
 
 ---
 
-## 3. Phase-Map Updates from These Insights
+## 3. Phase mapping
 
-Three of the six insights affect Phase 1 scope (doc 06):
+Three insights affect Phase 1 scope per `42-phase-one-authority-contract.md`:
 
-- **Insight 3 (memory as tool):** Phase 1 already has minimal memory; the tool-only access pattern is locked in from slice 5 (LLM integration). No memory context injection.
-- **Insight 4 (skill ceilings):** Slice 3 (skill loader) must enforce 150 / 30000 limits from day one. Cheap to add, expensive to retrofit.
-- **Insight 6 (LLM-as-policy):** Slice 2 (permission engine) must expose a contract, not a fixed algorithm. Already in spec; reaffirm.
+- **Insight 3 (memory as tool):** Phase 1 has minimal memory; the tool-only access pattern is locked in from `10-agent-execution-guide.md` slice 5. No memory context injection.
+- **Insight 4 (Skill ceilings):** slice 3 (Skill Loader) enforces 150 / 30000 from day one.
+- **Insight 6 (LLM-as-policy):** slice 2 (permission engine) exposes a contract, not a fixed algorithm.
 
-The other three insights (heartbeat, auto-configuration, three-layer confirmation) are Phase 2 or Phase 3 additions.
-
----
-
-## 4. Attribution
-
-The architectural framing in this document is derived from Alex Krentsel's "Principles for Autonomous System Design: OpenClaw Deep Dive" (UC Berkeley NEXT seminar, March 30, 2026; expanded talk recorded April 2026). The slides are reusable with attribution under the author's stated terms.
-
-Friday is not affiliated with OpenClaw, Krentsel, or UC Berkeley. The talk is cited because it crystallises principles the agentic community is converging on, and Friday should reflect those principles where they fit our enterprise focus.
+Insights 1, 2, 5 (three-layer confirmation, heartbeat, auto-configuration) are Phase 2 or Phase 3 additions.
