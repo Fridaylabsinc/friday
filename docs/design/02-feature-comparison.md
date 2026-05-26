@@ -1,98 +1,102 @@
 # 02 — Feature Comparison
 
-A capability map across Hermes Agent, OpenClaw, and Friday, identifying what we **keep**, what we **replace**, and what we **add** when re-engineering on Frappe.
+> See `00-glossary.md` for all term definitions.
+> Hermes Agent and OpenClaw are the two upstream agent frameworks Friday draws from. This document maps capability-by-capability what Friday keeps, replaces, or adds when re-implementing those patterns on Frappe v16.
+
+---
 
 ## Core Agent Capabilities
 
-| Feature | Hermes | OpenClaw | Friday (target) |
+| Feature | Hermes | OpenClaw | Friday |
 |---|---|---|---|
-| Agent loop (perceive → plan → act) | ✅ AIAgent class | ✅ | ✅ Inherited from Hermes pattern |
-| Skill system | ✅ Markdown + manifests | ✅ Skill registry | ✅ Structured Skill DocType |
-| Learning loop / self-improving skills | ✅ Autonomous Curator | ⚠️ Limited | ✅ Skill Draft DocType + review workflow |
-| Multi-agent / sub-agents | ✅ Kanban dispatcher | ✅ | ✅ Frappe Project + Task + Kanban view |
-| Cron / scheduled jobs | ✅ jobs.json + 60s tick | ✅ | ✅ Frappe Scheduler + background workers |
-| Memory (persistent) | ✅ FTS5 + optional vector | ✅ Markdown + optional vector | ✅ PostgreSQL + pgvector |
-| User modeling | ✅ Honcho integration | ❌ | ✅ User Model DocType |
-| Skill curation | ✅ Autonomous Curator | ❌ | ✅ Background job + status flags |
+| Agent loop (perceive → plan → act) | AIAgent class | yes | Inherited from Hermes; runs on Agent Core Worker |
+| Skill system | Markdown + manifests | Skill registry | Skill DocType (database-backed, governed) |
+| Self-improving skills | Autonomous Curator | limited | Skill Draft DocType + human-review workflow |
+| Multi-agent / sub-agents | Kanban dispatcher | yes | Agent Project + Agent Task + Dispatcher |
+| Cron / scheduled jobs | jobs.json + 60s tick | yes | Frappe Scheduler + RQ workers |
+| Memory (persistent) | FTS5 + optional vector | Markdown + optional vector | PostgreSQL + pgvector |
+| User modeling | Honcho integration | none | User Model DocType |
+| Skill curation | Autonomous Curator | none | Background job + Skill status flags |
 
 ## Messaging & Platforms
 
-| Feature | Hermes | OpenClaw | Friday (target) |
+| Feature | Hermes | OpenClaw | Friday |
 |---|---|---|---|
-| Telegram | ✅ | ✅ | ✅ Adapter writes Chat Message DocType |
-| Discord | ✅ | ✅ | ✅ |
-| Slack | ✅ | ✅ | ✅ |
-| WhatsApp | ✅ | ✅ | ✅ |
-| Signal | ✅ | ✅ | ✅ |
-| Email (IMAP/SMTP) | ✅ | ⚠️ | ✅ Frappe has native email integration |
-| MS Teams / Google Chat | ✅ | ❌ | ✅ |
-| CLI / TUI | ✅ | ✅ | ✅ |
-| Web UI | ⚠️ Third-party | ✅ Native | ✅ Frappe Desk + custom views |
-| Voice input/output | ✅ Whisper + TTS | ⚠️ | ✅ Voice via attachment workflow |
+| Telegram, Discord, Slack, WhatsApp, Signal | yes | yes | Adapter writes Chat Message DocType |
+| Email (IMAP/SMTP) | yes | partial | Frappe native email |
+| MS Teams / Google Chat | yes | none | Adapter writes Chat Message DocType |
+| CLI / TUI | yes | yes | Phase 1 primary surface |
+| Web UI | third-party | native | Framework Console (Frappe Workspace + custom views) |
+| Voice in/out | Whisper + TTS | partial | Voice via attachment workflow |
 
 ## Tooling
 
-| Feature | Hermes | OpenClaw | Friday (target) |
+| Feature | Hermes | OpenClaw | Friday |
 |---|---|---|---|
-| Terminal/shell execution | ✅ Multiple backends | ✅ | ✅ Sandboxed in Docker |
-| Browser automation | ✅ Browserbase, CDP, etc. | ✅ | ✅ Browser Task DocType + worker |
-| Web search | ✅ | ✅ | ✅ |
-| Vision (image analysis) | ✅ | ✅ | ✅ Vision Task DocType |
-| Image generation | ✅ FAL.ai | ⚠️ | ✅ Image Generation Task DocType |
-| File I/O | ✅ | ✅ | ✅ |
-| MCP server support | ✅ | ⚠️ | ✅ MCP Server DocType registration |
+| Terminal / shell execution | multiple backends | yes | Sandboxed in Docker |
+| Browser automation | Browserbase, CDP | yes | Browser Task DocType + worker |
+| Web search | yes | yes | yes |
+| Vision (image analysis) | yes | yes | Vision Task DocType |
+| Image generation | FAL.ai | partial | Image Generation Task DocType |
+| File I/O | yes | yes | yes (sandboxed FS) |
+| MCP server support | yes | partial | MCP Server DocType registration |
 
 ## Governance & Security
 
-| Concern | Hermes | OpenClaw | Friday (target) |
+| Concern | Hermes | OpenClaw | Friday |
 |---|---|---|---|
-| Role-based permissions | ❌ Config only | ❌ Config only | ✅ **Frappe role matrix, enforced at gateway** |
-| Agent profile isolation | ⚠️ HERMES_HOME folder | ⚠️ | ✅ DocType + Docker container per profile |
-| Audit trail | ⚠️ Log files | ⚠️ Log files | ✅ Execution Log DocType (immutable) |
-| Approval workflows | ✅ Slack/Telegram buttons | ⚠️ | ✅ Workflow Request DocType + Frappe Workflow |
-| Sandboxing | ⚠️ Process-level | ⚠️ Process-level | ✅ Docker + network isolation + scoped credentials |
-| Secret management | ⚠️ .env files | ⚠️ .env files | ✅ Frappe's Password field type + integrations |
-| Command-level threat scanning | ✅ Tirith | ⚠️ | ✅ Inherit Tirith; add permission pre-check |
-| Resource quotas / rate limits | ⚠️ Limited | ⚠️ | ✅ Frappe rate limiter + cgroups |
+| Role-based permissions | config only | config only | **Frappe role matrix, enforced at the gateway before dispatch** |
+| Agent isolation | HERMES_HOME folder | folder-based | Agent Profile DocType + Docker container per skill invocation |
+| Audit trail | log files | log files | Execution Log + Permission Decision Log (immutable, submittable) |
+| Approval workflows | Slack/Telegram buttons | partial | Workflow Request DocType + Frappe Workflow |
+| Sandboxing | process-level | process-level | Docker, non-root, network-restricted, scoped credentials |
+| Secret management | .env files | .env files | Frappe Password field type + integration tokens |
+| Command-level threat scanning | Tirith | partial | Tirith inherited; permission pre-check added |
+| Resource quotas / rate limits | limited | limited | Frappe rate limiter + cgroups |
 
 ## Persistence & Data
 
-| Feature | Hermes | OpenClaw | Friday (target) |
+| Feature | Hermes | OpenClaw | Friday |
 |---|---|---|---|
-| Session storage | SQLite + FTS5 | SQLite | PostgreSQL (via Frappe) |
-| Vector embeddings | Optional, plugin-based | Optional | pgvector native |
-| Skill storage | Markdown files | Registry + files | Skill DocType (queryable, structured) |
-| Real-time pubsub | Custom | Custom | Frappe socketio + Redis |
-| Background jobs | Custom scheduler | Custom | Frappe RQ workers |
+| Session storage | SQLite + FTS5 | SQLite | PostgreSQL (Frappe) |
+| Vector embeddings | optional, plugin | optional | pgvector, first-class |
+| Skill storage | Markdown files | Registry + files | Skill DocType (queryable, versioned) |
+| Real-time pubsub | custom | custom | Redis pub/sub + Socket.io (Frappe native) |
+| Background jobs | custom scheduler | custom | Frappe RQ workers |
 
-## Notable Hermes Features We Inherit
+---
+
+## Decisions
+
+**Inherited from Hermes (re-implemented on Frappe primitives, not ported as code):**
 
 - Multi-platform unified gateway pattern (adapters + GatewayRunner)
-- Skills with progressive disclosure (L0/L1/L2) — but stored as DocType fields, not separate files
+- Progressive-disclosure skills (L0/L1/L2) — stored as DocType fields, not files
 - Cron with natural-language scheduling
-- Approval routing for dangerous commands
-- Tirith for command-level security scanning
-- Model fallback / provider switching
+- Approval routing for high-risk commands
+- Tirith command-level security scanning
+- Model fallback and provider switching
 - Sub-agent spawning for parallel workstreams
 - Honcho-style user modeling
 - MCP server integration
-- FTS-based session search (PostgreSQL FTS instead of SQLite FTS5)
+- Full-text session search (PostgreSQL FTS, not SQLite FTS5)
 
-## What We Drop / Replace
+**Replaced (Hermes pattern → Friday primitive):**
 
-- **Custom Kanban + SQLite** → Frappe Project/Task with native Kanban view
-- **Markdown skill files in `~/.hermes/skills/`** → Skill DocType
-- **`jobs.json` cron** → Frappe Scheduler
-- **`HERMES_HOME` profile folders** → Agent Profile DocType + scoped database access
-- **Log files for audit** → Execution Log DocType
-- **Custom WebSocket for live dashboards** → Frappe's real-time pubsub
-- **`.env` for secrets** → Frappe Password fields + integration tokens
+- Custom Kanban + SQLite → Agent Project + Agent Task + Frappe Kanban view
+- Markdown skill files in `~/.hermes/skills/` → Skill DocType
+- `jobs.json` cron → Frappe Scheduler
+- `HERMES_HOME` profile folders → Agent Profile DocType + scoped database access
+- Log files for audit → Execution Log DocType
+- Custom WebSocket for live dashboards → Frappe Socket.io + Redis pub/sub
+- `.env` for secrets → Frappe Password fields + integration tokens
 
-## What We Add (net-new vs. Hermes)
+**Net-new in Friday (not present in either upstream):**
 
-- Permission enforcement **at gateway level**, gating skill execution before queueing
-- Structured Skill schema with status flags (Active / Draft / Experimental / Retired)
+- Permission enforcement at the gateway, before a skill is queued
+- Skill schema with explicit status flags (Active / Draft / Experimental / Retired)
+- Skill Version rows for immutable rollback
 - Frappe Workflow-based approval chains (multi-step, multi-role)
-- Resource quotas per Agent Profile (Frappe rate limiter)
-- Native multi-tenant support (one Frappe site can host multiple isolated agentic deployments)
-- Reusable across any Frappe site (eventually as a core Frappe module)
+- Per-Agent-Profile resource quotas via Frappe rate limiter
+- Native multi-tenant: one Friday installation hosts multiple isolated sites
+- Framework-level agent primitives — not an installable app, part of the fork
