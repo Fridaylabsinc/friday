@@ -117,8 +117,10 @@ runs:
         --no-backups \
         --python "$(which python)"
 
-      # bench init sets origin to the local checkout path, fix it to point at GitHub
-      git -C apps/frappe remote set-url upstream "https://github.com/${{ github.repository }}"
+      # bench init sets origin to the local checkout path, fix it to point at GitHub.
+      # Point upstream at canonical frappe/frappe so migration tests can fetch
+      # version-15-hotfix / version-16-hotfix branches that only live there.
+      git -C apps/frappe remote set-url upstream "https://github.com/frappe/frappe"
 
       # Trim Procfile for CI
       sed -i '/^watch:/d' Procfile

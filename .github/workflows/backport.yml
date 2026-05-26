@@ -7,6 +7,10 @@ on:
 
 jobs:
   main:
+    # Only run when the PR carries the 'backport' label. Avoids failing every
+    # PR close with "Input required and not supplied: token" when the
+    # RELEASE_TOKEN secret isn't configured for non-backport PRs.
+    if: contains(github.event.pull_request.labels.*.name, 'backport')
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
