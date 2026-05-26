@@ -1,283 +1,234 @@
 # 41 — Porting Strategy: Hermes Core, ERPNext Work Objects, Raven War Room
 
-> **Purpose:** Convert the lived Hermes Kanban failure case into Friday's porting strategy. Hermes proves the multi-agent coordination pattern, but Friday must rebuild that pattern on Frappe's typed DocTypes, workflows, validations, permissions, and views.
+> **Status:** Authoritative. Hermes / ERPNext / Raven translation decisions.
+> Where doc 42 (Phase One Authority Contract) conflicts with this document on v0.1 scope, doc 42 wins.
 
 ---
 
-## 1. Origin Story
+## Origin: The Hermes Failure Case
 
-The practical test was simple: ask Hermes Agent to create profiles, create a board, create tasks, and run a multi-agent workflow.
+The porting strategy starts from a real test: ask Hermes Agent to create profiles, build a board, create tasks, and run a multi-agent workflow.
 
-The result was useful but not reliable enough for a real framework:
-
-- Basic bounded tasks worked, such as analysing a file.
+Results:
+- Basic bounded single-agent tasks worked.
 - Multi-agent setup failed repeatedly.
-- Profiles and skills were built incorrectly.
-- The board structure was too rigid.
-- The agent was forced to invent too much of the operating model from loose text.
+- Agent-created profiles and skills were built incorrectly.
+- Fixed Kanban columns did not match the actual workflow needed.
+- The agent was forced to invent too much of the operating model from loose instructions.
 
-This is the product insight:
+**The product insight:**
 
 > Agents should not improvise the operating model. They should operate inside one.
 
-Hermes shows the right orchestration shape. The failure mode shows why Friday needs Frappe.
+Hermes proves the right coordination shape. The failure case proves why Friday needs Frappe.
 
 ---
 
-## 2. What We Keep From Hermes
+## What Is Ported vs What Is Not
 
-Friday should keep these ideas:
+This is the most important section. The port is precise.
 
-- durable task coordination instead of fragile in-context subagent swarms;
-- named agent profiles instead of anonymous subagents;
-- dispatcher-driven claiming of ready work;
-- worker lanes by profile or capability;
-- task dependencies and dependency promotion;
-- block / unblock loops for human input;
-- heartbeat and stale-claim recovery;
-- per-task run history;
-- circuit breaker after repeated failures;
-- orchestrator agents that decompose work without doing every task themselves.
+### Ported from Hermes
 
-These are architectural patterns, not storage decisions.
+**`run_agent.py` and the `agent/` module tree** — the AIAgent class, the ReAct-style conversation loop, prompt builder, tool dispatch, model provider abstraction, and session state management. This is the agent core.
 
----
+**`tools/` and `model_tools.py`** — the tool registry and parallel tool execution logic.
 
-## 3. What We Reject From Hermes
+**`hermes_state.py`** — reimplemented against PostgreSQL + pgvector instead of SQLite + FTS5.
 
-Friday should not inherit these assumptions:
+**Skills (Level 0 / 1 / 2 progressive disclosure pattern)** — the concept of progressive skill disclosure is kept; the implementation moves from filesystem SKILL.md files to Frappe DocTypes.
 
-- file / SQLite state as the authority for enterprise workflows;
-- agent-created profiles becoming executable without schema validation;
-- agent-created skills becoming active without review and tests;
-- fixed Kanban columns as the workflow model;
-- dashboard state as the source of truth;
-- permissive profile/tool wiring that depends on prompt discipline;
-- task orchestration that is hard to audit through business records.
+### Not Ported from Hermes
 
-Hermes is a strong personal/local agent runtime. Friday is a framework for governed business agents.
+**`gateway/run.py` and `gateway/platforms/`** — Raven replaces the gateway. Hermes' multi-platform adapter system is not ported. Friday uses Raven's Socket.io layer for communication.
 
----
+**`cli.py` and the TUI** — Frappe Desk and the `friday` bench command group replace the CLI.
 
-## 4. Friday Translation
+**The ACP server, API server, batch runner** — not ported.
 
-| Hermes Concept | Friday Translation | Source of Truth |
-|---|---|---|
-| Kanban board | Agent Project / Workflow Board | Frappe DocTypes |
-| Kanban task | Agent Task | Frappe DocType |
-| Fixed columns | Workflow states rendered as Kanban columns | Frappe Workflow |
-| Profile | Agent Profile | Frappe DocType linked to User |
-| Profile lane | Agent Role Profile / Dispatcher lane | Frappe DocTypes |
-| `kanban_*` tools | `task_*`, `execution_*`, `approval_*` tools | Friday gateway |
-| Worker process | Agent Execution / Sandbox Execution | Execution Log |
-| Comments | Task comments + Raven messages | Frappe Timeline / Raven mirror |
-| Runs | Agent Execution rows | Frappe DocType |
-| Board isolation | Project / site / tenant permission boundary | Frappe permissions |
+**`jobs.json` cron daemon** — Frappe Scheduler replaces this entirely.
 
-The rule:
+**The Kanban dashboard** — Frappe Workflow + Kanban View replaces Hermes' fixed Kanban.
 
-> Agent Project, Agent Task, Workflow, Execution Log, and Permission Decision Log own the truth. Raven reflects and enriches collaboration. Agents act through governed tools.
+**SQLite / FTS5 session storage** — PostgreSQL + pgvector replaces this.
+
+**`HERMES_HOME` filesystem layout** — replaced by Frappe DocTypes and the site's PostgreSQL database.
+
+**LiteLLM as a default dependency** — not carried forward due to supply-chain risk. Friday uses direct provider SDKs.
 
 ---
 
-## 5. Flexible Workflow, Not Fixed Columns
+## What Friday Keeps from Hermes (as Patterns)
 
-Hermes' default lifecycle is useful:
+These are architectural patterns Friday re-implements on Frappe primitives, not code Friday inherits:
 
-`Triage -> Todo -> Ready -> In Progress -> Blocked -> Done`
-
-Friday should not hardcode it.
-
-Real businesses need different flows:
-
-- Procurement: `Draft -> Supplier Follow-up -> Internal Review -> Approval Needed -> PO Drafted -> Completed`
-- Engineering: `Idea -> Spec Needed -> Build -> Review Required -> Changes Requested -> Merged`
-- Support: `Reported -> Triage -> Investigation -> Waiting on Customer -> Escalated -> Resolved`
-- Research: `Question -> Source Gathering -> Synthesis -> Review -> Published`
-
-Friday's principle:
-
-> Kanban is a view, not the workflow.
-
-The workflow is defined through Frappe Workflow, Agent Task Type, and validation rules. The Kanban board renders whichever states are configured for that task or project type.
-
-Minimum model:
-
-- `Agent Task.workflow_state` stores the current state.
-- `Agent Task Type` determines the workflow template.
-- Workflow states can be marked `kanban_visible`.
-- Workflow states can be marked `dispatchable`.
-- Workflow transitions can require role, approval, or risk checks.
-- Dispatcher only claims tasks in dispatchable states.
-- Agents can only move tasks through allowed transitions.
+- Durable task coordination instead of fragile in-context subagent swarms
+- Named agent profiles instead of anonymous subagents
+- Dispatcher-driven claiming of ready work
+- Worker lanes by profile or capability
+- Task dependencies and dependency promotion
+- Block / unblock loops for human input
+- Heartbeat and stale-claim recovery
+- Per-task execution history
+- Circuit breaker after repeated failures
+- Orchestrator agents that decompose work without executing every task themselves
 
 ---
 
-## 6. Profile And Skill Governance
+## Hermes AIAgent → Agent Core Worker
 
-Hermes lets profiles and skills be lightweight and flexible. That flexibility is also where the real-world failure happened.
+The AIAgent class from `run_agent.py` is synchronous and ReAct-style. This is the right shape for a Frappe RQ worker, which is also synchronous. Do not try to make AIAgent async.
 
-Friday should treat profiles and skills as governed records:
+Three concrete changes required during porting:
 
-- `Agent Profile` defines identity, linked user, model, status, quotas, allowed roles, allowed skills, memory scope, and execution policy.
-- `Agent Role Profile` defines reusable bundles of roles, skill permissions, risk thresholds, delegation rules, and approval rules.
-- `Skill` defines name, description, input schema, output schema, allowed DocTypes, allowed operations, risk level, runtime, tests, and status.
-- `Skill Version` tracks changes and rollback.
-- `Skill Draft` captures agent-proposed skills before review.
+**1. Cooperative cancellation.** Replace Hermes' `threading.Event` interrupt with an RQ `SIGTERM`-aware check: on each tool boundary, the worker reads a `stop_requested` flag from the Agent Task DocType. If set, the worker shuts down gracefully.
 
-Agents may propose profiles, skills, tasks, and workflows. They may not silently activate safety-critical structure.
+**2. State as DocTypes.** Replace Hermes' filesystem state (`SOUL.md`, `MEMORY.md`, `USER.md`, `state.db`) with DocType reads loaded once at the start of `run_conversation()` and kept immutable for that run's duration. Frappe RQ can run multiple workers; each must load its own snapshot cleanly.
 
-Promotion gates:
-
-| Object | Agent May Propose | Human / Supervisor Must Approve |
-|---|---:|---:|
-| Agent Profile | Yes | Before active |
-| Agent Role Profile | Yes | Before active |
-| Skill | Yes | Before active |
-| Skill Version | Yes | Before default |
-| Workflow | Yes | Before dispatchable |
-| High-risk Task | Yes | Before execution |
+**3. Memory migration.** Replace SQLite FTS5 with PostgreSQL dual-index: `tsvector` + GIN for keyword recall (the direct FTS5 replacement), and pgvector `vector(1536)` + HNSW for semantic recall. Both stored on the `agent_message` table. Queries merge results via reciprocal rank fusion.
 
 ---
 
-## 7. ERPNext Project / Task / Issue Porting Strategy
+## Skills: Filesystem → DocTypes
 
-Friday should selectively port ERPNext's mature work objects, not depend on the whole ERPNext app for Phase 1.
+Hermes' SKILL.md system has three properties that require explicit mapping:
 
-Port as renamed Friday-native DocTypes:
+**Progressive disclosure (L0 / L1 / L2).** DocType fields map directly: `description` = L0 header (loaded into every prompt), `instructions` = L1 body (fetched on demand), `Skill Asset` child rows = L2 reference files.
 
-- `Agent Project` from ERPNext Project
-- `Agent Task` from ERPNext Task
-- `Agent Issue` from ERPNext Issue
+**Agent self-mutation.** Hermes agents can write new SKILL.md files directly. Friday does not allow this. Agents propose `Skill Draft` rows; humans approve. This is not a limitation — it is the governance model. See `22-hermes-learning-loop-deep-dive.md`.
 
-Keep:
+**External skill directories.** Hermes supports `external_dirs:` in config for local skill overlays. Not ported. Skills live in the database. Community-contributed skills are imported via the Skill import pipeline and go through the Draft → Review → Active flow.
 
-- project container semantics;
-- task assignment;
-- priorities;
-- dependencies / predecessor relationships;
-- status and workflow support;
-- Kanban / list / report / calendar / Gantt compatibility where useful;
-- comments, timeline, attachments, and activity history.
-
-Drop or defer:
-
-- ERP-specific fields that are not needed for agent orchestration;
-- billing or timesheet coupling unless it supports a concrete Phase 1 use case;
-- customer/project accounting assumptions;
-- any field that makes the object feel like ERPNext rather than Friday.
-
-Add:
-
-- `assigned_to_profile`;
-- `required_skills`;
-- `risk_level`;
-- `approval_policy`;
-- `dispatchable_state`;
-- `current_execution`;
-- `last_execution_status`;
-- `blocked_reason`;
-- `war_room_channel`;
-- `automation_mode`;
-- `evidence_required`;
-- `completion_contract`.
+**Inline shell snippets (`` `!cmd` `` in SKILL.md).** These execute on the host with no approval in Hermes. Hard-disabled in Friday. Agent-authored shell execution goes through the Docker sandbox with scoped credentials and the permission gate.
 
 ---
 
-## 8. Raven War Room Strategy
+## ERPNext Work Objects: Port, Not Depend
 
-Raven should be integrated before it is deeply forked.
+Friday ports selected DocTypes from ERPNext into the Friday app. It does not install ERPNext as a dependency.
 
-Raven owns:
+**Ported and renamed:**
 
-- conversation;
-- channels;
-- human comments;
-- message actions;
-- file sharing;
-- real-time collaboration.
+| ERPNext Source | Friday Name | What's kept | What's dropped |
+|---|---|---|---|
+| Project | Agent Project | Container semantics, status, comments, timeline | Billing, timesheet coupling, customer accounting |
+| Task | Agent Task | Assignment, priorities, dependencies, Kanban/list/Gantt | ERP-specific fields, invoice linking |
+| Issue | Agent Issue | Blocker tracking, escalation routing | Customer-facing ticketing fields |
 
-Friday owns:
+**Added to Agent Task:**
+- `assigned_to_profile` (Link → Agent Profile)
+- `required_skills` (child table)
+- `risk_level`
+- `approval_policy`
+- `dispatchable_state` flag
+- `current_execution` (Link → Execution Log)
+- `war_room_channel`
+- `automation_mode`
+- `blocked_reason`
 
-- workflow truth;
-- task state;
-- execution truth;
-- permissions;
-- audit;
-- approvals;
-- sandboxing;
-- dispatcher decisions.
-
-War Room behavior:
-
-- one Raven channel can be created per Agent Project;
-- important Agent Task events are posted to the channel;
-- message actions can request approval, block a task, create an issue, or attach evidence;
-- every action routes through Friday permission checks;
-- Raven messages are mirrored to Frappe Timeline where audit relevance exists;
-- Execution Log remains the legal / operational proof.
-
-Raven is the room where people and agents talk. Friday is the system that decides what is true and what is allowed.
+The ported DocTypes are Friday's own — they live in the Friday app, are maintained by the Friday team, and carry no ERPNext dependency.
 
 ---
 
-## 9. Dispatcher Contract
+## Raven: Communication Layer, Not Truth Layer
 
-The dispatcher should not infer the world from text. It should query validated records.
+Raven owns: conversation, channels, direct messages, message reactions, file sharing, message actions, and real-time collaboration.
 
-Dispatcher selection rule:
+Friday owns: workflow truth, task state, execution truth, permissions, audit, approvals, sandboxing, and dispatcher decisions.
 
-1. Find tasks whose workflow state is dispatchable.
-2. Exclude tasks with incomplete dependencies.
-3. Exclude tasks with pending approvals.
-4. Exclude tasks whose required skills are not active.
-5. Exclude inactive or over-quota profiles.
-6. Match candidate Agent Profiles by skills, roles, risk threshold, and project membership.
-7. Atomically claim a task.
-8. Create an Agent Execution row.
-9. Spawn the worker with scoped context.
-10. Require terminal outcome: complete, block, fail, timeout, or cancelled.
+**War Room behavior:**
+- One Raven channel auto-created per Agent Project on `after_insert`
+- Agent Task state changes post to the channel
+- Message Actions route through Friday permission checks before triggering any state change
+- Raven messages are mirrored to Frappe Timeline where audit relevance exists
+- Execution Log remains the legal and operational proof — not Raven
+
+**Raven's existing AI agent flow (v2) is replaced.** Raven v2 dispatches AI agents via `frappe.enqueue(timeout=600)` against OpenAI Assistants. Friday intercepts this via a `doc_events` hook on Raven Message `on_update` and reroutes to the `agent_core` queue. This is done as a hook, not a Raven fork. Upstream Raven can be updated without breaking the integration.
+
+---
+
+## Flexible Workflow, Not Fixed Columns
+
+Hermes' default lifecycle:
+`Triage → Todo → Ready → In Progress → Blocked → Done`
+
+Friday does not hardcode this. Real business workflows vary:
+
+- Procurement: `Draft → Supplier Follow-up → Internal Review → Approval Needed → PO Drafted → Completed`
+- Engineering: `Idea → Spec → Build → Review → Changes Requested → Merged`
+- Research: `Question → Source Gathering → Synthesis → Review → Published`
+
+**Friday's principle:** Kanban is a view, not the workflow.
+
+The workflow is defined in Frappe Workflow. Kanban renders whatever states are configured. The dispatcher claims only tasks in states explicitly marked `dispatchable`. Agents move tasks only through transitions they are permitted to make.
+
+---
+
+## Dispatcher Contract
+
+The dispatcher queries validated records. It does not infer the world from text.
+
+Selection logic:
+1. Find Agent Tasks whose workflow state is dispatchable
+2. Exclude tasks with incomplete dependencies
+3. Exclude tasks with pending approvals
+4. Exclude tasks whose required skills are not Active status
+5. Exclude Agent Profiles that are inactive or over resource quota
+6. Match candidate Agent Profiles by required_skills ⊆ profile.permitted_skills AND role authorization
+7. Atomically claim: `SELECT ... FOR UPDATE SKIP LOCKED`
+8. Create an Execution Log row (status: running)
+9. Emit real-time event to Agent Core Worker
+10. Require terminal outcome: completed / blocked / failed / timeout / cancelled
 
 This is where Friday becomes more reliable than prompt-led orchestration.
 
 ---
 
-## 10. Phase 1 Implication
+## Profile and Skill Governance
 
-Phase 1 does not need every future workflow feature. It does need the foundation that prevents Hermes-style brittleness.
+Agents may propose profiles, skills, tasks, and workflows. They may not silently activate safety-critical structure.
 
-Required for v0.1:
-
-- validated Agent Profile;
-- validated Skill;
-- Agent Project / Agent Task;
-- configurable workflow states, even if the first template is simple;
-- Kanban rendered from workflow state;
-- dispatcher claiming only dispatchable tasks;
-- Execution Log per run;
-- task event history;
-- basic block / unblock path;
-- manual approval for high-risk transitions if present;
-- War Room event posting if Raven is included in the selected stack.
-
-Deferred:
-
-- autonomous profile generation;
-- autonomous workflow generation;
-- autopilot;
-- complex memory;
-- cross-site agent communication;
-- deep Raven fork;
-- full ERPNext purchase automation.
+| Object | Agent May Propose | Human/Supervisor Must Approve |
+|---|---|---|
+| Agent Profile | Yes | Before Active |
+| Agent Role Profile | Yes | Before Active |
+| Skill | Yes (as Skill Draft) | Before Active |
+| Skill Version | Yes | Before becoming default |
+| Workflow | Yes | Before dispatchable |
+| High-risk skill invocation | Yes | Before execution (Workflow Request) |
 
 ---
 
-## 11. Summary
+## Phase 1 Port Scope
 
-Hermes proves that durable multi-agent Kanban is better than fragile subagent swarms.
+**Required for v0.1:**
+- Validated Agent Profile with linked Frappe User
+- Validated Skill with DocType-based discovery
+- Agent Project and Agent Task with configurable workflow
+- Kanban rendered from workflow states
+- Dispatcher claiming only dispatchable tasks
+- Execution Log per run
+- Task event history
+- Basic block / unblock path
+- Sandboxed execution path
+- Manual approval path for high-risk skill calls
 
-The real-world failure proves the missing layer: typed, validated, governable business structure.
+**Deferred:**
+- Autonomous Skill Draft generation (learning loop)
+- Full Raven War Room integration (if not included in v0.1 per spike decision)
+- Complex memory (semantic + FTS dual index — pgvector installed but not yet used)
+- Cross-site agent communication
+- Hermes' gateway platform adapters (Telegram, Discord, etc.)
+- Tirith command scanning
 
-Friday's answer is:
+---
 
-> Hermes-style agent coordination rebuilt on Frappe DocTypes, flexible workflows, ERPNext-derived work objects, and Raven War Rooms, where agents execute inside a governed operating model instead of inventing one at runtime.
+## Summary
+
+> Hermes proves that durable multi-agent coordination beats fragile in-context subagent swarms.
+>
+> The real-world failure case proves the missing layer: typed, validated, governable business structure.
+>
+> Friday's answer: Hermes-style agent coordination rebuilt on Frappe DocTypes, flexible workflows, ERPNext-derived work objects, and Raven War Rooms — where agents execute inside a governed operating model instead of improvising one at runtime.
+>
+> The port is `run_agent.py` and `agent/`. Everything else — gateways, adapters, Kanban, cron, session storage, approval routing — Frappe and Raven provide.
