@@ -1,47 +1,49 @@
-# Agentic Workflow — 01 Setup Guide
+# 08 — Agent Setup Guide
 
-> **Purpose:** Prepare any agentic coding framework (Claude Code, OpenClaw, Cursor, Aider, etc.) with the context, sources, and environment needed to implement Friday Phase One.
-
-This document is **framework-agnostic**. The instructions assume an agent capable of reading remote repositories, understanding multi-file specifications, writing code, and executing shell commands in a sandboxed development environment.
+> Prepare any agentic coding framework (Claude Code, OpenClaw, Cursor, Aider, etc.) with the context, sources, and environment needed to implement Friday Phase One.
+>
+> This document is framework-agnostic. The instructions assume an agent capable of reading remote repositories, understanding multi-file specifications, writing code, and executing shell commands in a sandboxed development environment.
+>
+> Companion docs: `09-agent-evaluation-guide.md` (criteria for reusing Hermes code), `10-agent-execution-guide.md` (the build sequence), `11-agent-validation-checklist.md` (gate before merge).
 
 ---
 
-## 1. Agent Context Sources
+## 1. Context sources
 
-Before writing any code, the agent must ingest the following sources, **in this order**:
+The agent loads sources in this order.
 
-### 1.1 Friday Specification Documents (primary, authoritative)
+### 1.1 Friday specification — primary, authoritative
 
-These define **what** Friday is and **what** Phase One must deliver. Load all of them:
+| Document | Purpose |
+|---|---|
+| `00-glossary.md` | Every Friday term resolves here first |
+| `00-README.md`, `01-vision-and-architecture.md` | Intent and system design |
+| `02-feature-comparison.md` | Capability map Hermes / OpenClaw → Friday |
+| `03-technical-stack.md` | Stack and rationale |
+| `04-security-model.md` | Permission and isolation requirements |
+| `05-module-design.md` | Module layout and DocType fields |
+| `06-phase-one-scope.md` | Build plan, milestones, risks |
+| `07-legal-and-branding.md` | License headers and naming |
+| `14-integrated-architecture.md` | Runtime architecture and request flow |
+| `39-friday-framework-strategy.md` | Framework-not-app identity and fork discipline |
+| `41-porting-strategy-hermes-erpnext-raven.md` | Verdict per Hermes / ERPNext / Raven piece |
+| `42-phase-one-authority-contract.md` | v0.1 scope authority |
+| `45-fork-policy.md` | One-repo kernel model and upstream-absorption workflow |
+| `46-security-claims-audit.md` | Verifiability rules for competitor security claims |
 
-| Document | Path | Purpose |
-|---|---|---|
-| Vision & Architecture | `00-README.md`, `01-vision-and-architecture.md` | High-level intent and system design |
-| Feature Comparison | `02-feature-comparison.md` | Hermes → Friday capability map |
-| Technical Stack | `03-technical-stack.md` | Required tech and rationale |
-| Security Model | `04-security-model.md` | Permission and isolation requirements |
-| Module Design | `05-module-design.md` | App layout, DocTypes, gateway internals |
-| Phase One Scope | `06-phase-one-scope.md` | What to build now, what to defer |
-| Legal & Branding | `07-legal-and-branding.md` | License headers, naming |
-| Friday Framework Strategy | `39-friday-framework-strategy.md` | Framework-first direction, fork discipline, product feel |
-| Porting Strategy | `41-porting-strategy-hermes-erpnext-raven.md` | Hermes Kanban lessons, flexible workflow, Raven/ERPNext boundaries |
-| Phase One Authority Contract | `42-phase-one-authority-contract.md` | Single source of truth for v0.1 scope |
+If anything in any other source contradicts the Friday specs, the specs win. If two Friday docs conflict, the authority hierarchy in §4 resolves it.
 
-**Rule:** If anything in any other source contradicts these documents, the Friday specs win.
+### 1.2 Hermes Agent — reference, selective
 
-### 1.2 Hermes Agent Source Code (reference, selective)
+- Repository: `https://github.com/NousResearch/hermes-agent`
+- Branch: `main`
+- License: verified on first access.
 
-The agent should have **read-only** access to the Hermes Agent repository:
+Hermes is a reference implementation, not code to copy verbatim. Reuse criteria are in `09-agent-evaluation-guide.md`. The verdict per piece is in `41-porting-strategy-hermes-erpnext-raven.md` and `14-integrated-architecture.md` §10.
 
-- **Repository:** `https://github.com/NousResearch/hermes-agent`
-- **Branch:** `main`
-- **License:** Verify on first access; assume copyleft-compatible.
+Hermes paths worth studying:
 
-The agent uses Hermes as a **reference implementation**, not as code to copy verbatim. See the Evaluation Guide for criteria on what's reusable vs. what must be rewritten.
-
-Key Hermes directories to study:
-
-| Hermes Path | What to Learn From It |
+| Path | Studied for |
 |---|---|
 | `gateway/run.py` | GatewayRunner lifecycle, session caching |
 | `agent/run_agent.py` | AIAgent loop, tool execution, retries |
@@ -54,55 +56,53 @@ Key Hermes directories to study:
 | `kanban/` (if present) | Multi-agent dispatcher |
 | `AGENTS.md`, `SECURITY.md` | Design rules and security boundaries |
 
-### 1.3 Frappe Framework Documentation
+### 1.3 Frappe Framework documentation
 
-- **Main docs:** `https://docs.frappe.io/framework`
-- **DocType guide:** `https://docs.frappe.io/framework/user/en/basics/doctypes`
-- **Permissions:** `https://docs.frappe.io/framework/user/en/permissions`
-- **Hooks:** `https://docs.frappe.io/framework/user/en/python-api/hooks`
-- **Background jobs:** `https://docs.frappe.io/framework/user/en/background_jobs`
-- **Workflow:** `https://docs.frappe.io/framework/user/en/workflows`
-- **DeepWiki (deep code reference):** `https://deepwiki.com/frappe/frappe`
+- Main docs: `https://docs.frappe.io/framework`
+- DocTypes: `https://docs.frappe.io/framework/user/en/basics/doctypes`
+- Permissions: `https://docs.frappe.io/framework/user/en/permissions`
+- Hooks: `https://docs.frappe.io/framework/user/en/python-api/hooks`
+- Background jobs: `https://docs.frappe.io/framework/user/en/background_jobs`
+- Workflow: `https://docs.frappe.io/framework/user/en/workflows`
+- DeepWiki (deep code reference): `https://deepwiki.com/frappe/frappe`
 
-### 1.4 OpenClaw (anti-pattern reference)
+### 1.4 OpenClaw — anti-pattern reference
 
-- **Repository:** `https://github.com/openclaw/openclaw` (read-only, for what *not* to do regarding default-permissive security).
-- Use only as a contrast case in design decisions. Do not copy code.
+- Repository: `https://github.com/openclaw/openclaw`
+- Used only as a contrast case for default-permissive security posture. No code is copied.
 
 ---
 
-## 2. Development Environment Requirements
+## 2. Development environment
 
-The agent must verify or set up the following before any code is written:
-
-### 2.1 System Prerequisites
+### 2.1 System prerequisites
 
 ```
-Python:        3.14 (Frappe v16's version-16 branch requires >=3.14,<3.15)
-Node.js:       24 LTS (Frappe v16 frontend requires Node >=24; older versions fail yarn install)
-PostgreSQL:    15+ with pgvector extension (PG 18 confirmed working)
-Redis:         7 or higher
-Docker:        24 or higher with running daemon
-Git:           2.40 or higher
+Python:     3.14   (Frappe v16's version-16 branch requires >=3.14,<3.15)
+Node.js:    24 LTS (Frappe v16 frontend requires Node >=24; older versions fail yarn install)
+PostgreSQL: 15+    with pgvector ≥ 0.8.2 (PG 18 confirmed working)
+Redis:      7+
+Docker:     24+    with running daemon
+Git:        2.40+
 ```
 
-**Verified working combination (from `docs/project/IMPLEMENTATION_LOG.md` 2026-05-18):**
+Verified working combination (`docs/project/IMPLEMENTATION_LOG.md`, 2026-05-18):
+
 - Python 3.14.4
 - Node 24.15.0 / npm 11.12.1 / yarn 1.22.22
 - PostgreSQL 18.3 with pgvector 0.8.1 and pg_trgm 1.6
 - Frappe 16.18.2 / Bench 5.29.1
 
-### 2.2 Frappe Bench
+### 2.2 bench setup
 
 ```bash
 pip install frappe-bench
 
-# Note: bench 5.x init does NOT support --db-type; set the db type on the site instead.
+# bench 5.x init does NOT accept --db-type; the db type is set on the site.
 bench init friday-bench --frappe-branch version-16 --python python3.14
-
 cd friday-bench
 
-# If PostgreSQL is on a non-default port (e.g. 5433 because 5432 is held by Docker):
+# If PostgreSQL is on a non-default port (e.g. 5433 because Docker holds 5432):
 bench set-config -g db_host 127.0.0.1
 bench set-config -g db_port 5433
 
@@ -110,39 +110,34 @@ bench new-site friday.localhost --db-type postgres --admin-password [secure]
 bench --site friday.localhost set-config developer_mode 1
 ```
 
-**Gotchas captured during initial setup (see IMPLEMENTATION_LOG.md):**
-- If a Conda base environment is active, deactivate it before `bench init` — Conda's compilers break the `mysqlclient` native build.
-- `bench new-site` with `--db-type postgres` first connects to a maintenance database named after the root login. Create it manually if missing (`createdb <rolename>`).
+Gotchas captured in IMPLEMENTATION_LOG:
+
+- Deactivate any active Conda base environment before `bench init` — Conda's compilers break the `mysqlclient` native build.
+- `bench new-site --db-type postgres` first connects to a maintenance database named after the root login. Create it manually (`createdb <rolename>`) if missing.
 - Activate Node 24 in every shell before `bench start` or any frontend command: `source ~/.nvm/nvm.sh && nvm use 24`.
 
-### 2.3 PostgreSQL Extensions
+### 2.3 PostgreSQL extensions
 
 ```sql
--- Run on the Friday site database as superuser
+-- On the Friday site database, as superuser:
 CREATE EXTENSION IF NOT EXISTS vector;
-CREATE EXTENSION IF NOT EXISTS pg_trgm;  -- for fuzzy search
+CREATE EXTENSION IF NOT EXISTS pg_trgm;  -- fuzzy search
 ```
 
-### 2.4 Friday Framework Scaffold
+### 2.4 Friday framework scaffold
 
-```bash
-# Start from the selected Frappe source substrate.
-# Keep Frappe internals close to upstream unless a deliberate Friday core patch is needed.
-# Add the Friday Agent Kernel modules and Friday-facing agent commands/workspace defaults.
-# Do not remove bench; bench remains the operational CLI for site/app lifecycle.
-```
-
-### 2.5 Project Repository
+The Friday repository is the Frappe v16 fork — there is no separate "app on top of Frappe" layer. Agent kernel modules live inside the Frappe source tree per `45-fork-policy.md`. `bench` remains the operational CLI; the `friday` command group adds agent-specific operations.
 
 ```
-friday/                                  ← Friday framework repo
-├── framework/                           ← Frappe-derived substrate, if split from app modules
-├── LICENSE                              ← GPL v3 (full text)
+friday/                                  ← repo root = the fork
+├── frappe/                              ← Frappe v16 source tree
+│   └── friday_core/                     ← agent kernel modules (see 05-module-design.md)
+├── LICENSE                              ← GPL v3
 ├── README.md
 ├── CONTRIBUTING.md
 ├── CODE_OF_CONDUCT.md
 ├── SECURITY.md
-├── NOTICE
+├── AUTHORS
 ├── CHANGELOG.md
 ├── pyproject.toml
 ├── .pre-commit-config.yaml
@@ -151,134 +146,129 @@ friday/                                  ← Friday framework repo
 │   └── PULL_REQUEST_TEMPLATE.md
 ├── docs/
 │   └── design/
-├── tests/
-└── friday/                              ← Friday Agent Kernel and framework modules
+└── tests/
 ```
+
+Conceptual paths. Implementation may evolve internal package layout; the rule is that the repo IS the fork and Friday Core is part of it, not installed on top.
 
 ---
 
-## 3. Code Conventions
-
-The agent must follow these conventions for **all** generated code:
+## 3. Code conventions
 
 ### 3.1 Python
 
-- Python 3.11+, type-hinted where reasonable
-- `black` formatter (line length 100)
-- `ruff` linter
-- `mypy` for type checking on `friday/permissions/`, `friday/gateway/` (strictest modules)
-- Docstrings: Google style
-- All public functions must have docstrings
-- All DocType controllers inherit from `frappe.model.document.Document`
+- Python 3.14, type-hinted where reasonable.
+- `black` (line length 100), `ruff`, `mypy` (strict on `permissions/` and `gateway/`).
+- Google-style docstrings on every public function.
+- DocType controllers inherit from `frappe.model.document.Document`.
 
-### 3.2 File Headers
-
-Every Python file begins with:
+### 3.2 File headers
 
 ```python
-# Copyright (c) [year] Friday contributors
+# Copyright (c) [year] Friday Labs and contributors
 # Licensed under GNU GPL v3 or later. See LICENSE.
 ```
 
-### 3.3 DocType Naming
+### 3.3 Naming
 
-- DocType names: Title Case with spaces (`Agent Profile`, `Skill`)
-- Python class names: PascalCase (`AgentProfile`, `Skill`)
-- DocType folder names: snake_case (`agent_profile/`, `skill/`)
-- Field names: snake_case (`assigned_roles`, `risk_level`)
+- DocType names: Title Case with spaces (`Agent Profile`, `Skill`).
+- Python class names: PascalCase (`AgentProfile`, `Skill`).
+- DocType folder names: snake_case (`agent_profile/`, `skill/`).
+- Field names: snake_case (`assigned_roles`, `risk_level`).
 
-### 3.4 Module Boundaries
+### 3.4 Module boundaries
 
-- No cross-module imports except through clearly defined interfaces in each module's `__init__.py`.
-- Permission checks always go through `friday.permissions.matrix`, never inline.
-- Database access always through Frappe ORM (`frappe.db`, `frappe.get_doc`), never raw SQL except for pgvector queries that must use parameterised raw SQL via `frappe.db.sql`.
+- No cross-module imports except through each module's explicit `__init__.py` interface.
+- Permission checks always go through `friday.permissions.matrix`. Never inline.
+- Database access always through Frappe ORM (`frappe.db`, `frappe.get_doc`). Raw SQL is permitted only for pgvector queries, via parameterised `frappe.db.sql`.
 
 ### 3.5 Testing
 
 - Every module has a `tests/` subdirectory.
-- Use `pytest` and `frappe.tests.utils.FrappeTestCase`.
-- Permission engine: **80% line coverage minimum**.
+- `pytest` with `frappe.tests.utils.FrappeTestCase`.
+- Permission engine: 80% line coverage minimum.
 - Gateway and dispatcher: integration tests required.
 
 ---
 
-## 4. Authoritative Hierarchy
+## 4. Authority hierarchy
 
-When the agent encounters a conflict or ambiguity, resolve in this order:
+On any conflict, resolve in this order:
 
-1. Friday authority documents (`39`, `41`, `42`), then core specs (`01`–`07`)
-2. Frappe Framework conventions (DocType API, hooks, permissions)
-3. Hermes Agent patterns (architectural guidance only)
-4. General Python / web best practices
+1. `42-phase-one-authority-contract.md` (v0.1 scope).
+2. `39-friday-framework-strategy.md` and `45-fork-policy.md` (identity and fork rules).
+3. `41-porting-strategy-hermes-erpnext-raven.md` and `14-integrated-architecture.md` (composition and verdict per piece).
+4. Other Friday specs (`01`–`07`, `40`, `46`).
+5. Frappe Framework conventions (DocType API, hooks, permissions).
+6. Hermes patterns (architectural guidance only).
+7. General Python and web best practice.
 
-The agent should **never** silently choose a pattern that contradicts the Friday specs. If the specs are ambiguous, the agent flags it for human review rather than guessing.
+The agent never silently chooses a pattern that contradicts a Friday spec. If specs are ambiguous, the agent flags it for human review.
 
 ---
 
-## 5. Tooling the Agent May Use
+## 5. Permitted tooling
 
-| Tool | Use For |
+| Tool | Use for |
 |---|---|
-| `bench` CLI | Site, app, migration, build operations |
-| `bench execute` | Running Python functions in site context for testing |
+| `bench` | Site, app, migration, build operations |
+| `bench execute` | Running Python in site context for testing |
 | `bench console` | Interactive Python in site context |
 | Git | All version control |
-| Docker | Building and running isolated agent containers |
+| Docker | Building and running sandbox containers |
 | `pytest` | All test execution |
-| `pre-commit` | Run before any commit |
+| `pre-commit` | Run before every commit |
 | `psql` | Direct PostgreSQL inspection (read-only preferred) |
-| `redis-cli` | Inspecting cache and pubsub state |
+| `redis-cli` | Inspecting cache and pub/sub |
 
-The agent **may not**:
+The agent may **not**:
 
-- Disable security features to make development easier
-- Skip permission checks "temporarily"
-- Hard-code credentials anywhere, including in tests (use `.env.test` patterns)
-- Push to a public remote without explicit human approval
-- Modify Frappe Framework source code (only override via hooks)
+- Disable security features to make development easier.
+- Skip permission checks "temporarily".
+- Hard-code credentials anywhere, including in tests (use `.env.test` patterns).
+- Push to a public remote without explicit human approval.
+- Modify Frappe Framework source outside the documented core-divergence path; every divergence is recorded in `docs/core-divergences.md`.
 
 ---
 
-## 6. Communication Format
-
-When the agent reports progress, it uses this structure:
+## 6. Progress-reporting format
 
 ```
 ## Milestone: [name]
 
 ### Completed
-- [bullet list of done items, with file paths]
+- [done items with file paths]
 
 ### In Progress
-- [what's being worked on now]
+- [current work]
 
 ### Blockers / Questions for Human
-- [explicit questions or unresolved ambiguities]
+- [explicit questions; unresolved ambiguities]
 
 ### Next Steps
 - [planned next actions]
 
 ### Decisions Made
-- [significant design decisions taken during this work, with rationale]
+- [significant decisions taken with rationale]
 ```
 
-This keeps the human in the loop on every significant decision without requiring constant micro-management.
+The human stays in the loop on every significant decision without constant micro-management.
 
 ---
 
-## 7. Definition of "Ready to Start"
+## 7. Definition of "ready to start"
 
 Setup is complete when:
 
-- [ ] All core Friday spec documents are loaded in the agent's context.
-- [ ] `39-friday-framework-strategy.md` is loaded and understood as the framework identity guide.
-- [ ] `41-porting-strategy-hermes-erpnext-raven.md` is loaded and understood as the Hermes/ERPNext/Raven translation guide.
-- [ ] `42-phase-one-authority-contract.md` is loaded and understood as the v0.1 scope authority.
-- [ ] Hermes repository is accessible to the agent (read-only).
-- [ ] Frappe bench is provisioned with PostgreSQL + pgvector and Redis.
-- [ ] Friday framework shell is scaffolded with LICENSE, README, bench-aware setup, Friday-facing agent commands, Control Room workspace, and Agent Kernel structure.
-- [ ] Pre-commit hooks are installed and passing on empty repo.
-- [ ] Initial commit is made on a `main` branch.
-- [ ] The agent confirms understanding by producing a written summary of Phase One's goal in its own words.
+- [ ] Friday spec documents listed in §1.1 are loaded in the agent's context.
+- [ ] `42` is loaded and understood as the v0.1 scope authority.
+- [ ] `39` and `45` are loaded and understood as identity and fork rules.
+- [ ] `14` is loaded and understood as the integrated runtime architecture.
+- [ ] Hermes repository is accessible (read-only).
+- [ ] bench is provisioned with PostgreSQL + pgvector and Redis.
+- [ ] Friday framework shell is scaffolded with LICENSE, README, bench-aware setup, `friday` command group, Framework Console workspace, and agent kernel module structure.
+- [ ] Pre-commit hooks are installed and pass on the empty repo.
+- [ ] Initial commit is made on `friday/main`.
+- [ ] The agent produces a written summary of Phase One's goal in its own words.
 
-When all checkboxes are green, proceed to the **Evaluation Guide**.
+When every checkbox is green, proceed to `09-agent-evaluation-guide.md`.
