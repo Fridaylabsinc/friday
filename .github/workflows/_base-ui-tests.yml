@@ -75,7 +75,7 @@ jobs:
 
       - name: Verify yarn.lock
         run: |
-          cd ${GITHUB_WORKSPACE}/apps/${{ github.event.repository.name }}
+          cd ${GITHUB_WORKSPACE}/apps/frappe
           git diff --exit-code yarn.lock
 
       - name: Cache cypress binary
@@ -86,11 +86,11 @@ jobs:
 
       - name: Instrument Source Code
         run: |
-          cd ${GITHUB_WORKSPACE}/apps/${{ github.event.repository.name }}
+          cd ${GITHUB_WORKSPACE}/apps/frappe
           npx nyc instrument \
-            -x '${{ github.event.repository.name }}/public/dist/**' \
-            -x '${{ github.event.repository.name }}/public/js/lib/**' \
-            -x '**/*.bundle.js' --compact=false --in-place ${{ github.event.repository.name }}
+            -x 'frappe/public/dist/**' \
+            -x 'frappe/public/js/lib/**' \
+            -x '**/*.bundle.js' --compact=false --in-place frappe
 
       - name: Site Setup
         run: |
@@ -105,7 +105,7 @@ jobs:
         id: ui-tests
         run: |
           bench --site test_site \
-            run-ui-tests ${{ github.event.repository.name }} \
+            run-ui-tests frappe \
               --with-coverage \
               --headless \
               --browser ${{ env.BROWSER_PATH }} \
@@ -128,7 +128,7 @@ jobs:
         if: inputs.enable-coverage
         with:
           name: coverage-js-${{ matrix.index }}
-          path: ./apps/${{ github.event.repository.name }}/.cypress-coverage/clover.xml
+          path: ./apps/frappe/.cypress-coverage/clover.xml
       - name: Compress Cypress Videos
         if: always() && steps.ui-tests.outcome == 'failure'
         run: |
