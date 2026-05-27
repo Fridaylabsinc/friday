@@ -1,65 +1,72 @@
-# 17 — Open Source Launch Playbook
+# 17 — Open-Source Launch Playbook
 
-> **Purpose:** Step-by-step plan to take Friday from a private Phase 1 prototype to a healthy open-source project with active contributors. Covers repo setup, release engineering, community process, and the launch sequence.
-
-This document assumes the Phase 1 MVP (per doc 06) is complete and dogfooded internally.
+> See `00-glossary.md` for term definitions.
+> See `07-legal-and-branding.md` for license, naming, and contributor-licensing decisions.
+> See `42-phase-one-authority-contract.md` — Phase 1 v0.1 must be complete before this playbook starts.
 
 ---
 
-## 1. Pre-Launch Checklist
+## 1. Pre-launch checklist
 
-Before flipping the repo from private to public:
+Flipping the repo from private to public requires every box green.
 
-### Code Quality
-- [ ] All Phase 1 tests passing on CI
-- [ ] Test coverage ≥ 70% overall, ≥ 85% on permissions, gateway, isolation, dispatcher
-- [ ] Pre-commit hooks pass on `--all-files`
-- [ ] No `TODO: security` comments left in code
-- [ ] No hard-coded credentials, tokens, or site names anywhere
-- [ ] `bench migrate` runs clean from empty site to current state
+### Code quality
 
-### Repository Hygiene
-- [ ] `LICENSE` file present (GPL v3 full text, unmodified)
-- [ ] `README.md` — concise overview, 60-second install, link to docs
-- [ ] `CONTRIBUTING.md` — DCO, code style, PR process, how to claim issues
-- [ ] `CODE_OF_CONDUCT.md` — Contributor Covenant 2.1
-- [ ] `SECURITY.md` — vulnerability reporting, response timeline
-- [ ] `NOTICE` — attribution for Hermes, OpenClaw, Raven, Frappe references
-- [ ] `CHANGELOG.md` — Keep-a-Changelog format, starts at v0.1.0
-- [ ] `.github/ISSUE_TEMPLATE/` — bug, feature, security, question
-- [ ] `.github/PULL_REQUEST_TEMPLATE.md`
-- [ ] `.github/workflows/` — CI for tests, lint, build
+- [ ] All Phase 1 tests pass on CI.
+- [ ] Coverage ≥ 70% overall, ≥ 85% on `permissions`, `gateway`, `sandbox`, `tasks/dispatcher`.
+- [ ] `pre-commit run --all-files` clean.
+- [ ] No `TODO: security` comments left in code.
+- [ ] No hard-coded credentials, tokens, or site names.
+- [ ] `bench migrate` clean from an empty site to current state.
+
+### Repository hygiene
+
+- [ ] `LICENSE` — GPL v3 verbatim.
+- [ ] `README.md` — concise overview, 60-second install, link to docs.
+- [ ] `CONTRIBUTING.md` — DCO, code style, PR process, claiming issues.
+- [ ] `CODE_OF_CONDUCT.md` — Contributor Covenant 2.1.
+- [ ] `SECURITY.md` — private reporting channel, response SLA.
+- [ ] `AUTHORS` / `NOTICE` — attribution for Hermes, OpenClaw, Raven, Frappe references.
+- [ ] `CHANGELOG.md` — Keep-a-Changelog format, starting v0.1.0.
+- [ ] `.github/ISSUE_TEMPLATE/` — bug, feature, security, question.
+- [ ] `.github/PULL_REQUEST_TEMPLATE.md`.
+- [ ] `.github/workflows/` — tests, lint, build, docs.
 
 ### Documentation
-- [ ] `docs/install.md` — full prerequisites and step-by-step setup
-- [ ] `docs/quickstart.md` — first agent + skill in 10 minutes
-- [ ] `docs/architecture.md` — high-level diagram + links to the seven specs (01–07)
-- [ ] `docs/skills.md` — how to author a Skill
-- [ ] `docs/security.md` — threat model, deployment hardening checklist
-- [ ] `docs/faq.md` — anticipated questions
-- [ ] All 39 internal design docs (00–38) committed to `docs/design/`
 
-### Brand & Legal
-- [ ] Project name confirmed: **Friday**
-- [ ] Tagline: "An agentic framework powered by Frappe"
-- [ ] Naming: avoid "Frappe Friday" or "Friday by Frappe" (trademark concerns)
-- [ ] Logo (simple wordmark sufficient for v0.1.0)
-- [ ] GitHub repo description and topics set
-- [ ] Domain registered (`friday.dev` or `fridayagent.io` or fallback)
+- [ ] `docs/install.md` — full prerequisites and step-by-step setup.
+- [ ] `docs/quickstart.md` — first agent + skill in 10 minutes.
+- [ ] `docs/architecture.md` — high-level diagram + links to the design docs.
+- [ ] `docs/skills.md` — Skill authoring guide.
+- [ ] `docs/security.md` — threat model, deployment hardening checklist.
+- [ ] `docs/faq.md` — anticipated questions.
+- [ ] `docs/design/` — design dossier committed.
+
+### Brand and legal (per `07-legal-and-branding.md`)
+
+- [ ] Project name confirmed: **Friday**.
+- [ ] Tagline: "An agentic framework, built on a hard fork of Frappe v16."
+- [ ] Naming rules in `07` followed (no "Frappe Friday", no "Friday by Frappe").
+- [ ] Wordmark for v0.1.0 (logo can iterate).
+- [ ] GitHub repo description and topics set.
+- [ ] Domain registered.
+- [ ] AGPL v3 re-evaluation completed (per `07` §License).
+- [ ] Trademark search for "Friday" performed; rename if conflict requires it.
 
 ---
 
-## 2. Repository Setup
+## 2. Repository layout
 
-### Layout
+The repo IS the Frappe v16 fork (per `45-fork-policy.md`). Agent kernel modules live inside the Frappe tree.
 
 ```
-friday/                              ← Frappe app root, public repo
+friday/                              ← repo root = the fork
 ├── LICENSE
 ├── README.md
 ├── CONTRIBUTING.md
 ├── CODE_OF_CONDUCT.md
 ├── SECURITY.md
+├── AUTHORS
 ├── NOTICE
 ├── CHANGELOG.md
 ├── pyproject.toml
@@ -71,6 +78,8 @@ friday/                              ← Frappe app root, public repo
 │       ├── test.yml
 │       ├── lint.yml
 │       └── docs-publish.yml
+├── frappe/                          ← Frappe v16 source tree (the fork)
+│   └── friday_core/                 ← agent kernel modules per 05-module-design.md
 ├── docs/
 │   ├── install.md
 │   ├── quickstart.md
@@ -78,190 +87,194 @@ friday/                              ← Frappe app root, public repo
 │   ├── skills.md
 │   ├── security.md
 │   ├── faq.md
-│   └── design/                      ← all 39 internal design docs
-├── friday/                          ← Python package
-│   ├── gateway/
-│   ├── agents/
-│   ├── skills/
-│   ├── tasks/
-│   ├── messaging/
-│   ├── permissions/
-│   ├── memory/
-│   └── api/
+│   └── design/                      ← the design dossier
 └── tests/
 ```
 
-### Branch Strategy
-- `main` — always green, releasable
-- `develop` — integration branch for active work (optional; can omit if `main` works)
-- Feature branches: `feat/{slug}`, `fix/{slug}`, `docs/{slug}`
-- Release tags: semantic versioning, `v0.1.0` for first public release
+### Branches
 
-### CI Workflows
-- `test.yml`: matrix of Python 3.11 / 3.12, PostgreSQL 15, Redis 7 — runs full pytest suite + `bench migrate`
-- `lint.yml`: black, ruff, mypy on critical modules
-- `docs-publish.yml`: publishes docs to GitHub Pages (or Cloudflare Pages) on `main` push
+- `friday/main` — always green, releasable.
+- Feature branches — `feat/{slug}`, `fix/{slug}`, `docs/{slug}`.
+- Release tags — semver, `v0.1.0` for the first public release.
+
+### CI
+
+- `test.yml` — Python 3.14, PostgreSQL 15 (+ pgvector ≥ 0.8.2), Redis 7. Full pytest + `bench migrate`.
+- `lint.yml` — `black`, `ruff`, `mypy` on critical modules.
+- `docs-publish.yml` — publish docs to GitHub Pages or Cloudflare Pages on `friday/main`.
 
 ---
 
-## 3. Release Engineering
+## 3. Release engineering
 
 ### Versioning
-Semantic versioning. v0.x.y signals "early, breaking changes possible".
+
+Semantic versioning. `v0.x.y` signals "early, breaking changes possible".
 
 | Version | Milestone |
 |---|---|
-| v0.1.0 | First public release — Phase 1 MVP |
-| v0.2.0 | Raven integration + Multi-Platform adapters |
-| v0.3.0 | Memory module with pgvector |
-| v0.4.0 | Learning loop + autonomous curator |
-| v0.5.0 | Multi-site agent-to-agent (doc 37) |
-| v1.0.0 | Production-ready, API-stable, ERPNext autonomous ops case study complete |
+| v0.1.0 | First public release — Phase 1 v0.1 |
+| v0.2.0 | Additional platform adapters (Telegram, Slack, etc.) and Memory module with pgvector |
+| v0.3.0 | Learning loop + autonomous curator |
+| v0.4.0 | Multi-site agent-to-agent (`37-multi-site-inter-agent-communication.md`) |
+| v0.5.0 | Sandbox hardening — warm pool, egress proxy, gVisor backend (per `42` §5 deferred items) |
+| v1.0.0 | Production-ready, API-stable, ERPNext PO flagship complete |
 
-### Release Cadence
-- Patch releases (x.y.Z): as needed for bugs and security
-- Minor releases (x.Y.0): monthly during active development, then quarterly
-- Major releases (X.0.0): only with breaking changes, advance notice
+If Raven is included in v0.1 per the feasibility spike, v0.2.0's Raven scope shifts to advanced features (Approve Skill, document-share previews, archive automation).
 
-### Release Process
-1. Create release branch `release/vX.Y.Z`
-2. Bump version in `pyproject.toml`
-3. Update `CHANGELOG.md`
-4. Run full test suite + manual smoke test
-5. Tag `vX.Y.Z`, push tag
-6. GitHub Actions builds and publishes to PyPI (and Frappe Cloud app marketplace if applicable)
-7. Publish GitHub Release with changelog excerpt
-8. Announce in relevant channels (§6)
+### Cadence
 
----
+- Patches (`x.y.Z`) — as needed for bugs and security.
+- Minors (`x.Y.0`) — monthly during active development, then quarterly.
+- Majors (`X.0.0`) — only with breaking changes; advance notice.
 
-## 4. Contribution Process
+### Release process
 
-### DCO (Developer Certificate of Origin)
-All commits must be signed: `git commit -s -m "message"`. CI rejects unsigned commits. This is lighter-weight than a CLA and sufficient for OSS projects.
-
-### Issue Triage
-- New issues triaged within 7 days
-- Labels: `bug`, `feature`, `docs`, `good-first-issue`, `help-wanted`, `security`, `breaking`, `priority/{low,med,high,critical}`
-- Issues without activity for 60 days get a stale label; 30 more days → auto-close (security issues never auto-close)
-
-### PR Review Standards
-- Every PR linked to an issue (except trivial doc fixes)
-- At least one approval from a maintainer required
-- CI must be green
-- For security-sensitive areas (permissions, isolation, gateway): two approvals required
-- PRs > 800 lines diff are blocked — must be broken up
-
-### Maintainer Tiers
-- **Founder/BDFL** — Vasanth, final decisions on direction
-- **Core Maintainers** — full commit access, can merge to `main`
-- **Trusted Contributors** — can review and approve, cannot merge
-- **Contributors** — anyone with a merged PR
-
-Promotion is based on demonstrated quality + community fit, not just contribution count.
+1. Create `release/vX.Y.Z`.
+2. Bump version in `pyproject.toml`.
+3. Update `CHANGELOG.md`.
+4. Run full test suite + manual smoke test.
+5. Tag `vX.Y.Z`, push tag.
+6. CI builds and publishes to PyPI (and Frappe Cloud app marketplace if applicable).
+7. Publish GitHub Release with changelog excerpt.
+8. Announce per §6.
 
 ---
 
-## 5. Security Policy
+## 4. Contribution process
+
+### DCO
+
+All commits signed: `git commit -s`. CI rejects unsigned commits. Lighter than a CLA and sufficient for Friday.
+
+### Issue triage
+
+- New issues triaged within 7 days.
+- Labels: `bug`, `feature`, `docs`, `good-first-issue`, `help-wanted`, `security`, `breaking`, `priority/{low,med,high,critical}`.
+- 60 days without activity → stale; 30 more → auto-close. Security issues never auto-close.
+
+### PR review standards
+
+- Every PR links to an issue (except trivial doc fixes).
+- One maintainer approval required.
+- CI must be green.
+- Security-sensitive areas (permissions, sandbox, gateway): two approvals required.
+- PRs > 800 lines diff are blocked — split required.
+
+### Maintainer tiers
+
+- **Founder / BDFL** — final direction decisions.
+- **Core Maintainers** — full commit access, can merge to `friday/main`.
+- **Trusted Contributors** — can review and approve; cannot merge.
+- **Contributors** — anyone with a merged PR.
+
+Promotion is based on demonstrated quality and community fit, not contribution count.
+
+---
+
+## 5. Security policy
 
 Per `SECURITY.md`:
 
-- **Private reporting:** security@friday-project.org or GitHub private vulnerability reporting
-- **Response SLA:** acknowledgement within 48 hours
-- **Disclosure timeline:** 90 days standard, can be shortened for actively-exploited or high-severity issues
-- **Credit:** reporters credited in changelog and SECURITY hall of fame
-- **Bug bounty:** none in v0.x; revisit at v1.0
+- **Private reporting:** GitHub private vulnerability reporting (preferred) or a dedicated `security@` mailbox.
+- **Response SLA:** acknowledgement within 48 hours.
+- **Disclosure timeline:** 90 days standard; shortened for actively-exploited or high-severity issues.
+- **Credit:** reporters credited in the changelog and a SECURITY hall of fame.
+- **Bug bounty:** none in v0.x; revisited at v1.0.
 
 ---
 
-## 6. Launch Sequence
+## 6. Launch sequence
 
-### T-30 days (pre-launch)
-- Finalise public-facing docs
-- Lock the API surface (anything renamed after v0.1.0 = breaking change)
-- Internal red-team review of the security model
+### T-30 days
+
+- Finalise public-facing docs.
+- Lock the API surface — anything renamed after v0.1.0 is a breaking change.
+- Internal red-team review of the security model.
 
 ### T-14 days
-- Soft launch to 5–10 trusted reviewers (private fork or NDA)
-- Collect feedback, fix critical issues
-- Draft launch posts and tweet thread
+
+- Soft launch to 5–10 trusted reviewers (private fork or NDA).
+- Collect feedback, fix critical issues.
+- Draft launch posts and tweet thread.
 
 ### T-7 days
-- Final code freeze on `release/v0.1.0`
-- Generate the v0.1.0 release artefacts
-- Pre-write blog post, Show HN draft, LinkedIn post
 
-### T-0 (launch day)
-- Flip repo from private to public
-- Tag v0.1.0
-- Publish blog post on `friday.dev`
-- Submit to Hacker News (Show HN), Reddit r/selfhosted and r/programming, dev.to, lobste.rs
-- Post in Frappe forum and Frappe Discord
-- Post on Twitter/X, LinkedIn with the architecture diagram
+- Final code freeze on `release/v0.1.0`.
+- Generate v0.1.0 release artefacts.
+- Pre-write the blog post, Show HN draft, LinkedIn post.
+
+### T-0
+
+- Flip repo to public.
+- Tag v0.1.0.
+- Publish the blog post.
+- Submit to Hacker News (Show HN), Reddit r/selfhosted and r/programming, dev.to, lobste.rs.
+- Post in the Frappe forum and Frappe Discord.
+- Post on Twitter/X and LinkedIn with the architecture diagram.
 
 ### T+1 to T+7
-- Respond to every comment and issue within 24 hours
-- Fix critical bugs as patches (v0.1.1, v0.1.2)
-- Engage with anyone who tries to install — watch for install-experience friction
+
+- Respond to every comment and issue within 24 hours.
+- Patch critical bugs (v0.1.1, v0.1.2).
+- Watch for install-experience friction.
 
 ### T+30
-- Retrospective: what worked, what didn't
-- Plan v0.2.0 based on community feedback
+
+- Retrospective: what worked, what did not.
+- Plan v0.2.0 based on community feedback.
 
 ---
 
-## 7. Community Spaces
+## 7. Community spaces
 
 Set up before launch:
 
 | Channel | Purpose |
 |---|---|
 | GitHub Discussions | Q&A, ideas, show-and-tell |
-| Discord (or Matrix) | Real-time chat, dev coordination |
-| Mailing list (low-volume) | Releases, security advisories |
+| Discord or Matrix | Real-time chat, dev coordination |
+| Low-volume mailing list | Releases, security advisories |
 | Twitter/X account | Announcements, dogfood updates |
-| Blog on `friday.dev` | Long-form writing, case studies, design rationale |
+| Project blog | Long-form writing, case studies, design rationale |
 
-**Don't:** set up Telegram, WhatsApp, Slack (closed-source), or any walled garden as a primary community space.
+Do not set up Telegram, WhatsApp, Slack (closed-source), or any walled-garden as the **primary** community space.
 
 ---
 
-## 8. Documentation Site
+## 8. Documentation site
 
-Host on GitHub Pages or Cloudflare Pages. Static site built from `docs/` markdown.
-
-Suggested stack: MkDocs Material, or Docusaurus, or Astro Starlight. Pick one and commit.
+GitHub Pages or Cloudflare Pages, static site from `docs/` markdown. Stack: MkDocs Material, Docusaurus, or Astro Starlight — pick one and commit.
 
 Structure:
-- Landing page with 60-second value pitch
-- "Get Started" → install + first agent
-- "Concepts" → key abstractions (Agent Profile, Skill, War Room)
-- "How-to" → recipes
-- "Reference" → DocType schemas, REST API, configuration
-- "Design" → the 39 design docs
+
+- Landing page with the 60-second value pitch.
+- "Get Started" — install + first agent.
+- "Concepts" — Agent Profile, Skill, War Room, etc. (terms drawn from `00-glossary.md`).
+- "How-to" — recipes.
+- "Reference" — DocType schemas, REST API, configuration.
+- "Design" — the design dossier.
 
 ---
 
-## 9. Anti-Patterns to Avoid
+## 9. Anti-patterns to avoid
 
-- **Vanity metrics:** don't optimise for stars early. Optimise for repeat users.
-- **Surface-only marketing:** if the install experience is broken, no amount of LinkedIn posts will save it. Fix friction first.
-- **Roadmap public theatre:** keep a public roadmap, but don't make commitments you can't keep. Better to under-promise.
-- **Burning out one maintainer:** delegate aggressively. Documented contribution paths matter more than your own throughput.
-- **Closing issues fast:** an old open issue is honest. A closed-without-resolution issue burns trust.
+- **Vanity metrics.** Don't optimise for stars early. Optimise for repeat users.
+- **Surface-only marketing.** If the install experience is broken, no LinkedIn post will save it. Fix friction first.
+- **Roadmap theatre.** Keep a public roadmap; never commit to what cannot be delivered. Under-promise.
+- **Burning out one maintainer.** Delegate aggressively. Documented contribution paths matter more than personal throughput.
+- **Closing issues fast.** An old open issue is honest. A closed-without-resolution issue burns trust.
 
 ---
 
-## 10. Success Criteria (T+90 days)
+## 10. Success criteria (T+90 days)
 
-The launch is successful if:
+- [ ] ≥ 100 GitHub stars.
+- [ ] ≥ 10 external contributors with merged PRs.
+- [ ] ≥ 3 documented production deployments.
+- [ ] No unfixed critical security issues.
+- [ ] Active Discussions traffic (≥ 5 threads per week).
+- [ ] At least one third-party blog post or video covering Friday.
+- [ ] Time-to-first-running-agent for a new user: < 30 minutes.
 
-- [ ] >= 100 GitHub stars
-- [ ] >= 10 external contributors with merged PRs
-- [ ] >= 3 documented production deployments (case studies)
-- [ ] No unfixed critical security issues
-- [ ] Active Discussions traffic (>5 threads per week)
-- [ ] At least one third-party blog post or video covering Friday
-- [ ] Time-to-first-running-agent for a new user: < 30 minutes
-
-These are deliberately modest. Healthy growth is the goal, not virality.
+Deliberately modest. Healthy growth is the goal, not virality.

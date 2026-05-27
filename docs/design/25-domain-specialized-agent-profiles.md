@@ -1,244 +1,215 @@
 # 25 — Domain-Specialised Agent Profiles
 
-> **Purpose:** Move from generic agent profiles (Full-Stack Developer, DevOps Engineer) to narrow domain experts (React Developer, Kubernetes Specialist, PostgreSQL DBA). Specialised agents waste fewer tokens, execute faster, and produce higher-quality work because their context is focused.
-
-This document refines doc 12 (Agent Role Profiles) and complements docs 26 (Dynamic Framework Versions) and 27 (Infrastructure Specialist Sub-Agents).
+> See `00-glossary.md` for term definitions.
+> Refines `12-refinement-agent-roles-and-features.md`. Complements `26-dynamic-framework-version-management.md`, `27-infrastructure-specialist-subagents.md`, and `33-knowledge-graph-wiki-integration.md`.
+> Phase: deferred from v0.1; phased in from Phase 2 (see §10).
 
 ---
 
-## 1. Why Specialisation Matters
+## 1. Why specialisation
 
-A generic Full-Stack Developer agent has to **discover** which framework it's working in, which version is in use, what conventions the codebase follows. That discovery burns tokens and time, and produces mediocre output because the agent's training data is averaged across many ecosystems.
+A generic Full-Stack Developer agent must **discover** which framework, which version, which conventions a codebase uses. Discovery burns tokens and time and produces averaged-quality output.
 
-A React Developer agent **starts** with React-specific context: hooks, JSX patterns, current React 19 conventions, common pitfalls. No discovery. Focused execution. Better output.
+A React Developer agent **starts** with React-specific context: hooks, JSX patterns, current React 19 conventions, common pitfalls. No discovery. Focused execution. Higher-quality output.
 
-The same logic applies across every domain:
+Examples:
 
-| Generic Profile | Specialised Equivalents |
+| Generic | Specialised |
 |---|---|
-| Full-Stack Developer | React Dev, Vue Dev, Svelte Dev, Django Dev, FastAPI Dev |
-| DBA | PostgreSQL DBA, MySQL DBA, MongoDB Engineer, ClickHouse Engineer |
-| DevOps | Kubernetes Specialist, Terraform Specialist, Ansible Specialist, Docker Compose Specialist, AWS Specialist, GCP Specialist |
-| Data Engineer | Airflow Engineer, dbt Engineer, Spark Engineer, Snowflake Specialist |
-| Tester | E2E Test Author (Playwright), Unit Test Author (pytest/jest), Load Test Engineer (k6/Locust) |
-| Writer | Technical Writer, Marketing Copywriter, Release-Notes Author |
+| Full-Stack Developer | React, Vue, Svelte, Django, FastAPI |
+| DBA | PostgreSQL, MySQL, MongoDB, ClickHouse |
+| DevOps | Kubernetes, Terraform, Ansible, Docker Compose, AWS, GCP |
+| Data Engineer | Airflow, dbt, Spark, Snowflake |
+| Tester | Playwright E2E, pytest/jest unit, k6/Locust load |
+| Writer | Technical, marketing, release notes |
 
 ---
 
-## 2. Specialisation Mechanics
+## 2. Mechanics
 
-A specialised Agent Role Profile differs from a generic one in four ways:
+A specialised Agent Role Profile differs from a generic one in four ways.
 
 ### 2.1 Narrow skill set
-Instead of all "development" skills, only the skills relevant to the domain are permitted. A React Developer doesn't have access to `query_database` skills; that's the DBA's job. This isn't just permission, it's **focus** — the LLM's prompt is shorter and more coherent.
 
-### 2.2 Domain-tuned system prompt
-The Agent Role Profile carries a `domain_system_prompt` field — a domain-specific addendum to the base system prompt. Example for React Developer:
+Only domain-relevant skills permitted. A React Developer has no `query_database` skill — that is the DBA's. Beyond permission, it is **focus**: the LLM's prompt is shorter and more coherent.
+
+### 2.2 Domain system prompt
+
+`domain_system_prompt` field on Agent Role Profile — a domain-specific addendum. Example for React Developer:
 
 ```
 You are a React developer specialising in React 19 with TypeScript.
 Conventions:
 - Functional components only; class components are legacy.
-- Prefer Server Components when running on Next.js 15+; mark client components with "use client" directive.
-- State: useState for local; useReducer for complex; Context API for cross-tree; Zustand or Redux Toolkit for global.
+- Prefer Server Components when running on Next.js 15+; mark client components with "use client".
+- State: useState (local), useReducer (complex), Context API (cross-tree), Zustand or Redux Toolkit (global).
 - Side effects: useEffect with explicit dependency arrays; no missing deps.
-- Suspense and ErrorBoundary patterns expected for async UI.
+- Suspense and ErrorBoundary expected for async UI.
 - Accessibility (ARIA, keyboard nav) is not optional.
 - Styling: Tailwind preferred unless project uses CSS-in-JS or modules.
 ```
 
-### 2.3 Domain-tuned knowledge bundle
-A reference of current, curated knowledge available to the agent via tools, not auto-injected (per OpenClaw insight, doc 15). The bundle is updated as the framework evolves (see doc 28 GitHub-driven doc sync).
+### 2.3 Knowledge bundle
 
-### 2.4 Domain-tuned learning loop
-The autonomous curator (doc 22) operates within domain scope. A React Developer's learning improves React skills; it doesn't pollute the broader skill library.
+Curated reference exposed via tools (per `15-openclaw-insights-friday-refinements.md` Insight 3 — memory as tool, not auto-injection). Updated as the framework evolves through `28-github-driven-documentation-sync.md`.
+
+### 2.4 Domain-scoped learning loop
+
+The curator (`22-hermes-learning-loop-deep-dive.md`) operates within domain scope. A React Developer's learning improves React skills; it does not pollute the broader library.
 
 ---
 
-## 3. Agent Role Profile Extensions
+## 3. Schema extensions
 
-Building on doc 12, add fields:
+Beyond `12-refinement-agent-roles-and-features.md`:
 
 | Field | Type | Notes |
 |---|---|---|
 | `domain` | Link → Domain | The specialisation area |
-| `domain_system_prompt` | Long Text | Domain-specific prompt addendum |
-| `knowledge_bundle` | Link → Knowledge Bundle (doc 33) | Curated docs for this domain |
+| `domain_system_prompt` | Long Text | Addendum to the base system prompt |
+| `knowledge_bundle` | Link → Knowledge Bundle (`33-knowledge-graph-wiki-integration.md`) | Curated reference |
 | `framework_versions` | Table | Pinned framework versions (e.g. React=19, TS=5.4) |
-| `parent_generic_profile` | Link → Agent Role Profile (nullable) | If this is a specialised child of a generic profile, for fallback |
+| `parent_generic_profile` | Link → Agent Role Profile (nullable) | Fallback for adjacent work |
 
-### Domain DocType (new)
+### Domain DocType
 
 | Field | Type |
 |---|---|
-| `domain_code` | Data (unique) | e.g. `react`, `kubernetes`, `postgresql` |
+| `domain_code` | Data (unique) — e.g. `react`, `kubernetes`, `postgresql` |
 | `display_name` | Data |
-| `category` | Select | Frontend / Backend / Database / Infra / Data / Testing / Writing |
+| `category` | Select — Frontend / Backend / Database / Infra / Data / Testing / Writing |
 | `description` | Text |
 | `current_stable_version` | Data |
-| `documentation_sources` | Table | URLs Friday monitors for updates (see doc 28) |
+| `documentation_sources` | Table — URLs Friday monitors per `28-github-driven-documentation-sync.md` |
 
 ---
 
-## 4. Coordinator Pattern
+## 4. Coordinator pattern
 
-Specialised agents are too narrow to handle full features. A coordinator routes work:
+Specialists are too narrow for full features. A coordinator routes work.
 
 ```
 Operator: "Build a React component with a PostgreSQL-backed API endpoint and Kubernetes deployment."
 
 Coordinator Agent receives the request.
   ├─ Decomposes: UI / API / DB / Deploy
-  ├─ Delegates UI work → React Developer
-  ├─ Delegates API work → FastAPI Developer
-  ├─ Delegates DB schema → PostgreSQL DBA
-  └─ Delegates deployment → Kubernetes Specialist
+  ├─ Delegates UI    → React Developer
+  ├─ Delegates API   → FastAPI Developer
+  ├─ Delegates DB    → PostgreSQL DBA
+  └─ Delegates infra → Kubernetes Specialist
 
-Each specialist works in parallel where possible, sequentially where dependent.
+Specialists work in parallel where possible, sequentially where dependent.
 Coordinator integrates results and reports back.
 ```
 
-The Coordinator profile has:
-- Broad context (knows the high-level shape of full-stack work)
-- No execution skills of its own
-- Delegation rights to many specialist profiles (per `can_delegate_to`)
-- A skill `decompose_and_route` that uses the LLM to plan the breakdown
+A Coordinator profile has:
 
-Why this works: the LLM excels at planning when given clear options. Coordinators provide the planning context; specialists provide the execution depth.
+- Broad context — knows the high-level shape of full-stack work.
+- No execution skills of its own.
+- Delegation rights to many specialist profiles (`can_delegate_to`).
+- A skill `decompose_and_route` that uses the LLM to plan the breakdown.
+
+LLMs excel at planning when given clear options. Coordinators provide the planning context; specialists provide execution depth.
 
 ---
 
-## 5. Standard Specialised Profiles (Ship with Friday)
+## 5. Standard specialised profiles
 
-Initial set, contributable later:
+Initial set; contributable later.
 
-### Frontend
-- `frontend.react` — React 19 + TypeScript
-- `frontend.vue` — Vue 3 + TypeScript
-- `frontend.next` — Next.js 15 + App Router
-- `frontend.tailwind` — Styling-focused
-
-### Backend
-- `backend.fastapi` — FastAPI + Pydantic
-- `backend.django` — Django 5
-- `backend.frappe` — Frappe Framework app development
-- `backend.node` — Node.js + TypeScript
-
-### Database
-- `db.postgresql` — PostgreSQL 16, pgvector
-- `db.mysql` — MySQL 8
-- `db.mongodb` — MongoDB 7
-
-### Infrastructure (see doc 27 for the sub-agent pattern)
-- `infra.kubernetes` — K8s 1.30+
-- `infra.terraform` — Terraform 1.8+
-- `infra.ansible` — Ansible 10
-- `infra.docker-compose` — Compose v2
-
-### Cloud
-- `cloud.aws` — AWS Solutions Architect Associate-level
-- `cloud.gcp` — GCP equivalent
-- `cloud.azure` — Azure equivalent
-
-### Testing
-- `test.playwright` — E2E testing
-- `test.pytest` — Python unit testing
-- `test.k6` — Load testing
-
-### Writing
-- `write.technical` — Technical documentation
-- `write.marketing` — Marketing copy
-- `write.release-notes` — Release notes
-
-### Coordinator
-- `coordinator.fullstack` — Decomposes full-stack work
-- `coordinator.devops` — Decomposes infrastructure work
-- `coordinator.research` — Decomposes research projects (doc 21)
+**Frontend** — `frontend.react`, `frontend.vue`, `frontend.next`, `frontend.tailwind`.
+**Backend** — `backend.fastapi`, `backend.django`, `backend.frappe`, `backend.node`.
+**Database** — `db.postgresql`, `db.mysql`, `db.mongodb`.
+**Infra** (see `27-infrastructure-specialist-subagents.md`) — `infra.kubernetes`, `infra.terraform`, `infra.ansible`, `infra.docker-compose`.
+**Cloud** — `cloud.aws`, `cloud.gcp`, `cloud.azure`.
+**Testing** — `test.playwright`, `test.pytest`, `test.k6`.
+**Writing** — `write.technical`, `write.marketing`, `write.release-notes`.
+**Coordinators** — `coordinator.fullstack`, `coordinator.devops`, `coordinator.research` (see `21-auto-research-integration-strategy.md`).
 
 Each ships with a tested system prompt, a starter knowledge bundle, and explicit `can_delegate_to` for coordinators.
 
 ---
 
-## 6. Knowledge Bundle Lifecycle
+## 6. Knowledge bundle lifecycle
 
-Each specialised profile has a Knowledge Bundle (doc 33) — curated reference material kept current via doc 28 (GitHub-driven sync).
+Each specialised profile carries a Knowledge Bundle (`33-knowledge-graph-wiki-integration.md`) kept current via `28-github-driven-documentation-sync.md`.
 
-Bundle contents for `frontend.react`:
-- Current React major-version reference (auto-updated from React docs)
-- Current TypeScript reference
-- Top 50 React patterns (with examples) — curated, versioned
-- Common pitfalls list — community-contributed
-- Migration guides between recent versions
+`frontend.react` bundle contents:
+
+- Current React major-version reference (auto-updated from React docs).
+- Current TypeScript reference.
+- Top 50 React patterns with examples — curated, versioned.
+- Common pitfalls — community-contributed.
+- Migration guides between recent versions.
 
 Bundles are **versioned**. When React 20 ships, the bundle gets a new version; existing React 19 projects pin to the older bundle until ready to migrate.
 
 ---
 
-## 7. Cross-Specialisation Coordination
+## 7. Cross-specialisation contracts
 
 Specialists must speak the same language at boundaries. Friday enforces this via **interface contracts**:
 
 ```
 React Developer produces a component that calls an API.
-  → Contract: OpenAPI schema for the API endpoint, supplied by the Coordinator
-  → React Developer generates the client code matching the schema
-  → FastAPI Developer implements the endpoint matching the same schema
-  → Coordinator verifies both sides match
+  → Contract: OpenAPI schema, supplied by the Coordinator.
+  → React Developer generates client code matching the schema.
+  → FastAPI Developer implements the endpoint matching the schema.
+  → Coordinator verifies both sides match.
 ```
 
-Contracts are shared in the War Room. Mismatches surface as Issues, blocking task completion.
+Contracts live in the War Room. Mismatches surface as Agent Issues and block task completion.
 
 ---
 
-## 8. When Generic Profiles Are Appropriate
+## 8. When generic profiles are appropriate
 
-Specialisation isn't always better:
-- **Exploratory tasks** where the framework isn't known yet → generic profile
-- **Trivial tasks** (write a script to count lines) → generic is fine
-- **Cross-cutting concerns** (project setup, README writing) → generic
-- **Small teams** with limited skill variety → generic may suffice
+Specialisation is not always better.
 
-Friday defaults to generic profiles for new installations. Operators specialise as their workload demands.
+- Exploratory tasks where the framework is unknown → generic.
+- Trivial tasks (e.g. count lines in a file) → generic.
+- Cross-cutting concerns (project setup, README writing) → generic.
+- Small teams with limited skill variety → generic may suffice.
+
+Friday defaults to generic profiles. Operators specialise as workload demands.
 
 ---
 
-## 9. Performance Implications
+## 9. Expected performance impact
 
-Empirical expectation (to be validated in Phase 2):
-- Specialised React Developer agent uses **30–60% fewer tokens** per task vs. generic Full-Stack agent
-- Specialised agent's task completion rate **20–40% higher**
-- Specialised agent's response time **2–4× faster** on framework-specific questions
+Empirical expectation (validated in Phase 2):
 
-The cost trade: more profiles to maintain. Mitigated by:
-- Ship a strong default set (§5)
-- Knowledge bundles auto-update (doc 28)
-- Community contributes new profiles
+- Specialised React Developer uses **30–60% fewer tokens** per task vs. generic Full-Stack.
+- Task completion rate **20–40% higher**.
+- Response time **2–4× faster** on framework-specific questions.
+
+Cost: more profiles to maintain. Mitigated by the standard set (§5), auto-updating bundles, and community contributions.
 
 ---
 
 ## 10. Phasing
 
-| Phase | Specialisation Scope |
+| Phase | Scope |
 |---|---|
-| 1 (MVP) | Generic profiles only (per doc 12) |
-| 2 | Specialised profiles for `frontend.react`, `backend.fastapi`, `infra.kubernetes`, `db.postgresql` (the most common stack) |
+| 1 (v0.1) | Generic profiles only per `12-refinement-agent-roles-and-features.md` |
+| 2 | Specialised profiles for the most common stack: `frontend.react`, `backend.fastapi`, `infra.kubernetes`, `db.postgresql` |
 | 3 | Full standard set (§5) |
 | 4 | Community-contributed profiles via Skills Marketplace |
 
 ---
 
-## 11. Engineering TODOs
+## 11. Open engineering questions
 
-- [ ] Knowledge Bundle storage and versioning — extend doc 33 with version semantics
-- [ ] Token-budget accounting per profile — empirically validate the efficiency claim
-- [ ] Coordinator decomposition skill: how to teach an LLM to break down work cleanly without over-specifying
-- [ ] Conflict resolution between specialists who disagree (e.g. React Dev says use Server Components, Next.js Dev says client components — escalate to architect coordinator?)
-- [ ] Bundle update cadence — how aggressively to pull from upstream sources without breaking pinned projects
+- Knowledge Bundle storage and version semantics — extend `33-knowledge-graph-wiki-integration.md`.
+- Token-budget accounting per profile — empirically validate the efficiency claim.
+- Coordinator decomposition: how to teach an LLM to break work down cleanly without over-specifying.
+- Conflict resolution between specialists who disagree (e.g. React Dev says Server Components; Next.js Dev says client components) — escalate to architect coordinator?
+- Bundle update cadence — how aggressively to pull from upstream without breaking pinned projects.
 
 ---
 
-## 12. Open Questions
+## 12. Open product questions
 
-- **How many specialised profiles is too many?** A library of 200 niche profiles becomes harder to navigate than a library of 20 well-tuned ones. We start with §5's ~25 and let usage data guide expansion.
-- **Should specialised profiles auto-fall-back to parents?** If a React Developer is asked something React-adjacent (e.g. browser performance), should it delegate to a Frontend Generalist? Probably yes via `parent_generic_profile`.
-- **How do specialists handle deprecation?** When React 19 reaches end-of-life, what happens to projects still pinned to it? Mark the bundle as `legacy`, require operator opt-in, surface migration prompts.
+- How many specialised profiles is too many? A library of 200 niche profiles is harder to navigate than 20 well-tuned ones. Start with §5 (~25); let usage data guide expansion.
+- Should specialised profiles auto-fall back to parents? A React Developer asked something React-adjacent (browser performance) probably delegates to a Frontend Generalist via `parent_generic_profile`.
+- How do specialists handle deprecation? When React 19 reaches EOL, projects still pinned to it need a migration path. Mark the bundle `legacy`, require operator opt-in, surface migration prompts.

@@ -1,67 +1,68 @@
-# 38. Performance Optimization & Bottleneck Analysis
+# 38 — Performance Optimisation and Bottleneck Analysis
 
-## Performance Goals
+> See `00-glossary.md` for term definitions.
+> v16-attributable performance wins live in `13-frappe-v16-leverage-strategy.md` §2. This document covers Friday-side bottlenecks and mitigations.
+
+---
+
+## 1. Performance goals
 
 Friday must feel responsive under realistic load:
-- Single-agent task completion: p50 < 5 seconds, p99 < 30 seconds for simple tasks
-- Concurrent agents: 50+ agents executing in parallel on a single 8-core Friday node
-- Memory search: p50 < 200ms, p99 < 800ms
-- Skill dispatch (selection + validation): < 100ms
-- War Room message → agent pickup: < 2 seconds end-to-end
 
-If these targets miss, agents feel sluggish, supervisors lose trust, and the autonomous experience degrades.
+- Single-agent task completion — p50 < 5s, p99 < 30s for simple tasks.
+- Concurrent agents — 50+ agents executing in parallel on a single 8-core Friday node.
+- Memory search — p50 < 200ms, p99 < 800ms.
+- Skill dispatch (selection + validation) — < 100ms.
+- War Room message → agent pickup — < 2s end-to-end.
 
-## Known Bottleneck Categories
+Misses degrade the autonomous experience and erode supervisor trust.
 
-1. LLM provider latency (largest, often external)
-2. Vector search on pgvector (with poor indexing)
-3. Frappe ORM overhead on hot queries
-4. Container startup for skill execution (cold start)
-5. Permission gate evaluation
-6. Cross-process synchronization for Raven War Room
+---
 
-We address each.
+## 2. Bottleneck categories
 
-## Category 1: LLM Provider Latency
+1. LLM provider latency (largest; often external).
+2. Vector search on pgvector with poor indexing.
+3. Frappe ORM overhead on hot queries.
+4. Container startup for skill execution (cold start).
+5. Permission gate evaluation.
+6. Cross-process synchronisation for Raven War Room.
 
-**Observation:** A single LLM call to a frontier model takes 1-8 seconds. Agents that make 5 calls in series feel slow.
+Each addressed below.
 
-**Strategies:**
+---
 
-### Parallel LLM Calls
-Where independent reasoning steps exist, run them concurrently. Skills like "classify these 10 emails" or "validate these 5 documents" launch parallel calls.
+## 3. LLM provider latency
 
-### Streaming
-Stream LLM responses where the agent can act on partial output. For final user-visible summaries, stream to Raven in chunks.
+A single LLM call to a frontier model takes 1–8 seconds. Five serial calls feels slow.
 
-### Smaller Model Fallback
-For deterministic, simple sub-tasks (classification, extraction, validation), use a cheaper/faster model (Haiku-class). Reserve frontier models for complex reasoning.
+**Parallel calls.** Independent reasoning steps run concurrently (e.g. "classify these 10 emails", "validate these 5 documents").
 
-The Skill DocType has a `recommended_model_tier` field (Light/Standard/Heavy). Dispatcher uses this to route LLM calls appropriately.
+**Streaming.** Stream LLM responses where the agent can act on partial output. Stream final summaries to Raven in chunks.
 
-### Provider Failover
-Two configured LLM providers (e.g. Anthropic + a local OSS model). If primary times out beyond threshold, fail over to secondary. Recovers gracefully from provider incidents.
+**Smaller-model fallback.** Deterministic, simple sub-tasks (classification, extraction, validation) use a cheaper/faster model (Haiku-class). Frontier models reserved for complex reasoning. Skill DocType carries `recommended_model_tier` (Light/Standard/Heavy); dispatcher routes accordingly.
 
-### Batched LLM Calls
-For analytics tasks evaluating dozens of items, batch into a single prompt with structured output. One call replaces ten.
+**Provider failover.** Two configured providers (e.g. Anthropic + a local OSS model). If primary times out beyond threshold, fail over to secondary.
 
-## Category 2: Vector Search
+**Batched calls.** Analytics tasks evaluating dozens of items batch into a single prompt with structured output. One call replaces ten.
 
-**Observation:** A naive pgvector scan over millions of rows is slow. With proper indexing, sub-second p99 is achievable.
+---
 
-**Strategies:**
+## 4. Vector search
 
-### HNSW Index
+A naive pgvector scan over millions of rows is slow. With proper indexing, sub-second p99 is achievable.
+
+**HNSW index**
+
 ```sql
 CREATE INDEX idx_memory_embedding ON memory_entry_embeddings
 USING hnsw (embedding vector_cosine_ops)
 WITH (m = 16, ef_construction = 64);
 ```
 
-Tuning: `ef_search` parameter at query time. Higher = better recall, slower. Start at 40, profile.
+Tune `ef_search` at query time. Higher = better recall, slower. Start at 40, profile.
 
-### Partial Indexes per Domain
-Most queries are domain-scoped (doc 29). Domain-partial indexes keep working set small.
+**Partial indexes per domain.** Most queries are domain-scoped per `29-domain-specific-self-learning.md`.
 
 ```sql
 CREATE INDEX idx_memory_embedding_procurement ON memory_entry_embeddings
@@ -69,171 +70,133 @@ USING hnsw (embedding vector_cosine_ops)
 WHERE domain_id = 'erpnext-procurement';
 ```
 
-### Pre-filtered Search
-Apply metadata filters (domain, time range, concept) BEFORE vector search where possible. PostgreSQL's planner can sometimes do this; explicit query hints help.
+**Pre-filtered search.** Apply metadata filters (domain, time range, concept) before vector search where possible. PostgreSQL's planner can sometimes do this; explicit hints help.
 
-### Cold Tier Bypass
-Cold tier never scanned synchronously. Only async on explicit request (doc 34).
+**Cold tier bypass.** Cold tier is never scanned synchronously — only async on explicit request (`34-efficient-multilayer-memory-system.md`).
 
-### Dimension Choice
-1536-dimensional embeddings: high quality but slower than 768-dim. Profile and choose per workload.
+**Dimension choice.** 1536-dim embeddings — higher quality but slower than 768-dim. Profile per workload.
 
-## Category 3: Frappe ORM Overhead
+---
 
-**Observation:** `frappe.get_doc` performs role permission checks, link field resolution, and hook firing on every call. For hot read paths, this adds 50-100ms.
+## 5. Frappe ORM overhead
 
-**Strategies:**
+`frappe.get_doc` performs role permission checks, link-field resolution, and hook firing on every call. On hot paths this adds 50–100ms.
 
-### Bulk Reads
-Replace 10 `frappe.get_doc` calls with one `frappe.get_all` or one direct SQL query.
+**Bulk reads.** Replace 10 `frappe.get_doc` calls with one `frappe.get_all` or one direct SQL.
 
-### Direct SQL for Hot Paths
-Where role checks aren't needed (admin-context background tasks), use `frappe.db.sql` or `frappe.db.get_value` instead of full doc load.
+**Direct SQL for hot paths.** Where role checks are not needed (admin-context background tasks), use `frappe.db.sql` or `frappe.db.get_value` instead of full doc load.
 
-### Caching Layer
-The cache layer (doc 31) intercepts hot reads before they hit ORM.
+**Caching layer.** The cache layer in `31-cache-buffer-management-system.md` intercepts hot reads before ORM.
 
-### Hook Audit
-Identify and disable unnecessary doc_events hooks for Friday-internal DocTypes that don't need them.
+**Hook audit.** Identify and disable unnecessary `doc_events` hooks for Friday-internal DocTypes that do not need them.
 
-## Category 4: Container Cold Start
+---
 
-**Observation:** Spinning up a Docker container for skill execution takes 1-3 seconds. If every skill call did this, agents would crawl.
+## 6. Container cold start
 
-**Strategies:**
+Spinning up a Docker container for skill execution takes 1–3 seconds. Every-call cold-spawn is unacceptable.
 
-### Warm Pool
-Maintain 5-20 pre-started containers in an idle pool. When a skill needs to execute, grab one from the pool, run, return (or recycle) the container.
+**Warm pool.** 5–20 pre-started containers in an idle pool. Grab one, run, return (or recycle).
 
-### Per-Profile Pools
-Different agent profiles need different container images. Pool is segmented per image. Common images get larger pools.
+**Per-profile pools.** Different agent profiles need different images. Pool segments per image; common images get larger pools.
 
-### Container Reuse Within Execution
-Within a single agent execution, the same container handles multiple skill calls if isolation requirements permit. Reduces overhead dramatically.
+**Container reuse within execution.** Within a single agent execution, the same container handles multiple skill calls if isolation requirements permit.
 
-### Async Container Fill
-A background job keeps the pool topped up. When usage spikes, pool grows; when usage drops, idle containers exit.
+**Async fill.** A background job tops up the pool. Spikes grow the pool; idle drains it.
 
-## Category 5: Permission Gate
+Per `42-phase-one-authority-contract.md` §5 the warm pool is **deferred to Phase 1.5**. v0.1 ships only the cold-spawn path per the §5 minimum bar.
 
-**Observation:** Every skill call passes through the permission gate (doc 04). Naive evaluation of complex permission matrices can take 20-50ms.
+---
 
-**Strategies:**
+## 7. Permission gate
 
-### Permission Decision Cache
-A Redis cache of (user_id, skill, target_doctype) → allow/deny. TTL: 5 minutes. Invalidated on role / profile changes.
+Every skill call passes through the permission gate (`04-security-model.md`). Naive evaluation of complex matrices takes 20–50ms.
 
-### Pre-compute Permission Sets
-For each Agent Role Profile, compute and cache the full set of (skill, target_doctype, action) tuples it can perform. Skill calls become O(1) set membership tests.
+**Permission decision cache.** Redis cache of `(user_id, skill, target_doctype) → allow/deny`. TTL 5 minutes. Invalidated on role / profile changes.
 
-### Approval Threshold Lookup
-Threshold checks (e.g. "PO ≤ ₹50,000 → autopilot") use indexed lookups, not table scans.
+**Pre-computed permission sets.** For each Agent Role Profile, compute and cache the full set of `(skill, target_doctype, action)` tuples it can perform. Skill calls become O(1) membership tests.
 
-## Category 6: Raven War Room
+**Approval threshold lookup.** Threshold checks ("PO ≤ ₹50,000 → autopilot") use indexed lookups, not table scans.
 
-**Observation:** When 20 agents post simultaneously to War Room channels, the chat backend can lag.
+---
 
-**Strategies:**
+## 8. Raven War Room throughput
 
-### Async Posting
-Agents fire-and-forget War Room posts to an internal queue. A worker consumer flushes to Raven.
+When 20 agents post simultaneously, the chat backend can lag.
 
-### Batching
-Multiple posts within a 100ms window from the same agent batch into a single Raven message.
+**Async posting.** Agents fire-and-forget War Room posts to an internal queue. A worker flushes to Raven.
 
-### Channel Pagination Optimization
-War Room read APIs paginate efficiently. Default page size 50 messages; older messages on-demand only.
+**Batching.** Multiple posts within a 100ms window from the same agent batch into a single Raven message.
 
-### Bot Account Pool
-Each Friday agent has a Frappe user, but Raven message authoring uses a small pool of "bot" identities to reduce per-account overhead. The original agent author is preserved in message metadata.
+**Pagination.** War Room read APIs paginate efficiently. Default page size 50 messages; older messages on-demand only.
 
-## Performance Testing
+**Bot account pool.** Each Friday agent has a Frappe user, but Raven message authoring uses a small pool of "bot" identities to reduce per-account overhead. The original agent author is preserved in message metadata.
 
-A standardized benchmark suite ships with Friday:
+---
 
-### benchmark_simple_task.py
-Runs 100 simple PO-create tasks sequentially. Reports p50, p95, p99 latencies.
+## 9. Benchmark suite
 
-### benchmark_concurrent_agents.py
-Spawns 50 concurrent agents each running a 5-step task. Reports wall-clock completion and resource utilization.
+Standardised benchmarks ship with Friday and run in CI on every core PR. Regressions block merge.
 
-### benchmark_memory_search.py
-100K memory entries pre-loaded. Runs 1000 vector searches. Reports p50/p99 latency.
+| Benchmark | What it measures |
+|---|---|
+| `benchmark_simple_task.py` | 100 sequential simple PO-create tasks; p50, p95, p99 latencies |
+| `benchmark_concurrent_agents.py` | 50 concurrent agents, each a 5-step task; wall-clock + resource utilisation |
+| `benchmark_memory_search.py` | 100K pre-loaded entries; 1000 vector searches; p50/p99 latency |
+| `benchmark_war_room_throughput.py` | 500 messages/second sustained for 2 minutes; lag distribution |
 
-### benchmark_war_room_throughput.py
-500 messages/second sustained for 2 minutes. Reports lag distribution.
+---
 
-These run in CI on every Friday core PR. Regressions block merge.
+## 10. Profiling tools
 
-## Profiling Tools
+- **Python** — py-spy, cProfile + snakeviz.
+- **PostgreSQL** — `auto_explain`, `pg_stat_statements`, `EXPLAIN ANALYZE` on slow queries.
+- **Redis** — `SLOWLOG`, latency monitor.
+- **Containers** — cAdvisor, Prometheus.
+- **End-to-end traces** — OpenTelemetry instrumentation; Jaeger or Tempo backend.
 
-- **Python profiling:** py-spy, cProfile + snakeviz for hot path analysis
-- **PostgreSQL:** auto_explain, pg_stat_statements, EXPLAIN ANALYZE on slow queries
-- **Redis:** SLOWLOG, latency monitor
-- **Container metrics:** cAdvisor, Prometheus
-- **End-to-end traces:** OpenTelemetry instrumentation; Jaeger or Tempo backend
+Every agent execution emits a trace. Slow executions auto-flagged for review.
 
-Every agent execution emits a trace. Slow executions are auto-flagged for review.
+---
 
-## Optimization Priorities
+## 11. Optimisation by phase
 
-By Phase:
+| Phase | Scope |
+|---|---|
+| 1 (v0.1) | Permission decision cache (basic Redis); pgvector installed (queries Phase 2 per `34-efficient-multilayer-memory-system.md`); Frappe ORM bulk reads on hot paths; cold-spawn sandbox per `42-phase-one-authority-contract.md` §5; latency monitoring with simple histogram; standardised benchmark suite |
+| 1.5 | Warm container pool per `42` §5 deferred items |
+| 2 | HNSW indexes on memory tables; streaming LLM responses with War Room chunked delivery; OpenTelemetry tracing; async Raven posting; per-profile container pools |
+| 3 | Parallel LLM orchestration; provider failover; pre-computed permission sets; memory-tier optimisation; cost attribution dashboard |
+| 4 | ML-tuned query plans; auto-scaling pools; multi-region deployments |
 
-### Phase 1
-- pgvector HNSW indexes
-- Basic permission cache
-- Frappe ORM bulk reads
-- Single container warm pool
-- Skill latency monitoring
+---
 
-### Phase 2
-- Streaming LLM responses
-- Domain-partial indexes
-- Per-profile container pools
-- Async Raven posting
-- End-to-end OpenTelemetry tracing
+## 12. Capacity planning
 
-### Phase 3
-- Parallel LLM call orchestration
-- Provider failover
-- Pre-computed permission sets
-- Memory tier optimization
-- ML-based query plan tuning
+| Scale | Configuration |
+|---|---|
+| **Small** (≤ 50 employees, ≤ 10K monthly transactions) | 1 Friday node — 8 CPU, 16GB RAM, 100GB SSD. Handles 50 concurrent agents. LLM cost dominates (~₹15–50K/month for moderate usage) |
+| **Mid** (≤ 500 employees, ≤ 100K monthly transactions) | 2–3 Friday nodes behind a load balancer. Shared PostgreSQL primary + read replica. Redis cluster. Cost scales roughly linearly with transaction volume |
+| **Enterprise** (> 500 employees) | Multi-node Friday cluster. Dedicated PostgreSQL with WAL replication. Multi-region Redis. Custom optimisation per workload |
 
-## Capacity Planning
+---
 
-For a small business (≤50 employees, ≤10K monthly transactions):
-- 1 Friday node: 8 CPU, 16GB RAM, 100GB SSD
-- Handles 50 concurrent agents comfortably
-- LLM cost dominates (typically ₹15-50K/month for moderate usage)
-
-For mid-size (≤500 employees, ≤100K monthly transactions):
-- 2-3 Friday nodes behind a load balancer
-- Shared PostgreSQL primary + read replica
-- Redis cluster
-- Costs scale roughly linearly with transaction volume
-
-For enterprise (>500 employees):
-- Multi-node Friday cluster
-- Dedicated PostgreSQL with WAL replication
-- Multi-region Redis
-- Custom optimization per workload
-
-## Cost Optimization
+## 13. Cost optimisation
 
 LLM cost is the largest variable cost. Reduce by:
-1. Use Haiku/Light tier for simple sub-tasks (see Category 1)
-2. Cache LLM responses for idempotent prompts (doc 31)
-3. Batch related calls
-4. Prefer smaller context: pass only relevant skill descriptions (skill ceiling per doc 15)
-5. Trim memory search results to top N actually needed
-6. Use embedding cache aggressively
 
-Track cost per task type. Surface in Performance Insights Agent report (doc 36). Identify outliers.
+1. Use Haiku / Light tier for simple sub-tasks (§3).
+2. Cache LLM responses for idempotent prompts (`31-cache-buffer-management-system.md`).
+3. Batch related calls.
+4. Prefer smaller context — pass only relevant skill descriptions per skill ceiling (`15-openclaw-insights-friday-refinements.md`).
+5. Trim memory search results to top N actually needed.
+6. Use the embedding cache aggressively.
 
-## SLA Targets
+Track cost per task type. Surface in the Performance Insights Agent report (`36-analytical-predictive-agents.md`). Identify outliers.
 
-For the hosted FridayLabs SaaS:
+---
+
+## 14. SLA targets (Friday Labs hosted)
 
 | Metric | Target | Hard SLA |
 |---|---|---|
@@ -242,34 +205,13 @@ For the hosted FridayLabs SaaS:
 | Uptime (excluding maintenance) | 99.5% | 99.0% |
 | War Room post latency | < 2s | < 10s |
 
-Self-hosted deployments are not bound by SLA but the same targets serve as quality goals.
+Self-hosted deployments are not bound by SLA, but the same targets serve as quality goals.
 
-## Phase 1 Scope
+---
 
-Phase 1 ships:
-- HNSW indexes on memory tables
-- Permission decision cache
-- Basic container warm pool (5 containers per image)
-- Latency monitoring with simple histogram
-- Standardized benchmark suite
+## 15. Open questions
 
-Phase 2 adds:
-- Domain-partial indexes
-- Streaming LLM responses with War Room chunked delivery
-- OpenTelemetry tracing
-- Async Raven posting
-- Per-profile pools
-
-Phase 3 adds:
-- Parallel LLM orchestration
-- Provider failover
-- Pre-computed permission sets
-- ML-tuned query plans
-- Cost attribution dashboard
-
-## Open Questions
-
-1. Should we ship Friday with Prometheus + Grafana pre-configured? Probably yes Phase 2 — most operators don't know what to monitor.
-2. How much performance can we sacrifice for safety guarantees (sandbox, permission gate)? Hard cap: safety overhead < 10% of task time.
-3. What is acceptable cold start latency for first agent of the day? < 2 seconds via warm pool.
-4. Optimal embedding dimension for our use cases? Profile both 768 and 1536 in Phase 1; pick based on quality/cost trade-off.
+- Ship Friday with Prometheus + Grafana pre-configured? Probably yes Phase 2 — most operators do not know what to monitor.
+- Performance vs. safety overhead — hard cap: safety overhead < 10% of task time.
+- Cold-start latency for the first agent of the day — < 2 seconds via warm pool (Phase 1.5).
+- Optimal embedding dimension — profile both 768 and 1536 during Phase 2; choose on quality/cost trade-off.

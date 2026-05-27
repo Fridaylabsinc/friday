@@ -1,15 +1,23 @@
-# 34. Efficient Multi-Layer Memory System
+# 34 — Efficient Multi-Layer Memory
 
-## Memory is Tools, Not Context
+> See `00-glossary.md` for term definitions (Memory Entry, Memory Search, Domain).
+> Phase: v0.1 installs pgvector but **does not run queries** per `42-phase-one-authority-contract.md` §4 ("Semantic memory / pgvector queries: installed but not used"). The full memory subsystem ships Phase 2+.
 
-Per the OpenClaw insight (doc 15): memory must be **searchable via skills**, not stuffed into every prompt. Naive context-injection of memory:
-- Blows up token budgets
-- Includes irrelevant content (distraction)
-- Doesn't scale (memory grows unbounded, context doesn't)
+---
 
-Friday treats memory as a backend the agent queries deliberately, just like it queries a database.
+## 1. Memory is a tool, never auto-injected context
 
-## Three-Tier Memory Architecture
+Per `15-openclaw-insights-friday-refinements.md` Insight 3: memory is searchable via skills, not stuffed into every prompt. Naive context-injection:
+
+- Blows token budgets.
+- Includes irrelevant content (distraction).
+- Does not scale — memory grows unbounded; context does not.
+
+Friday treats memory as a backend the agent queries deliberately, like a database.
+
+---
+
+## 2. Three-tier architecture
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
@@ -22,94 +30,92 @@ Friday treats memory as a backend the agent queries deliberately, just like it q
 ├─────────────────────────────────────────────────────────────────┤
 │ WARM — PostgreSQL + pgvector                                    │
 │   - Memory Entries (full content + embeddings)                  │
-│   - Memory Concepts + Links (doc 32)                            │
-│   - Recent (last 90 days) execution logs                        │
+│   - Memory Concepts + Links (32)                                │
+│   - Recent (last 90 days) Execution Logs                        │
 │   - Indexed for fast retrieval                                  │
-│   - Size: ~1-10GB per business after 1 year                     │
+│   - Size: ~1–10GB per business after 1 year                     │
 ├─────────────────────────────────────────────────────────────────┤
-│ COLD — Archive Storage (S3 / MinIO / local disk)                │
+│ COLD — Archive (S3 / MinIO / local disk)                        │
 │   - Compressed execution logs > 90 days                         │
-│   - Memory entries flagged "archive" by curator                 │
+│   - Memory Entries flagged "archive" by curator                 │
 │   - Periodic snapshots                                          │
 │   - Retrievable on demand (slow path)                           │
 └─────────────────────────────────────────────────────────────────┘
 ```
 
-## Memory Categories
+---
 
-Independent of tier, memory entries are categorized:
+## 3. Categories
 
-### 1. Episodic
-"What happened" — events, observations, interactions.
-- "On March 5, Customer X placed an order for 50 units."
-- "Procurement Agent retried PO-001 three times due to supplier timeout."
+Independent of tier, every Memory Entry carries a category.
 
-### 2. Semantic
-"What is true" — facts, configurations, relationships.
-- "Customer X's payment terms: Net 30."
-- "Supplier S is preferred vendor for Item A."
+| Category | Meaning | Example |
+|---|---|---|
+| **Episodic** | What happened | "Customer X placed an order for 50 units on March 5." |
+| **Semantic** | What is true | "Customer X payment terms: Net 30." |
+| **Procedural** | How to do | Typically codified as Skills, not memory entries. |
+| **Reflective** | What was learned | "Following up with Customer X via WhatsApp is more effective than email." |
 
-### 3. Procedural
-"How to do" — patterns and methods.
-- "When invoice is 7 days overdue, send reminder email; 14 days, escalate."
-- Typically codified as Skills, not memory entries.
+`memory_search` filters by category.
 
-### 4. Reflective
-"What we learned" — meta-observations.
-- "Following up with Customer X via WhatsApp is more effective than email."
-- "Supplier S misses deadlines in March due to seasonal factors."
+---
 
-Each memory entry carries a `category` field. Search can filter by category.
+## 4. Memory Entry — full schema
 
-## DocType: Memory Entry (Full Schema)
+| Field | Type |
+|---|---|
+| `entry_id` | Data (auto-named) |
+| `domain` | Link → Domain |
+| `category` | Select — Episodic / Semantic / Procedural / Reflective |
+| `content` | Long Text |
+| `embedding_vector` | pgvector column on companion table |
+| `mentioned_concepts` | Child table → Memory Concept |
+| `primary_concept` | Link → Memory Concept |
+| `source_type` | Select — Agent Execution / Human Annotation / ERPNext Event / Wiki / External |
+| `source_reference` | Data — link back to original |
+| `created_by` | Link → User (agent or human) |
+| `created_at` | Datetime |
+| `accessed_at` | Datetime — last time returned by search |
+| `access_count` | Int |
+| `tier` | Select — Hot / Warm / Cold |
+| `importance` | Float, 0.0–1.0 — curator-set |
+| `verified` | Check — supervisor confirmed accuracy |
+| `sensitive` | Check — elevated permission to read |
+| `archive_at` | Date — auto-archive date if set |
 
-Building on prior docs, the complete schema:
+---
 
-- `entry_id` (Data, auto-named)
-- `domain` (Link to Domain)
-- `category` (Select: Episodic, Semantic, Procedural, Reflective)
-- `content` (Long Text)
-- `embedding_vector` (stored in pgvector column on companion table)
-- `mentioned_concepts` (child table)
-- `primary_concept` (Link to Memory Concept)
-- `source_type` (Select: Agent Execution, Human Annotation, ERPNext Event, Wiki, External)
-- `source_reference` (Data) — link back to original
-- `created_by` (Link to User) — agent or human
-- `created_at` (Datetime)
-- `accessed_at` (Datetime) — last time this entry was returned by a search
-- `access_count` (Int)
-- `tier` (Select: Hot, Warm, Cold)
-- `importance` (Float, 0.0-1.0) — curator-set
-- `verified` (Check) — supervisor confirmed accuracy
-- `sensitive` (Check) — requires elevated permission to read
-- `archive_at` (Date) — auto-archive date if set
-
-## Tier Management
-
-Memory entries promote and demote between tiers:
+## 5. Tier transitions
 
 ### Hot → Warm
+
 Automatic on agent execution end. Hot tier holds only active context.
 
 ### Warm → Cold
+
 Nightly job moves entries to cold when:
+
 - Not accessed in 90 days, AND
 - `importance` < 0.5, AND
-- Not flagged `verified`
+- Not flagged `verified`.
 
 Cold storage uses S3-compatible object storage. Each archive object is a compressed JSONL of ~1000 entries.
 
-### Cold → Warm (Restore)
-When a `memory_search` query has unusually low hit rate, the search expands into cold storage:
-1. Search executes a cold-tier scan with looser thresholds.
-2. If matches found, those entries are restored to warm tier.
+### Cold → Warm (restore)
+
+When `memory_search` has an unusually low hit rate, search expands into cold:
+
+1. Cold-tier scan with looser thresholds.
+2. Matches restored to warm tier.
 3. Restored entries get `accessed_at = now` and remain warm.
 
-Cold scan is slow (10-30 seconds) and bounded — used as a fallback.
+Cold scan is slow (10–30s) and bounded — a fallback.
 
-## Hot Memory Structure
+---
 
-Within Redis, hot memory is organized per-agent-execution:
+## 6. Hot tier shape
+
+Within Redis, organised per agent execution:
 
 ```
 agent:{agent_id}:exec:{exec_id}:
@@ -119,159 +125,164 @@ agent:{agent_id}:exec:{exec_id}:
   - cached_skill_results: result cache for current execution
 ```
 
-This expires at execution end (or after 1 hour idle). Long-running heartbeat sessions persist hot memory across heartbeat boundaries.
+Expires at execution end or after 1 hour idle. Long-running heartbeat sessions persist hot memory across heartbeat boundaries.
 
-## Memory Write Path
+---
 
-When an agent records a memory:
+## 7. Write path
 
-1. Agent calls `memory_save(content, category, ...)` skill.
-2. Skill creates a Memory Entry (warm tier by default) in PostgreSQL.
-3. Embedding computed via embedding service (LLM provider or local model).
-4. Concept extraction runs (doc 32).
-5. Mentioned concepts updated.
-6. Entry indexed in pgvector.
-7. Hot memory also updated with `recent_concepts` set.
-8. Execution Log records the write.
+`memory_save(content, category, ...)`:
 
-Latency target: <500ms for the full pipeline.
+1. Create a Memory Entry (warm tier) in PostgreSQL.
+2. Compute embedding via the embedding service.
+3. Run concept extraction per `32-memory-association-neural-linking.md`.
+4. Update mentioned concepts.
+5. Index in pgvector.
+6. Update hot memory `recent_concepts`.
+7. Submit Execution Log record of the write.
 
-## Memory Read Path
+Latency target: < 500ms end-to-end.
 
-When an agent calls `memory_search(query, ...)`:
+---
 
-1. Query embedded.
+## 8. Read path
+
+`memory_search(query, ...)`:
+
+1. Embed the query.
 2. pgvector similarity search in warm tier (top K, with metadata filters).
 3. Hot tier scratchpad scanned for recent matches.
-4. Concept graph walked (doc 32) for associated context.
-5. Results merged and ranked:
-   - Direct vector matches (high weight)
-   - Hot tier hits (high weight, very recent)
-   - Associated concept results (lower weight)
+4. Concept graph walk per `32-memory-association-neural-linking.md` for associated context.
+5. Merge and rank:
+   - Direct vector matches (high weight).
+   - Hot tier hits (high weight, very recent).
+   - Associated concept results (lower weight).
 6. Return top N with metadata.
 
-If hit count below threshold, optionally extend to cold tier (slow path, only on agent's explicit request or supervisor opt-in).
+Below hit threshold → optionally extend to cold tier (only on explicit agent or supervisor opt-in).
 
-Latency target: <300ms (warm tier only).
+Latency target: < 300ms (warm tier only).
 
-## Memory Compression
+---
 
-Old episodic memories compress into summary form:
+## 9. Compression
 
-Example: 50 individual entries about "Procurement Agent processed PO-X with supplier follow-up" → one summary "In Q1 2025, Procurement Agent processed 50 POs averaging 3.2 days to completion."
+Old episodic memories compress into summary form.
 
-Compression rules:
-- Run nightly on entries > 30 days old in episodic category
-- Group by concept and time window
-- LLM-generated summary
-- Original entries archived to cold; summary stays in warm
-- Summary tagged `category = Reflective`, `source_type = Compression`
+Example: 50 entries about "Procurement Agent processed PO-X with supplier follow-up" → one summary "In Q1 2025, Procurement Agent processed 50 POs averaging 3.2 days to completion."
 
-This keeps warm tier from bloating while preserving aggregate knowledge.
+Rules:
 
-## Memory Sharing
+- Nightly job on entries > 30 days old in `Episodic`.
+- Group by concept and time window.
+- LLM-generated summary.
+- Originals archived to cold; summary stays in warm.
+- Summary tagged `category = Reflective`, `source_type = Compression`.
 
-Within a Domain, all agents share memory access. Cross-domain access controlled per doc 29.
+Keeps warm tier from bloating while preserving aggregate knowledge.
 
-For multi-business SaaS:
-- Each business has its own memory namespace
-- No cross-business sharing by default
-- Opt-in to anonymized community memory pool (Phase 4 feature)
+---
 
-## Memory Quality Curation
+## 10. Sharing
 
-A weekly background job (the "memory curator") runs:
-1. Identifies duplicate entries (high embedding similarity, same domain).
-2. Proposes merges to supervisors via Raven.
-3. Identifies low-importance, low-access entries → suggests archive.
-4. Identifies high-access entries that lack `verified` flag → suggests review.
-5. Identifies entries contradicting each other → flags for supervisor.
+Within a Domain, all agents share memory access. Cross-domain access is controlled per `29-domain-specific-self-learning.md`.
 
-Curator does not modify memory autonomously in Phase 1; only proposes.
+For Friday Labs multi-tenant:
 
-## Memory Permissions
+- Each business has its own memory namespace.
+- No cross-business sharing by default.
+- Opt-in to an anonymised community memory pool (Phase 4).
 
-Three permission levels per memory entry:
-- **Public** within domain — any agent in the domain can read
-- **Restricted** — only specific Agent Role Profiles can read (e.g. salary memories visible to HR agents only)
-- **Sensitive** — supervisor approval required for each read
+---
 
-Sensitive memories: encrypted at rest with per-tenant key, audited on every access.
+## 11. Curator (Phase 2 weekly job)
 
-## Forgetting
+1. Identify duplicate entries (high embedding similarity, same domain).
+2. Propose merges to supervisors via Raven.
+3. Identify low-importance, low-access entries → suggest archive.
+4. Identify high-access entries lacking `verified` → suggest review.
+5. Identify contradicting entries → flag for supervisor.
 
-Some memories should be deleted, not archived:
-- GDPR/DPDPA right-to-be-forgotten requests
-- Memories about ex-employees, ex-customers (with retention policy expiry)
-- Erroneous memories flagged by supervisor
+The curator proposes; it does not modify memory autonomously.
 
-Skill `memory_forget(entry_id, reason)`:
-- Requires supervisor approval
-- Logs the deletion event with reason (immutable)
-- Removes from warm and hot tiers
-- Marks cold archive object for purge on next cold-storage maintenance
+---
 
-## Performance Tuning
+## 12. Permissions
+
+| Level | Behaviour |
+|---|---|
+| **Public** within domain | Any agent in the domain can read |
+| **Restricted** | Only specific Agent Role Profiles can read (e.g. salary memories visible to HR agents only) |
+| **Sensitive** | Supervisor approval required per read |
+
+Sensitive memories: encrypted at rest with per-tenant key; audited per access.
+
+---
+
+## 13. Forgetting
+
+Some memories must be deleted, not archived:
+
+- GDPR / DPDPA right-to-be-forgotten.
+- Memories about ex-employees or ex-customers (retention policy expiry).
+- Erroneous memories flagged by supervisor.
+
+`memory_forget(entry_id, reason)`:
+
+- Requires supervisor approval.
+- Logs the deletion event with reason (immutable).
+- Removes from warm and hot tiers.
+- Marks cold archive object for purge on next maintenance.
+
+---
+
+## 14. Performance tuning
 
 pgvector indexes:
-- HNSW index on embedding column with M=16, ef_construction=64 (defaults)
-- Re-index when entry count crosses 100K, 500K, 1M thresholds
-- Partial indexes per domain to keep search scope tight
 
-Query patterns to optimize:
-- Domain-filtered vector search: index on `domain_id` + vector index, query planner uses both
-- Concept-filtered: pre-fetch concept's linked entry IDs, then filter
+- HNSW on embedding column with `M=16`, `ef_construction=64` (defaults).
+- Re-index when entry count crosses 100K, 500K, 1M thresholds.
+- Partial indexes per domain to keep search scope tight.
 
-## Monitoring
+Query patterns to optimise:
 
-Track:
-- Total entries per tier
-- Read latency p50, p99
-- Write latency p50, p99
-- Cold tier scan frequency (should be rare)
-- Curator queue depth
-- Memory growth rate per business
+- Domain-filtered vector search — index on `domain_id` + vector index; planner uses both.
+- Concept-filtered — pre-fetch concept's linked entry IDs, then filter.
 
-Alert if:
-- Read p99 > 1 second
-- Cold scans > 10/hour
-- Growth rate suggests bloat (>1GB/week sustained)
+---
 
-## Phase 1 Scope
+## 15. Monitoring
 
-Phase 1 ships:
-- Memory Entry DocType (warm tier only)
-- pgvector similarity search
-- `memory_save`, `memory_search`, `memory_get` skills
-- Domain scoping
-- Basic permissions (public/restricted)
+Tracked:
 
-NOT in Phase 1:
-- Concept graph (doc 32 — Phase 2)
-- Compression
-- Curator job
-- Cold tier / archive
-- Sensitive memory encryption
+- Entries per tier.
+- Read latency p50, p99.
+- Write latency p50, p99.
+- Cold-tier scan frequency (should be rare).
+- Curator queue depth.
+- Memory growth rate per business.
 
-## Phase 2
+Alerts:
 
-Phase 2 adds:
-- Hot tier (Redis)
-- Concept extraction + graph
-- Compression job
-- Cold tier with S3-compatible storage
-- Memory curator with proposal workflow
+- Read p99 > 1s.
+- Cold scans > 10/hour.
+- Growth rate suggests bloat (> 1GB/week sustained).
 
-## Phase 3
+---
 
-Phase 3 adds:
-- Sensitive memory encryption
-- Forgetting workflow with audit trail
-- Cross-tenant anonymized community pool (opt-in)
-- Advanced curation with anomaly detection
+## 16. Phasing
 
-## Open Questions
+| Phase | Scope |
+|---|---|
+| 1 (v0.1) | pgvector installed; **no queries run** per `42-phase-one-authority-contract.md` §4. Memory Entry DocType is defined for the schema but no `memory_*` skills active |
+| 2 | Memory Entry DocType active; pgvector similarity search; `memory_save`, `memory_search`, `memory_get` skills; domain scoping; basic permissions (public / restricted) |
+| 3 | Hot tier (Redis); concept extraction + graph (`32-memory-association-neural-linking.md`); compression job; cold tier with S3; curator with proposal workflow |
+| 4 | Sensitive memory encryption; forgetting workflow with audit; cross-tenant anonymised community pool (opt-in); advanced curation with anomaly detection |
 
-1. Embedding model choice — provider API (OpenAI/Anthropic) vs local (BGE, E5)? Lean: configurable; local models for cost and privacy at scale.
-2. Vector dimension trade-off — 768 vs 1536 vs 3072? 1536 is good default; 768 for cost-sensitive deployments.
-3. How to handle embedding model changes (when we upgrade)? Maintain old + new for 30 days, dual-index, then drop old. Designed in Phase 2.
+---
+
+## 17. Open questions
+
+- Embedding model — provider API (OpenAI/Anthropic) vs. local (BGE, E5)? Configurable; local models for cost and privacy at scale.
+- Vector dimension trade-off — 768 vs. 1536 vs. 3072? 1536 default; 768 for cost-sensitive deployments.
+- Embedding-model upgrades — keep old + new for 30 days, dual-index, then drop old. Designed in Phase 3.

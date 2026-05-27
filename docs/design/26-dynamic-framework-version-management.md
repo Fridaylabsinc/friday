@@ -1,143 +1,174 @@
-# 26. Dynamic Framework Version Management
+# 26 — Dynamic Framework Version Management
 
-## Problem Statement
+> See `00-glossary.md` for term definitions.
+> Companion: `28-github-driven-documentation-sync.md` (snapshot fetch / sync), `25-domain-specialized-agent-profiles.md` (specialised profiles consume version pins).
+> Phase: not in v0.1 per `42-phase-one-authority-contract.md` §3. Phase 2+.
 
-Friday agents work across many frameworks (Frappe v15, Frappe v16, ERPNext v15, Next.js 14/15, React 18/19, PostgreSQL 14/15/16, Kubernetes 1.28+, etc.). Each framework version has different APIs, deprecated patterns, new features, and different best practices.
+---
+
+## 1. Problem
+
+Friday agents work across many frameworks (Frappe v15 and v16, ERPNext v15+, Next.js 14/15, React 18/19, PostgreSQL 14/15/16, Kubernetes 1.28+, and so on). Each version has different APIs, deprecated patterns, new features, and best practices.
 
 A naive agent that knows "React" gives generic answers — sometimes correct for v17, sometimes for v18, sometimes for v19. Production code breaks.
 
-We need agents that always know **which exact framework version this project uses** and can pull skills/documentation matched to that version.
+Agents must always know **which exact framework version a project uses** and pull skills and documentation matched to that version.
 
-## Design Goals
+---
+
+## 2. Design goals
 
 1. Every Agent Project records the exact framework versions in play.
 2. Skills are versioned per framework version. A skill for "Frappe DocType creation" exists separately for v15 and v16.
-3. The dispatcher selects the right skill version automatically based on the project's framework version.
+3. The dispatcher selects the right Skill version automatically based on project context.
 4. Documentation snapshots are stored locally so agents work offline and don't hallucinate against stale memory.
-5. Documentation auto-updates when upstream releases happen (see doc 28).
+5. Documentation auto-updates from upstream releases — see `28-github-driven-documentation-sync.md`.
 
-## DocType: Framework Version
+---
 
-A new DocType `Framework Version` records each (framework, version) pair we support.
+## 3. DocTypes
 
-Fields:
-- `framework_name` (Link to Framework DocType) — e.g. "Frappe", "React", "PostgreSQL"
-- `version` (Data) — e.g. "v15.42.0", "18.2.0", "16.1"
-- `release_date` (Date)
-- `is_lts` (Check) — is this a long-term-support release?
-- `status` (Select: Active, Deprecated, EOL)
-- `doc_url` (Data) — canonical documentation URL
-- `release_notes_url` (Data)
-- `github_release_url` (Data) — used by doc 28 sync job
-- `latest_known_release` (Check) — only one version per framework is "latest known"
-- `breaking_changes_from_previous` (Long Text)
+### 3.1 Framework
 
-## DocType: Framework
+Identity record.
 
-The parent DocType holds the framework identity itself.
+| Field | Type |
+|---|---|
+| `framework_name` | Data (unique) |
+| `category` | Select — Backend / Frontend / Database / Infra / DevOps / ML / Other |
+| `homepage_url` | Data |
+| `github_repo` | Data |
+| `default_version` | Link → Framework Version (used when a project does not specify) |
+| `tracked` | Check (whether Friday actively syncs docs) |
 
-Fields:
-- `framework_name` (Data, unique)
-- `category` (Select: Backend, Frontend, Database, Infra, DevOps, ML, Other)
-- `homepage_url` (Data)
-- `github_repo` (Data)
-- `default_version` (Link to Framework Version) — used when project doesn't specify
-- `tracked` (Check) — whether Friday actively syncs docs for this framework
+### 3.2 Framework Version
 
-## DocType: Agent Project — New Fields
+One row per (framework, version) pair supported.
 
-Extend Agent Project with a child table `project_framework_versions`:
-- `framework` (Link to Framework)
-- `version` (Link to Framework Version)
-- `notes` (Small Text) — e.g. "production runs v15.40 but staging runs v15.42"
+| Field | Type |
+|---|---|
+| `framework_name` | Link → Framework |
+| `version` | Data — e.g. `v16.18.2`, `19.0.0`, `16.1` |
+| `release_date` | Date |
+| `is_lts` | Check |
+| `status` | Select — Active / Deprecated / EOL |
+| `doc_url` | Data |
+| `release_notes_url` | Data |
+| `github_release_url` | Data — consumed by `28-github-driven-documentation-sync.md` |
+| `latest_known_release` | Check (one per framework) |
+| `breaking_changes_from_previous` | Long Text |
 
-When the project is created, the supervisor (or System Manager Agent) fills this child table. Friday can also auto-detect for some frameworks: read `package.json` for Node, `requirements.txt` for Python, `frappe --version` for Frappe sites, etc.
+### 3.3 Agent Project — child table
 
-## DocType: Skill — Version Fields
+`project_framework_versions`:
 
-Extend the Skill DocType with:
-- `applicable_frameworks` (child table of Framework Version)
-- `min_version` (Data) — optional semver-style floor
-- `max_version` (Data) — optional ceiling
-- `version_specific_notes` (Long Text)
+| Field | Type |
+|---|---|
+| `framework` | Link → Framework |
+| `version` | Link → Framework Version |
+| `notes` | Small Text — e.g. "production runs v15.40 but staging runs v15.42" |
 
-A single skill record can apply to multiple framework versions if behavior is identical. Where behavior differs, separate skill records are created (e.g. "Frappe DocType Save v15" vs "Frappe DocType Save v16").
+On project creation the supervisor (or System Manager Agent) fills the table. Friday auto-detects for some frameworks: `package.json` for Node, `requirements.txt` for Python, `frappe --version` for Frappe sites.
 
-## Skill Resolution Logic
+### 3.4 Skill — version fields
+
+| Field | Type |
+|---|---|
+| `applicable_frameworks` | Child table of Framework Version |
+| `min_version` | Data (optional, semver-style floor) |
+| `max_version` | Data (optional, ceiling) |
+| `version_specific_notes` | Long Text |
+
+A single Skill row can apply to multiple framework versions when behaviour is identical. Where behaviour differs, separate Skill rows ("Frappe DocType Save v15", "Frappe DocType Save v16").
+
+---
+
+## 4. Skill resolution
 
 When the dispatcher matches a task to skills:
 
 1. Read the Agent Project's `project_framework_versions`.
-2. Filter skills whose `applicable_frameworks` includes any matching (framework, version) pair OR whose `min_version`/`max_version` window contains the project's version.
-3. Rank by version specificity: exact match > range match > generic skill (no framework specified).
-4. If multiple skills match equally, pick the most recent `last_used` or highest `success_rate`.
+2. Filter Skills whose `applicable_frameworks` includes any matching (framework, version) pair, or whose `min_version`/`max_version` window contains the project's version.
+3. Rank by version specificity: exact match > range match > generic Skill (no framework specified).
+4. Tie-break by most recent `last_used` or highest `success_rate`.
 
-This logic is implemented in `friday.dispatcher.resolve_skills_for_task(project, task)` and is unit-tested with fixture projects across versions.
+Implemented in `friday.dispatcher.resolve_skills_for_task(project, task)`. Unit-tested with fixture projects across versions.
 
-## Documentation Snapshot Storage
+---
 
-For each tracked Framework Version, Friday stores a local snapshot of its documentation:
+## 5. Documentation snapshots
 
-- Path: `friday/framework_docs/{framework_name}/{version}/`
-- Format: Markdown files indexed by topic
-- Optionally: full HTML mirror for fidelity
-- Embedding store: each doc chunk goes into pgvector with `framework_version_id` as a metadata filter
+Per tracked Framework Version, Friday stores a local snapshot:
 
-Snapshots are fetched by a scheduled job (see doc 28). Initial seed is manual: maintainers download and commit the snapshot for each framework version on initial support.
+- Path: `friday/framework_docs/{framework_name}/{version}/`.
+- Format: Markdown indexed by topic.
+- Optional: full HTML mirror for fidelity.
+- Embeddings: each doc chunk goes into pgvector with `framework_version_id` as a metadata filter.
 
-## Skill `framework_doc_lookup`
+Snapshots are fetched by the scheduled job in `28-github-driven-documentation-sync.md`. Initial seeds are manual — maintainers download and commit the snapshot for each framework version on first support.
 
-A new built-in skill `framework_doc_lookup(query, framework=None, version=None)`:
+---
+
+## 6. Skill `framework_doc_lookup`
+
+```
+framework_doc_lookup(query, framework=None, version=None)
+```
 
 1. Resolves framework + version from project context if not supplied.
-2. Embeds the query and runs a pgvector similarity search filtered by `framework_version_id`.
+2. Embeds the query; runs a pgvector similarity search filtered by `framework_version_id`.
 3. Returns top N chunks with citations.
 
-Agents call this skill **before** generating code, ensuring grounded responses. If no results above threshold, the agent returns "documentation not found in snapshot, escalating for human verification" rather than hallucinating.
+Agents call this skill **before** generating code, ensuring grounded responses. Below threshold → return "documentation not found in snapshot, escalating for human verification" rather than hallucinating.
 
-## Version Upgrade Workflows
+---
 
-When a project decides to upgrade (e.g. Frappe v15 → v16):
+## 7. Version upgrade workflow
+
+On framework upgrade (e.g. Frappe v15 → v16 on a downstream app):
 
 1. Supervisor opens an "Agent Project Framework Upgrade" workflow.
-2. Friday's Migration Specialist agent (a specialised profile) reads `breaking_changes_from_previous` for the new version.
+2. The Migration Specialist agent (specialised profile per `25-domain-specialized-agent-profiles.md`) reads `breaking_changes_from_previous` for the target version.
 3. Generates an upgrade plan as Agent Tasks.
-4. Each task references skills filtered to the new version.
+4. Each task references Skills filtered to the new version.
 5. Plan goes to War Room for human approval before execution.
 
-This makes framework upgrades a first-class operation, not a last-minute scramble.
+Upgrades become first-class operations, not last-minute scrambles.
 
-## Multi-Version Coexistence
+---
 
-Some projects run mixed versions (e.g. legacy app on Frappe v14, new app on v15). The project_framework_versions child table supports multiple rows. Agents working on tasks within that project must specify which sub-project / app they're acting on, and the dispatcher resolves skills accordingly.
+## 8. Multi-version coexistence
 
-If ambiguity remains, the dispatcher asks (via War Room) which version applies before proceeding.
+Some projects run mixed versions (legacy app on Frappe v14, new app on v15). The `project_framework_versions` table supports multiple rows. Agents must specify which sub-project or app they are acting on; the dispatcher resolves Skills accordingly.
 
-## Cleanup and Deprecation
+If ambiguity remains, the dispatcher asks in War Room which version applies before proceeding.
+
+---
+
+## 9. Deprecation and cleanup
 
 When a Framework Version is marked EOL:
 
-1. All associated skills get a banner: "Skill applies to EOL framework version; consider upgrading."
-2. Projects still using that version get a War Room notice once per week.
+1. Associated Skills get a banner: "Skill applies to EOL framework version; consider upgrading."
+2. Projects still using that version receive a weekly War Room notice.
 3. Skills are not deleted — they remain available for legacy support but are deprioritised in ranking.
 
-## Phase 1 Scope
+---
 
-Phase 1 ships:
-- Framework + Framework Version DocTypes
-- Project framework versions child table
-- Skill version fields (applicable_frameworks)
-- `framework_doc_lookup` skill (with pgvector search)
-- Manual seed of snapshots for: Frappe v15, ERPNext v15, PostgreSQL 15
+## 10. Phasing
 
-Phase 2 adds:
-- Automated sync (doc 28)
-- Migration Specialist profile
-- Snapshot rotation and storage limits
+| Phase | Scope |
+|---|---|
+| 1 (v0.1) | Not in scope per `42-phase-one-authority-contract.md` §3 |
+| 2 | Framework + Framework Version DocTypes; project framework versions child table; Skill version fields; `framework_doc_lookup`; manual snapshot seed for Frappe v16, ERPNext v15+, PostgreSQL 15 |
+| 3 | Automated sync per `28-github-driven-documentation-sync.md`; Migration Specialist profile; snapshot rotation and storage limits |
+| 4 | Public API for community-contributed framework support |
 
-## Open Questions / Engineering TODOs
+---
 
-1. Storage budget per framework snapshot? Cap at 500MB initially.
-2. How to detect framework version automatically across many project types — separate detection rules per framework, registered as small Python plugins.
-3. What happens when documentation URL structure changes between versions (Frappe wiki vs docs.frappe.io)? Sync job needs per-framework adapter (doc 28).
-4. Do we expose the framework version list as a public API for community contribution of new framework support? Likely yes in Phase 3.
+## 11. Open engineering questions
+
+- Storage budget per framework snapshot — cap at 500MB initially.
+- Framework version auto-detection across many project types — per-framework rules registered as small Python plugins.
+- Documentation URL structure changes between versions (Frappe Wiki vs `docs.frappe.io`) — sync needs per-framework adapter in `28`.
+- Public API for community contribution of new framework support — likely Phase 3.

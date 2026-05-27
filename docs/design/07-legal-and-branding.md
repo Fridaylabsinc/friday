@@ -1,143 +1,127 @@
 # 07 — Legal & Branding
 
-## License
+> See `00-glossary.md` for term definitions.
+> See `00-README.md` and `01-vision-and-architecture.md` for the standing license decision (GPL v3) referenced throughout.
 
-**Friday is licensed under the GNU General Public License v3 (GPL v3)** to maintain compatibility with Frappe Framework.
+---
 
-### Why GPL v3
+## License — GPL v3
 
-- Frappe Framework is licensed under GPL v3. Anything built on top of it that distributes Frappe must comply with GPL v3.
-- Friday's vision is fully open-source from day one, so GPL v3 aligns with the project's intent.
-- GPL v3 ensures derivative works remain open, protecting the community contribution model.
+Friday is licensed under the **GNU General Public License v3** to match Frappe Framework. The `LICENSE` file at the repo root carries the verbatim GPL v3 text.
 
-### What This Means in Practice
+**Practical implications:**
 
-- Friday's source code must remain freely available.
-- Anyone using or modifying Friday must release their modifications under GPL v3 if they distribute it.
-- Friday cannot be relicensed to a permissive license (MIT, Apache) without consent of all contributors.
-- Friday **can** be deployed and used internally without distribution obligations (GPL only triggers on distribution).
-- Commercial use is **explicitly allowed**. Companies can deploy Friday in production without paying license fees.
+- Source code remains freely available.
+- Distribution of modified Friday triggers GPL v3 reciprocal obligations.
+- Internal deployment is unrestricted — GPL only triggers on distribution.
+- Commercial use is allowed without license fees.
+- Relicensing to a permissive licence (MIT, Apache) is not possible without consent from every contributor — and is not planned.
 
-### AGPL Consideration
+### AGPL v3 — open question, not a pending decision
 
-Frappe Technologies has been moving newer apps (Helpdesk, Gameplan) toward **AGPL v3**, which extends GPL's reciprocal obligations to SaaS deployments. Friday should evaluate AGPL v3 vs GPL v3 closer to open-source launch:
+Frappe Technologies has moved newer apps (Helpdesk, Gameplan) to AGPL v3, which extends reciprocal obligations to SaaS deployments. For an agentic framework whose expected deployment shape is heavily hosted, AGPL v3 has clear strategic appeal: it prevents commercial forks from offering proprietary hosted Friday without contributing back.
 
-- **GPL v3**: copyleft on distribution. SaaS providers can use Friday without releasing modifications.
-- **AGPL v3**: copyleft on distribution **and network use**. SaaS providers must release modifications.
+**Friday ships v0.1 under GPL v3.** Re-evaluation of AGPL v3 happens once before the public open-source launch (Phase 2) — not iteratively. If AGPL is adopted, the change must land before the first public release; relicensing after public adoption requires contributor consent and is slow.
 
-For an agentic framework where most usage will be SaaS / hosted, **AGPL v3** is likely the better fit — it prevents commercial forks from offering proprietary hosted Friday without contributing back.
+---
 
-**Recommended:** Start drafting with GPL v3 (matches Frappe core), revisit AGPL v3 before public launch.
+## Copyright and contribution
 
-## Copyright
+- Copyright is held by the contributors; the original author is the primary copyright holder for initial code.
+- `LICENSE` (verbatim GPL v3) lives at the repo root.
+- `AUTHORS` (or `NOTICE`) tracks significant contributors and inherited works.
+- File headers carry: `Copyright (c) [year] Friday Labs and contributors. Licensed under GPL v3.`
+- Contributions are gated by **Developer Certificate of Origin (DCO)** via `git commit -s`. Simpler than a CLA and sufficient for an OSS project of Friday's profile.
 
-- The Friday project's copyright is held by the **contributors**, with the original author as the primary copyright holder for initial code.
-- Use a `LICENSE` file (verbatim GPL v3 text) at the repo root.
-- Use a `NOTICE` or `AUTHORS` file to track significant contributors.
-- File headers should include a brief copyright notice: `Copyright (c) [year] [author] and contributors. Licensed under GPL v3.`
-- Consider a **Developer Certificate of Origin (DCO)** for contributions, signed via `git commit -s`. Simpler than a CLA, sufficient for most OSS projects.
+---
 
-## Documentation License
+## Documentation license — CC-BY-SA-3.0
 
-Documentation should be **Creative Commons Attribution-ShareAlike 3.0 (CC-BY-SA-3.0)**, matching Frappe's documentation license. This allows broad reuse while keeping derivatives open.
+Documentation is licensed under **Creative Commons Attribution-ShareAlike 3.0**, matching Frappe's documentation license. Marked explicitly in `docs/LICENSE` and the docs site footer.
 
-Mark this explicitly in `docs/LICENSE` and in the docs site footer.
+---
 
-## Branding
+## Naming and branding
 
-### Product Name
+### Product name
 
-**Friday** — the framework name. Short, memorable, evocative (echoes "Man Friday" — the helpful companion).
+**Friday** — the framework. Short, memorable, "Man Friday" connotation.
 
-### Tagline Options
+### Tagline
 
-- "An agentic framework powered by Frappe"
-- "Hermes-grade agents, Frappe-grade governance"
-- "The agent that grows with your enterprise"
+> "An agentic framework, built on a hard fork of Frappe v16."
 
-### Naming Rules
+Avoid taglines that imply Hermes lineage at the product level; Friday ports Hermes patterns into a different framework. The product is Friday.
 
-- **Do**: "Friday — an agentic framework powered by Frappe"
-- **Do**: "Friday for Frappe"
-- **Do**: "Friday (built on Frappe Framework)"
-- **Don't**: "Frappe Friday" (sounds like an official Frappe product)
-- **Don't**: "Friday by Frappe" (implies Frappe Technologies is the author)
-- **Don't**: use the Frappe logo unmodified as Friday's logo
+### Naming rules
 
-The name "Frappe" and the Frappe logo are trademarks of **Frappe Technologies Pvt. Ltd.** You can reference Frappe factually ("built on Frappe Framework", "compatible with Frappe sites") but cannot imply official endorsement, partnership, or origin.
+| Do | Don't |
+|---|---|
+| "Friday — an agentic framework built on a hard fork of Frappe v16" | "Frappe Friday" (implies an official Frappe product) |
+| "Friday (Frappe-derived agentic framework)" | "Friday by Frappe" (implies Frappe Technologies authorship) |
+| Reference Frappe factually as the upstream | Use the Frappe logo unmodified as Friday's logo |
 
-### Hermes / Nous Research / OpenClaw
+The names "Frappe" and the Frappe logo are trademarks of **Frappe Technologies Pvt. Ltd.** Factual reference is allowed ("built on a hard fork of Frappe Framework"). Implying endorsement, partnership, or origin is not.
 
-Friday is **inspired by** Hermes Agent's architecture and OpenClaw's patterns but is **not a fork**. You're free to:
+### Hermes, Nous Research, OpenClaw
 
-- Reference Hermes / OpenClaw in documentation and architecture discussions ("inspired by Hermes Agent's gateway pattern").
-- Implement the same design ideas (gateway, skills, Kanban, learning loop) — ideas aren't copyrighted.
-- Quote short, attributed snippets from their open documentation under fair use.
+Friday **ports Hermes patterns** and draws on OpenClaw concepts; Friday is **not a fork** of either. The fork is Frappe v16.
 
-You should **not**:
+| Do | Don't |
+|---|---|
+| Cite Hermes / OpenClaw in architecture discussions ("the gateway pattern is Hermes-derived") | Copy substantial source code without complying with their licenses |
+| Implement the same design ideas — ideas are not copyrightable | Use "Hermes" or "OpenClaw" in Friday's product name |
+| Quote short, attributed snippets under fair use | Imply endorsement by Nous Research or OpenClaw maintainers |
 
-- Copy substantial source code from Hermes or OpenClaw without complying with their licenses.
-- Use the "Hermes" or "OpenClaw" name as part of Friday's product name.
-- Imply endorsement by Nous Research or the OpenClaw maintainers.
+When any Hermes code is reused verbatim, the original license header is preserved and attribution is recorded in `AUTHORS` / `NOTICE`.
 
-If you reuse any code from Hermes (which is also open-source), preserve its license headers and attribute clearly in `NOTICE`.
+---
 
-## Repository Setup
+## Public-repo readiness
 
-When you flip from private to public (Phase 2), ensure the repo has:
+At the Phase 1 → Phase 2 flip, the repository ships with:
 
 | File | Purpose |
 |---|---|
-| `LICENSE` | GPL v3 (or AGPL v3) full text |
-| `README.md` | Project overview, install, quick start, link to docs |
-| `CONTRIBUTING.md` | How to contribute, DCO, code style, PR process |
-| `CODE_OF_CONDUCT.md` | Contributor Covenant 2.1 is standard |
-| `SECURITY.md` | How to report security issues privately (mirror Hermes' approach) |
-| `NOTICE` or `AUTHORS` | Attribution to contributors and inherited works |
+| `LICENSE` | GPL v3 verbatim |
+| `README.md` | Project overview, install, quick start, docs link |
+| `CONTRIBUTING.md` | Contribution flow, DCO, code style, PR process |
+| `CODE_OF_CONDUCT.md` | Contributor Covenant 2.1 |
+| `SECURITY.md` | Private vulnerability reporting channel |
+| `AUTHORS` / `NOTICE` | Contributor and inherited-work attribution |
 | `CHANGELOG.md` | Versioned release notes |
 | `.github/ISSUE_TEMPLATE/` | Bug, feature, security templates |
 | `.github/PULL_REQUEST_TEMPLATE.md` | Standardised PR description |
 
-## Trademark Strategy
+---
 
-For the first 12–24 months, don't worry about trademarking "Friday" — focus on building. Trademark searches are cheap; trademark filings are not. Once the project has meaningful adoption (a few hundred stars, multiple production users), consider:
+## Trademark — deferred
 
-- A USPTO trademark search on "Friday" in the software / SaaS classes (likely many existing marks; you may need to pivot the name or scope tightly to "agentic framework").
-- Defensive trademark registration if you find clear conflict risk.
+For the first 12–24 months no trademark filings are pursued. Once meaningful adoption exists (a few hundred stars, multiple production users), a USPTO search on "Friday" in the software / SaaS classes is run. The trademark space for "Friday" is likely crowded; pivoting the mark to "Friday Framework" or similar may be necessary.
 
-If "Friday" turns out to be too crowded a trademark space, fallback names to consider:
+Renaming after public launch is painful. The name decision is revisited **before** the Phase 2 launch, not after.
 
-- **Fri** — even shorter
-- **FridayKit**
-- **AgentFriday**
-- **Friday Framework**
+---
 
-Decide before open-source launch, not after — renaming a public project is painful.
+## Patents — none
 
-## Patents
+- Frappe Technologies asserts no patents against derivative works.
+- Hermes and OpenClaw assert none either.
+- Friday inherits the GPL v3 patent grant from GPL-licensed dependencies — sufficient defensive coverage.
+- Friday will not file patents on its own design. Doing so would conflict with the open-source posture and deter contribution.
 
-Frappe Technologies does not assert patents against derivative works. Hermes and OpenClaw similarly do not appear to hold restrictive patents. Friday inherits the GPL v3 patent grant from any GPL-licensed dependencies, which provides reasonable defensive coverage.
+---
 
-You should not file patents on Friday's design — it would conflict with the open-source ethos and could deter contributions.
+## Compliance status
 
-## Compliance Summary
-
-| Area | Status | Action |
-|---|---|---|
-| License (Friday code) | Confirmed: GPL v3 required | Add LICENSE file at scaffold time |
-| License (Friday docs) | CC-BY-SA-3.0 recommended | Add docs/LICENSE |
-| Frappe license compatibility | ✅ GPL v3 ↔ GPL v3 | No action |
-| Trademark — "Frappe" | Third-party trademark | Use factually, never as Friday's name |
-| Trademark — "Hermes" / "OpenClaw" | Third-party names | Reference, don't appropriate |
-| Trademark — "Friday" | Likely crowded space | Search before public launch |
-| Patents | No restrictive IP | None needed |
-| Contributor licensing | DCO recommended | Document in CONTRIBUTING.md |
-
-## TL;DR
-
-- Friday is **GPL v3** (consider AGPL v3 closer to launch).
-- Docs are **CC-BY-SA-3.0**.
-- The name **"Friday"** is the product; **"powered by Frappe"** is the relationship.
-- Reference Hermes and OpenClaw as inspiration, never as the product.
-- Use a DCO for contributions to keep licensing clean.
-- No license fees, no patents, no proprietary lock-in — ever.
+| Area | Status |
+|---|---|
+| License (code) | GPL v3 — committed; `LICENSE` present at repo root |
+| License (docs) | CC-BY-SA-3.0 — pending `docs/LICENSE` |
+| AGPL v3 re-evaluation | One-time pass before Phase 2 launch |
+| Frappe license compatibility | GPL v3 ↔ GPL v3 — no action |
+| Third-party trademark — Frappe | Used factually only |
+| Third-party trademark — Hermes / OpenClaw | Referenced as upstream inspiration only |
+| Friday trademark | Deferred; revisited before Phase 2 |
+| Patents | None filed, none planned |
+| Contributor licensing | DCO documented in `CONTRIBUTING.md` |

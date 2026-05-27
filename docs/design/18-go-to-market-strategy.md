@@ -1,223 +1,212 @@
-# 18 — Go-to-Market Strategy: India-First, Open-Source Funded
+# 18 — Go-to-Market Strategy
 
-> **Purpose:** Define Friday's go-to-market positioning, target audiences, and sustainability model. Captures the founder's vision: **Made in India, for Indian growing businesses, open-source with revenue flowing back to contributors.**
-
-This is a strategy document, not a business plan. It's the **why** and the **for whom**, not the financial projections.
-
----
-
-## 1. Mission Statement
-
-> **Friday is an open-source agentic framework, built in India, for the next generation of Indian businesses to automate intelligently — without vendor lock-in, predatory licensing, or compromise on governance.**
-
-The mission has three non-negotiable pieces:
-1. **Open-source** (GPL v3 / AGPL v3) — no proprietary trap doors
-2. **Made in India** — Indian builders, Indian-hosted infrastructure (FridayLabs), Indian community first
-3. **Enterprise governance from day one** — not a hobbyist tool retrofitted for business
+> See `00-glossary.md` for term definitions.
+> See `07-legal-and-branding.md` for the license decision (GPL v3 today; AGPL v3 open question before Phase 2 launch).
+> See `17-open-source-launch-playbook.md` for the launch sequence.
 
 ---
 
-## 2. Target Audience
+## 1. Mission
+
+> Friday is an open-source agentic framework, built in India, for the next generation of growing businesses to automate intelligently — without vendor lock-in, predatory licensing, or compromise on governance.
+
+Three non-negotiable pieces:
+
+1. **Open-source** — GPL v3 today, AGPL re-evaluated once before public launch. No proprietary trap doors.
+2. **Made in India** — Indian builders, Indian-hosted infrastructure (Friday Labs), Indian community first.
+3. **Enterprise governance from day one** — not a hobbyist tool retrofitted for business.
+
+---
+
+## 2. Audience
 
 ### Primary (Phase 1 launch)
-- **Indian SMBs and growth-stage startups** using ERPNext (or considering it)
-- **System integrators and consultants** serving Indian businesses
-- **Indian software developers** building automation for their employers
 
-Why ERPNext users specifically: they already trust open-source enterprise software, they already run Frappe-based stacks, and they have real automation pain (manual data entry, repetitive workflow, supplier coordination). Friday lands on terrain they already understand.
+- Indian SMBs and growth-stage startups already using ERPNext, or considering it.
+- System integrators and consultants serving Indian businesses.
+- Indian software developers building automation for their employers.
+
+Why ERPNext users specifically: they already trust open-source enterprise software, they run Frappe-based stacks, and they have real automation pain (manual data entry, repetitive workflow, supplier coordination). Friday lands on terrain they already understand.
 
 ### Secondary (Phase 2–3)
-- **Global Frappe community** — same value prop, broader geography
-- **Mid-market companies** in any vertical (manufacturing, services, healthcare) where governance matters
-- **Internal automation teams** at larger enterprises evaluating open agentic platforms
 
-### Not the target (yet)
-- **Hobbyists / personal-automation users** — OpenClaw, Hermes, and Claude Code serve them well
-- **AI researchers** — Friday isn't an experimentation platform
-- **Pure-LLM applications** (chatbots, content generators) — wrong tool for the job
+- Global Frappe community — same value proposition, broader geography.
+- Mid-market companies in manufacturing, services, and healthcare where governance matters.
+- Internal automation teams at larger enterprises evaluating open agentic platforms.
+
+### Not the target yet
+
+- Hobbyist personal-automation users — OpenClaw, Hermes, and Claude Code serve them.
+- AI researchers — Friday is not an experimentation platform.
+- Pure-LLM applications (chatbots, content generation) — wrong tool.
 
 ---
 
-## 3. Positioning vs. Alternatives
+## 3. Positioning
 
 | Alternative | What they have | What Friday adds |
 |---|---|---|
 | Custom in-house automation | Full control | Faster build, governance built-in, community |
-| UiPath, Automation Anywhere (RPA) | Enterprise features | Open-source, no per-bot licensing, real LLM agents (not just bots) |
+| UiPath, Automation Anywhere (RPA) | Enterprise features | Open-source, no per-bot licensing, real LLM agents |
 | LangChain, AutoGen, CrewAI | Agent frameworks | Enterprise governance, audit trails, role-based permissions |
 | OpenClaw, Hermes Agent | Personal autonomy | Multi-tenant, enterprise-grade, ERPNext-native |
-| ChatGPT Enterprise, Anthropic Claude for Work | Polished UX | Self-hosted, no data leaves premise, no per-seat lock-in |
+| ChatGPT Enterprise, Claude for Work | Polished UX | Self-hosted, data stays on-premise, no per-seat lock-in |
 | ERPNext alone | Solid ERP | Agentic layer on top — autonomous workflows, not just records |
 
-**The pitch in one line:** "ERPNext for agents — open-source, enterprise-grade, made in India."
+**One-line pitch:** "ERPNext for agents — open-source, enterprise-grade, made in India."
 
 ---
 
 ## 4. Differentiators
 
-These are not marketing claims; they must be true in code:
+These are not marketing claims. They are properties enforced in code:
 
 1. **Permission-first.** Every skill invocation gated by Frappe's role matrix. Competitors gate at config; Friday gates at runtime.
 2. **Audit trail by default.** Every decision is a submittable Frappe DocType. SOC 2-ready out of the box.
-3. **Sandbox isolation.** Docker-per-execution with scoped credentials. Compromised skill can't pivot.
-4. **Native ERPNext integration.** Project, Task, Issue ported from ERPNext; multi-user agent authentication respects ERPNext role separation (doc 31).
-5. **Community-owned.** Friday Labs revenue flows back to contributors. Not a "open-source until we get acquired" play.
-6. **No external vector DB.** pgvector inside PostgreSQL. Lower cost, less moving parts, easier audit.
+3. **Sandbox isolation.** Docker-per-execution with scoped credentials. A compromised skill cannot pivot.
+4. **Native ERPNext integration.** Project, Task, Issue ported from ERPNext; multi-user agent authentication respects ERPNext role separation.
+5. **Community-owned revenue.** Friday Labs revenue flows back to contributors. Not an "open-source until acquisition" play.
+6. **No external vector database.** pgvector inside PostgreSQL. Lower cost, fewer moving parts, easier audit.
 7. **No vendor lock on LLM.** Provider-agnostic; runs against local models if desired.
 
 ---
 
 ## 5. Phasing
 
-### Phase 1: Build & dogfood (months 1–4)
-- Build Phase 1 MVP per doc 06
-- Dogfood: use Friday to manage Friday's own development
-- Prove ERPNext autonomous ops on a real (or carefully simulated) Indian SMB scenario
-- **No marketing.** Don't launch what doesn't work.
+### Build & dogfood (months 1–4)
 
-### Phase 2: Quiet release (months 5–6)
-- Open the repo (doc 17)
-- Quiet announcement to the Frappe / ERPNext community first — Frappe forum, ERPNext Discord, Indian dev Twitter
-- Invite 10–20 design partners from Indian SMBs to pilot
-- Gather feedback aggressively; iterate weekly
+- Build Phase 1 v0.1 per `42-phase-one-authority-contract.md`.
+- Dogfood: Friday tracks Friday's own development.
+- Prove ERPNext autonomous ops on a real (or carefully simulated) Indian SMB scenario.
+- **No marketing.** Do not launch what does not work.
 
-### Phase 3: Public launch (months 7–9)
-- Show HN, Reddit, broader social
-- Document case studies from Phase 2 design partners
-- Begin booking demos for FridayLabs hosted (see §7)
+### Quiet release (months 5–6)
 
-### Phase 4: Sustained growth (year 2+)
-- FridayLabs revenue starts flowing
-- Contributor revenue-share model live (see §8)
-- Indian conference circuit: FOSS, ETPL, NASSCOM events
-- Targeted partnerships with Indian ERPNext partners and consulting firms
+- Open the repo per `17-open-source-launch-playbook.md`.
+- Quiet announcement to the Frappe / ERPNext community first — Frappe forum, ERPNext Discord, Indian dev Twitter.
+- Invite 10–20 design partners from Indian SMBs to pilot.
+- Iterate weekly on feedback.
+
+### Public launch (months 7–9)
+
+- Show HN, Reddit, broader social.
+- Document case studies from the design partners.
+- Book demos for Friday Labs hosted (see §7).
+
+### Sustained growth (year 2+)
+
+- Friday Labs revenue begins.
+- Contributor revenue-share model goes live (see §8).
+- Indian conference circuit: FOSS, NASSCOM, PyCon India, Frappe Conference.
+- Targeted partnerships with Indian ERPNext implementers and consultancies.
 
 ---
 
-## 6. Distribution & Discovery
+## 6. Distribution
 
 How Friday reaches its first 1,000 users:
 
 | Channel | Tactic |
 |---|---|
-| Frappe forum & community | First place to announce; native audience |
+| Frappe forum and community | First place to announce; native audience |
 | ERPNext partner network | Direct outreach to top 20 Indian ERPNext implementers |
-| Indian dev Twitter / LinkedIn | Founder-led content, weekly architecture posts |
-| Hacker News | Show HN at v0.1.0; technically substantive post |
-| YouTube | Architecture walkthroughs, "Friday managing an ERPNext business" demo videos |
-| Conferences | FOSDEM India, PyCon India, Frappe Conference, NASSCOM events |
-| Indian tech press | YourStory, Inc42, Entrackr — pitch the "Indian open-source agentic framework" angle |
-| GitHub trending | Optimise repo metadata; aim for trending-page exposure on launch day |
+| Indian dev Twitter / LinkedIn | Founder-led content; weekly architecture posts |
+| Hacker News | Show HN at v0.1.0 with a technically substantive post |
+| YouTube | Architecture walkthroughs; "Friday managing an ERPNext business" demos |
+| Conferences | PyCon India, FOSDEM India, Frappe Conference, NASSCOM events |
+| Indian tech press | YourStory, Inc42, Entrackr — the "Indian open-source agentic framework" angle |
+| GitHub trending | Repo metadata tuned for trending exposure on launch day |
 
-**Anti-channel:** paid ads on Google/Facebook/LinkedIn until v1.0. The cost-per-acquisition for OSS is dominated by organic; ads waste budget.
-
----
-
-## 7. FridayLabs: Hosted Platform
-
-Separate project, separate revenue line. Begins in Phase 4 (year 2+).
-
-### Concept
-Managed Friday for businesses who want the value but not the operations. We host. They use.
-
-### Tiers (placeholder pricing)
-
-| Tier | Target | Includes |
-|---|---|---|
-| **Free Trial** | Anyone | 1 agent, 14 days, capped LLM tokens |
-| **Starter** | Solo founders, micro-SMBs | 2 agents, single project, basic skills, INR 5,000–15,000/month |
-| **Growth** | Growing SMBs | 10 agents, multiple projects, ERPNext integration, INR 50,000–1,50,000/month |
-| **Enterprise** | Mid-market | Unlimited agents, custom integrations, SLA, dedicated support, contact for pricing |
-| **Self-Host Support** | Anyone running self-hosted | Friday remains free; support contracts available, INR-priced |
-
-### What FridayLabs owns
-- Hosting (servers in Indian regions for data residency)
-- Auto-upgrades and security patches
-- Usage metering and billing
-- Multi-tenancy isolation
-- Customer dashboard (manage agents, view metrics, billing)
-- L1 support
-
-### What FridayLabs does **not** own
-- The open-source code (still GPL v3, in the public repo)
-- Customer data (encrypted, customer-controlled key)
-- Lock-in mechanisms (one-click export to self-hosted at any time)
-
-This is the **"open-core done right"** structure: the platform is free, the convenience is paid.
+Paid ads on Google / Facebook / LinkedIn are rejected until v1.0. OSS acquisition cost is dominated by organic; ads waste budget.
 
 ---
 
-## 8. Contributor Revenue Share
+## 7. Friday Labs hosted platform
 
-The novel piece. FridayLabs revenue, after covering operational costs, flows back to community contributors based on contribution metrics.
+Separate project, separate revenue line. Starts year 2+.
 
-### Metric Sources
-- Merged PRs (weighted by code size, complexity, criticality)
-- Skill contributions (weighted by usage across FridayLabs tenants)
-- Documentation contributions
-- Issue triage and community support (measurable via GitHub activity)
-- Security disclosures
+**Concept.** Managed Friday for businesses that want the value but not the operations. Friday Labs hosts; customers use.
 
-### Distribution Model (placeholder, to be ratified by community)
-- **40%** of net revenue retained for FridayLabs operations and reserves
-- **30%** to core maintainers (split by contribution score)
-- **20%** to broader contributor pool (split by contribution score)
-- **10%** to a community fund for grants, events, and outreach
+**Tiers.** Free trial, Starter (solo / micro-SMB), Growth (growing SMB), Enterprise (mid-market with SLA), and Self-Host Support contracts. Specific pricing is set during the design-partner phase based on observed unit economics — pre-pricing here would be speculation.
 
-### Why This Matters
-Most "open-source startups" extract value from contributors and monetise it privately. Friday inverts this: contributors who build skills, integrations, and improvements receive a share of revenue their work generates.
+**Friday Labs owns:** hosting in Indian regions for data residency; auto-upgrades and security patches; usage metering and billing; multi-tenant isolation; customer dashboard; L1 support.
 
-This makes contributing economically rational, not just altruistic. Especially relevant for Indian developers — even a modest revenue share is meaningful at INR purchasing power.
+**Friday Labs does not own:** the open-source code (GPL v3, public repo), customer data (encrypted with customer-controlled keys), or any lock-in mechanism (one-click export to self-hosted is always available).
 
-### Governance
-- Revenue and distribution are reported publicly (annual transparency report)
-- Contributor scores are public and auditable
-- A community-elected committee reviews and adjusts the formula yearly
+Open-core done right: the platform is free, the convenience is paid.
 
 ---
 
-## 9. What Success Looks Like
+## 8. Contributor revenue share
 
-### Year 1 (Launch + initial growth)
-- 1,000 GitHub stars
-- 50 production deployments (mostly self-hosted)
-- 20 active contributors
-- 3 written case studies of Indian businesses using Friday
+The novel piece. Friday Labs revenue, after operations, flows back to community contributors based on contribution metrics.
 
-### Year 2 (FridayLabs launch)
-- 10,000 GitHub stars
-- 500 self-hosted deployments
-- 50 FridayLabs paying customers
-- 100 active contributors
-- First contributor revenue distribution
+**Metric sources:**
 
-### Year 3 (Sustained growth)
-- Friday is the default agentic framework for Indian Frappe/ERPNext deployments
-- FridayLabs revenue covers full operations and meaningful contributor share
-- Recognised by NASSCOM, the broader Indian open-source community, and the Frappe project itself
-- One conference dedicated to Friday (Friday Conf India)
+- Merged PRs (weighted by size, complexity, criticality).
+- Skill contributions (weighted by usage across Friday Labs tenants).
+- Documentation contributions.
+- Issue triage and community support.
+- Security disclosures.
+
+**Distribution model** (placeholder, ratified by the community before activation):
+
+- **40%** retained for Friday Labs operations and reserves.
+- **30%** to core maintainers, split by contribution score.
+- **20%** to the broader contributor pool, split by contribution score.
+- **10%** to a community fund for grants, events, outreach.
+
+**Why this matters.** Most "open-source startups" extract value from contributors and monetise privately. Friday inverts that: contributors whose work generates revenue receive a share. Especially relevant for Indian developers — even a modest share is meaningful at INR purchasing power.
+
+**Governance.** Revenue and distribution reported publicly in an annual transparency report. Contribution scores public and auditable. A community-elected committee reviews and adjusts the formula yearly.
 
 ---
 
-## 10. Risks and Mitigations
+## 9. Success markers
+
+### Year 1 — launch and initial growth
+
+- 1,000 GitHub stars.
+- 50 production deployments (mostly self-hosted).
+- 20 active contributors.
+- 3 written case studies of Indian businesses using Friday.
+
+### Year 2 — Friday Labs launch
+
+- 10,000 GitHub stars.
+- 500 self-hosted deployments.
+- 50 Friday Labs paying customers.
+- 100 active contributors.
+- First contributor revenue distribution.
+
+### Year 3 — sustained growth
+
+- Friday is the default agentic framework for Indian Frappe/ERPNext deployments.
+- Friday Labs revenue covers full operations and a meaningful contributor share.
+- Recognised by NASSCOM, the broader Indian open-source community, and the Frappe project.
+- One dedicated conference: Friday Conf India.
+
+---
+
+## 10. Risks and mitigations
 
 | Risk | Mitigation |
 |---|---|
-| Anthropic / OpenAI release competing enterprise agent platforms | Lean into open-source, self-hosting, data sovereignty — they can't match those |
-| Frappe core absorbs agentic features, Friday becomes redundant | Become so good and so embedded that Friday is what they'd absorb; collaborate, don't compete |
-| Community contributions don't materialise | Founder + small core team must produce 80% of value for first year; revenue-share kicks in to attract contributors |
-| FridayLabs operational complexity sinks the team | Don't launch FridayLabs until Phase 1 product is rock-solid; small early-customer beta first |
-| Indian SMBs don't adopt agentic automation fast enough | Lead with concrete ROI on a single workflow (e.g. ERPNext PO automation) — not "platform" pitches |
-| Founder bandwidth | Document everything (this is one of 39 design docs); build for handoff from day one |
+| Anthropic or OpenAI release competing enterprise agent platforms | Lean into open-source, self-hosting, and data sovereignty — they cannot match those |
+| Frappe core absorbs agentic features; Friday becomes redundant | Become so good and so embedded that Friday is what they would absorb; collaborate, don't compete |
+| Community contributions don't materialise | Core team produces 80% of value for the first year; revenue-share kicks in to attract contributors |
+| Friday Labs operational complexity sinks the team | Don't launch Friday Labs until Phase 1 product is rock-solid; small early-customer beta first |
+| Indian SMBs don't adopt agentic automation fast enough | Lead with concrete ROI on a single workflow (ERPNext PO automation), not "platform" pitches |
+| Founder bandwidth | Document everything (the design dossier already does); build for handoff from day one |
 
 ---
 
-## 11. The North Star
+## 11. The decision filter
 
 Every decision passes this test:
 
-> **Does this decision make Friday more useful for an Indian SMB founder running their business on ERPNext, who wants automation without losing control or paying through the nose?**
+> Does this make Friday more useful for an Indian SMB founder running their business on ERPNext, who wants automation without losing control or paying through the nose?
 
-If yes → ship it. If no → drop it.
+If yes → ship. If no → drop.
 
-This filter is opinionated on purpose. Optimising for everyone optimises for no one.
+Opinionated on purpose. Optimising for everyone optimises for no one.

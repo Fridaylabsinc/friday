@@ -1,78 +1,95 @@
 # 03 — Technical Stack
 
-## Stack Overview
+> See `00-glossary.md` for term definitions.
+> See `39-friday-framework-strategy.md` for the fork-not-app framing.
 
-| Layer | Technology | Why |
+---
+
+## Stack
+
+| Layer | Technology | Reason |
 |---|---|---|
-| Application framework | Frappe Framework (v15+) | Battle-tested DocType + permission system, Python-based, GPL-aligned |
-| Primary database | PostgreSQL | Native vector support via pgvector, superior JSON + FTS vs MariaDB |
-| Vector search | pgvector extension | Semantic search on agent memory and execution logs, no external vector DB |
-| In-memory layer | Redis (Redis Stack optional) | Cache, queues, pubsub; Redis Stack adds vector similarity in RAM for hot paths |
-| Job queue | Frappe RQ (Redis-backed) | Native to Frappe, handles retries, scheduling, background workers |
-| Real-time | Frappe socketio + Redis pubsub | Live notifications, gateway events, Kanban updates |
-| Container runtime | Docker | Agent sandboxing, resource quotas, network isolation |
-| Language (server) | Python 3.11+ | Frappe's runtime |
-| Language (client / UI) | JavaScript + Frappe UI | Frappe Desk + custom Vue components |
-| LLM access | Provider-agnostic (OpenAI, Anthropic, OpenRouter, local) | Inherited from Hermes pattern; switchable per Agent Profile |
+| Framework | Hard fork of Frappe v16 stable (`version-16` branch) | DocTypes, permissions, workflows, scheduler, RQ workers, Socket.io, REST API — agent primitives are patched into core, not bolted on top |
+| Primary database | PostgreSQL 15+ | pgvector support, `jsonb` + GIN indexes, superior FTS, stronger multi-writer concurrency than MariaDB |
+| Vector search | pgvector ≥ 0.8.2 | Semantic retrieval on Memory Entries and execution traces — no external vector DB |
+| In-memory layer | Redis | Cache (permission matrices, Skill rows, ERPNext master data), RQ job queue, Socket.io pub/sub |
+| Job queue | Frappe RQ (Redis-backed) | Standard Frappe; the agent loop runs on a dedicated `agent_core` queue and worker |
+| Real-time | Frappe Socket.io + Redis pub/sub | Console events, Raven channel updates, Kanban state changes |
+| Container runtime | Docker | Per-skill sandbox: non-root, network-restricted, resource-capped, ephemeral FS |
+| Server language | Python 3.14 | Required by Frappe v16's `version-16` branch (`>=3.14,<3.15`) |
+| Frontend language | JavaScript + Frappe UI + Vue components | Framework Console renders on Frappe Workspace primitives |
+| Frontend toolchain | Node 24 LTS | Frappe v16 frontend requires Node ≥ 24; older versions fail `yarn install` |
+| LLM access | Provider-agnostic adapter; Minimax M2 first, Anthropic/OpenAI/OpenRouter/local switchable per Agent Profile | Provider lock-in is rejected; provider choice is configuration |
 
-## Why PostgreSQL over MariaDB
+---
 
-Frappe defaults to MariaDB, but the developer release supports PostgreSQL. For Friday we go straight to PostgreSQL because:
+## PostgreSQL, not MariaDB
 
-- **pgvector** gives us native vector similarity search — no external vector database (Pinecone, Weaviate) needed.
-- **Better JSON handling** (`jsonb`, GIN indexes) for storing skill schemas and tool call payloads.
-- **Superior full-text search** vs MariaDB, removing the need for SQLite FTS5 (which Hermes uses).
-- **Stronger concurrency** for multi-agent writes.
+Frappe defaults to MariaDB. Friday ships on PostgreSQL.
 
-Tradeoff: slightly higher resource footprint than MariaDB. Acceptable for enterprise-grade workloads.
+- `pgvector` gives native vector similarity — no Pinecone, no Weaviate, no second source of truth.
+- `jsonb` with GIN indexes stores Skill parameter schemas and tool-call payloads efficiently.
+- Postgres FTS replaces SQLite FTS5 (used in Hermes) for session and execution search.
+- Multi-writer concurrency matters once the dispatcher claims tasks across many agents.
 
-## Why Redis Stays Central
+Cost: slightly higher resource footprint. Accepted.
 
-- **Cache layer** in front of PostgreSQL — skill definitions, permission matrices, session metadata.
-- **Job queues** via Frappe RQ — skill executions, learning jobs, curator runs.
-- **Pubsub** for real-time gateway events — incoming messages, task state changes, approval requests.
-- **Optional Redis Stack** — in-memory vector similarity for hot agent memories, with spillover to pgvector for cold storage.
+## Redis is load-bearing in three roles
 
-## Why Docker for Sandboxing
+1. **Cache** in front of PostgreSQL — Skill rows, permission matrices, ERPNext masters.
+2. **Queues** for all background work via Frappe RQ — agent runs, learning jobs, curator passes.
+3. **Pub/sub** for real-time events — Raven channels, Framework Console, gateway message delivery.
 
-Each Agent Profile execution runs in a Docker container with:
+Redis Stack is optional. If installed, hot Memory Entries can use in-RAM vector similarity with pgvector as cold storage. This is an optimisation, not a dependency.
 
-- **Resource limits** (cgroups) — CPU, memory, disk quotas per agent.
-- **Network namespace isolation** — container can only reach Frappe REST API + permitted external endpoints.
-- **Scoped credentials** — container receives only the DB/API tokens needed for its Agent Profile's permitted scope.
-- **Ephemeral filesystem** — read-only mounts for skill definitions; writes go through Frappe API.
-- **Teardown after execution** — no persistent container state; everything important lives in Frappe.
+## Docker is the sandbox boundary
 
-This raises the security floor significantly versus Hermes' process-level isolation, where a compromised skill can read anything the host user can.
+Every skill invocation runs inside a fresh Docker container:
 
-## Why Frappe Framework Specifically
+- **cgroups** cap CPU, memory, disk.
+- **Network namespace** restricts egress to the Frappe REST API plus any explicitly allowed external endpoints.
+- **Credentials** are scoped to the Agent Profile's permitted DocTypes and integrations — nothing more.
+- **Filesystem** is ephemeral; skill content is mounted read-only; persistent writes go through the REST API.
+- **Teardown** is immediate after execution. Nothing survives in the container.
 
-Compared to alternatives (FastAPI from scratch, Django, Flask + custom permission layer):
+This raises the security floor relative to Hermes' process-level isolation, where a compromised skill inherits the host user's authority.
 
-- **DocType system** — declarative schema with automatic CRUD, validation, hooks, UI.
-- **Role-based permission engine** — fine-grained, multi-role, per-document permissions. Years of production hardening.
-- **Workflow engine** — native multi-state, multi-role approval chains.
-- **Native Kanban view** — no need to build a board UI.
-- **Real-time notifications** — out of the box via socketio.
-- **Background workers** — Frappe RQ ready to use.
-- **REST API auto-generated** — every DocType is queryable via REST without writing endpoints.
-- **`bench execute`** — built-in CLI to invoke Python functions in the site context (useful for internal admin operations and trusted skill execution paths).
-- **Multi-tenant** — one bench can host many sites, each with isolated Friday deployments.
+## Why the Frappe fork, not FastAPI from scratch
 
-## Optional / Future Components
+Evaluated against FastAPI + custom permission layer, Django, and Flask:
 
-| Component | Purpose | Status |
+- DocType system gives declarative schema with automatic CRUD, validation, hooks, and UI.
+- Role-based permission engine — fine-grained, multi-role, per-document, hardened in production for years.
+- Workflow engine — multi-state, multi-role approval chains, no extra code.
+- Native Kanban view — Agent Tasks render as a board with no UI work.
+- Real-time via Socket.io — out of the box.
+- Background workers via Frappe RQ — out of the box.
+- REST API auto-generated per DocType — no hand-written endpoints for CRUD.
+- `bench execute` — invoke Python in site context for trusted admin paths.
+- Multi-tenant — one bench, many sites, isolated per Friday deployment.
+
+Rebuilding any of these is months of work that Frappe already shipped.
+
+---
+
+## Phase-staged components
+
+| Component | Purpose | Phase |
 |---|---|---|
-| Tirith | Command-level security scanning (inherited from Hermes) | Phase 2 |
-| Whisper (local or API) | Voice transcription | Phase 2 |
-| TTS service | Spoken replies | Phase 2 |
-| Browser automation backends | Browserbase, Playwright, CDP | Phase 2 |
-| Image generation | FAL.ai or local SD | Phase 3 |
-| MCP server clients | External tool integration | Phase 2 |
+| Tirith | Command-level threat scanning, inherited from Hermes | 2 |
+| Whisper (local or API) | Voice transcription | 2 |
+| TTS service | Spoken replies | 2 |
+| Browser automation (Browserbase, Playwright, CDP) | Browser Task DocType + worker | 2 |
+| MCP server clients | External tool integration via MCP Server DocType | 2 |
+| Image generation (FAL.ai or local SD) | Image Generation Task DocType | 3 |
 
-## What We Explicitly Avoid
+Phase 1 scope is fixed in `42-phase-one-authority-contract.md`. Anything not listed there is post-v0.1.
 
-- **MongoDB / schema-less databases** — we lose transactional guarantees and Frappe's permission integration.
-- **External vector DBs (Pinecone, Weaviate)** — adds cost, complexity, and a second source of truth. pgvector is sufficient.
-- **Heavy message brokers (RabbitMQ, Kafka)** — overkill for our throughput; Redis + RQ is sufficient until proven otherwise.
-- **Reinventing Frappe's primitives** — if Frappe already does it (workflows, permissions, scheduler, Kanban, real-time), we use it.
+---
+
+## Rejected technologies
+
+- **MongoDB and schema-less stores.** Lose transactional guarantees and break Frappe's permission integration.
+- **External vector databases (Pinecone, Weaviate).** Adds cost, complexity, and a second source of truth. pgvector is sufficient.
+- **Heavy message brokers (RabbitMQ, Kafka).** Overkill for projected throughput. Redis + RQ holds until proven otherwise.
+- **Reinventing Frappe primitives.** If the framework already provides workflows, permissions, scheduler, Kanban, or real-time, use it. New implementations of solved problems are rejected on sight.
