@@ -561,5 +561,3 @@ add_to_apps_screen = [
 		"route": app_home,
 	}
 ]
-
-
