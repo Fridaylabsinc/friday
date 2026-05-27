@@ -427,9 +427,49 @@ history, except for correcting factual mistakes.
   OK
   ```
 
+## 2026-05-27 — Slice 2: Permission engine
+
+- Shipped the gateway pre-check engine specified in `docs/design/10-agent-execution-guide.md` §Slice 2.
+- New package `frappe/friday_core/permissions/` with three modules:
+  - `matrix.py` — `build_matrix`, `evaluate`, `check` + `Decision` / `PermissionMatrix` dataclasses.
+  - `cache.py` — Redis cache (`friday:perm_matrix:{profile}`, 60s TTL) with per-profile and broad invalidation.
+  - `decisions.py` — writes immutable Permission Decision Log rows.
+- `frappe/hooks.py` wired: `Agent Profile.on_update` → per-profile invalidation; `Role.on_update` → broad invalidation.
+- 10 tests in `frappe/friday_core/tests/test_permissions.py`, all green on PostgreSQL 17.
+- Slice 1 regression: 2/2 green.
+- Deliverable verified:
+  ```
+  bench --site friday.localhost execute \
+      frappe.friday_core.permissions.matrix.check \
+      --args "['FRIDAY-TEST-PROFILE-A', 'friday-test-skill-active']"
+  → {"allowed": true, "reason": "Allowed"}
+  ```
+- Full product-head rollout narrative: `docs/rollouts/slice-2-permission-engine.md`.
+- Merged via PR #26 by `@Fridaylabsinc`.
+
+## 2026-05-27 — Slice 3: Skill loader
+
+- Shipped the agent's tool-menu builder specified in `docs/design/10-agent-execution-guide.md` §Slice 3.
+- New package `frappe/friday_core/skills/` with one module:
+  - `loader.py` — `load_for_profile`, `to_tool_definition`, three invalidation hooks, `SkillDefinition` dataclass.
+- Filter chain (cheapest-first, short-circuits on first miss): `Skill.status == "Active"` → `skill in profile.permitted_skills` → `permissions.matrix.evaluate(matrix, skill).allowed`. Uses `evaluate()` (pure) not `check()` (logs), so listing the menu does not write decision-log rows.
+- `frappe/hooks.py` extended: `Skill.on_update` → surgical per-affected-profile flush; `Agent Profile.on_update` and `Role.on_update` events now fire both permissions and skills cache invalidation.
+- 8 tests in `frappe/friday_core/tests/test_skill_loader.py`, all green.
+- Regression: Slice 1 → 2/2, Slice 2 → 10/10.
+- Deliverable verified:
+  ```
+  bench --site friday.localhost execute \
+      frappe.friday_core.skills.loader.load_for_profile \
+      --args "['FRIDAY-SLICE3-PROFILE-FULL']"
+  → [{"name": "slice3-skill-active", "description": "...", "parameters_schema": {...}, ...}]
+  ```
+- Full product-head rollout narrative: `docs/rollouts/slice-3-skill-loader.md`.
+- Shipped via PR #27.
+
 ## Log Maintenance
 
 - Add a new dated section whenever setup, implementation, validation, or a blocker changes.
+- Every shipped slice/phase also gets a narrative doc at `docs/rollouts/slice-N-<name>.md` (product-head perspective). The IMPLEMENTATION_LOG is the timeline; the rollout doc is the story.
 - Record exact commands only when they affect future reproducibility.
 - Record blockers with the observed error, root cause, and next action.
 - Do not place secrets, passwords, API keys, or tokens in this file.
