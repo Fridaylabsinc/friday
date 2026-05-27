@@ -2,9 +2,9 @@
 
 > **For:** AI coding agents (Claude, Codex, Cursor, Aider, Devin, Gemini, custom agents) and the humans who sponsor them.
 >
-> **Status (v0.1 prototype mode):** *Deferred.* While the contributor count is "one human (`@iamfriday86`) + one AI (`fridaylabs`)", the governance below is more ceremony than value. Current working rules:
+> **Status (v0.1 prototype mode):** *Deferred.* While the contributor count is "one human (`@Fridaylabsinc`) + one AI (`fridaylabs`)", the governance below is more ceremony than value. Current working rules:
 >
-> - Trunk-based: branch, small PR, sponsor (`@iamfriday86`) reviews and merges.
+> - Trunk-based: branch, small PR, sponsor (`@Fridaylabsinc`) reviews and merges.
 > - **No proposal-first.** Build, push, read the diff.
 > - AI authors as `fridaylabs <fridaylabs@friday-contributors.local>`; PR body names the sponsor.
 > - Branch protection on `main` enforces 1 approval and blocks self-approval — that's the whole guardrail.
