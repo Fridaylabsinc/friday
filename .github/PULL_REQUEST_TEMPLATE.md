@@ -19,6 +19,6 @@ Anything reviewers should look at twice — schema changes, permission paths, se
 
 ## Author
 
-- [ ] Human (`@iamfriday86`)
-- [ ] AI (`fridaylabs`, sponsor `@iamfriday86`)
+- [ ] Human (`@Fridaylabsinc`)
+- [ ] AI (`fridaylabs`, sponsor `@Fridaylabsinc`)
 - [ ] Human-AI pair

@@ -385,6 +385,48 @@ history, except for correcting factual mistakes.
 - Created one local sanity row for each of the 8 main DocTypes through the Frappe ORM. The two audit logs submitted successfully.
 - Browser Desk create/list checks are still pending human verification.
 
+## 2026-05-27
+
+### Environment Setup on Mac M1 (PostgreSQL-Backend)
+
+- Successfully verified and finished `mysqlclient` package compilation using local `mariadb-connector-c` C-client headers to satisfy the required base dependency in Frappe's `pyproject.toml`.
+- Swapped stock `apps/frappe` folder with the true development repository `/Users/alphaworkz/Documents/friday`, establishing `/Users/alphaworkz/Documents/friday-bench/apps/frappe` as the single clean repository clone and active environment root.
+- Re-installed the true Friday development repository as an editable python package inside the virtual environment (`env/`).
+- Started `postgresql@17` and `redis` services via Homebrew services and verified active status.
+- Configured bench global database settings:
+  ```bash
+  bench set-config -g db_host 127.0.0.1
+  bench set-config -g db_port 5432
+  ```
+- Created a PostgreSQL maintenance database matching the local user `$(whoami)`.
+- Created site `friday.localhost` successfully using PostgreSQL 17, pointing to superuser `alphaworkz` via `--db-root-username` parameter:
+  ```bash
+  bench new-site friday.localhost --db-type postgres --db-root-username alphaworkz --admin-password admin --force
+  ```
+- Enabled PostgreSQL database extensions in the generated database:
+  ```sql
+  CREATE EXTENSION IF NOT EXISTS vector;
+  CREATE EXTENSION IF NOT EXISTS pg_trgm;
+  ```
+- Enabled `developer_mode = 1` and `allow_tests = true` for `friday.localhost`.
+- Ran database migrations:
+  ```bash
+  bench --site friday.localhost migrate
+  ```
+- Ran Slice 1 tests successfully on the PostgreSQL backend:
+  ```bash
+  bench --site friday.localhost run-tests --module frappe.friday_core.tests.test_doctypes_exist
+  ```
+  Result:
+  ```text
+  frappe.friday_core.tests.test_doctypes_exist.TestDocTypesExist
+      ✔  test_each_doctype_exists_with_required_fields
+      ✔  test_submittable_doctypes_are_submittable
+
+  Ran 2 tests in 0.568s
+  OK
+  ```
+
 ## Log Maintenance
 
 - Add a new dated section whenever setup, implementation, validation, or a blocker changes.
