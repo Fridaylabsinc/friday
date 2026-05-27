@@ -1,15 +1,55 @@
 # Copyright (c) 2026, Friday Labs and contributors
 # For license information, please see license.txt
 
-"""Tests for the Slice 2 permission engine.
+"""
+Tests for the Slice 2 permission engine.
 
-Covers:
-- Allow: profile has a role with the operation on the required DocType.
-- Deny: profile lacks the role / operation.
-- Deny: Skill status is not Active (Draft, Experimental, Retired, Archived).
-- Deny: Agent Profile status is not Active.
-- Cache: miss populates, hit reuses, invalidation drops.
-- Decision log is written on every check.
+PLAIN ENGLISH
+=============
+
+These tests prove that the permission engine in
+`frappe/friday_core/permissions/` actually does what its docstrings
+claim. Ten tests grouped by concern:
+
+  - **Allow path** — happy case. Profile has the right role, skill is
+    Active → expect `Decision(allowed=True)`.
+  - **Deny paths** — three independent reasons to deny: missing role,
+    suspended profile, skill not Active (sub-tested across Draft /
+    Retired / Archived).
+  - **Cache behaviour** — miss-then-hit, per-profile invalidation,
+    broad invalidation. Verifies both that hot reads come from Redis
+    AND that stale reads are dropped at the right times.
+  - **Audit log** — every check (allow or deny) writes one Permission
+    Decision Log row. Tested by counting before/after.
+  - **Round-trip** — PermissionMatrix → dict → PermissionMatrix
+    preserves all fields. Important because the cache stores the dict
+    form and reads it back.
+
+TEST DATA STRATEGY
+==================
+
+We create our own Role, Custom DocPerm, Agent Profiles, and Skills in
+`setUpClass`. This keeps tests independent of whatever fixtures Frappe
+sites happen to have, so they pass cleanly on a fresh `bench new-site`.
+
+We target `Note` as the DocType the test skill needs permissions on —
+Note is a built-in Frappe DocType that always exists, so we don't have
+to create a custom DocType for testing.
+
+The test role is called "Friday Test Reader" and gets just `read` on
+`Note` — minimal surface so it's obvious what's being tested.
+
+`setUp` (per-test) flushes only the permission cache so cache-hit vs
+cache-miss tests are deterministic. We don't tear down the role /
+profiles / skills between tests — they're idempotent (`_ensure_*`
+helpers handle re-runs) and rebuilding them each test would slow the
+suite without buying isolation that matters.
+
+HOW TO RUN
+==========
+
+    bench --site friday.localhost run-tests \\
+        --module frappe.friday_core.tests.test_permissions
 """
 
 from __future__ import annotations
@@ -40,6 +80,13 @@ SKILL_ARCHIVED = "friday-test-skill-archived"
 
 
 def _ensure_role():
+	"""Create the test Role and its Custom DocPerm on Note, if missing.
+
+	Idempotent — safe to call twice. We use `Custom DocPerm` (not
+	regular `DocPerm`) because Custom DocPerm rows can be added at
+	runtime without redefining the underlying DocType's standard
+	permissions.
+	"""
 	if not frappe.db.exists("Role", TEST_ROLE):
 		frappe.get_doc({"doctype": "Role", "role_name": TEST_ROLE}).insert(ignore_permissions=True)
 	if not frappe.db.exists("Custom DocPerm", {"parent": TARGET_DOCTYPE, "role": TEST_ROLE}):
@@ -57,6 +104,12 @@ def _ensure_role():
 
 
 def _ensure_profile(name: str, roles: list[str], status: str = "Active"):
+	"""Create or reset an Agent Profile with the given roles + status.
+
+	Idempotent: if the profile exists, we update it to match the
+	requested state (so tests don't carry leftover state from
+	earlier runs). If it doesn't exist, we create it.
+	"""
 	if frappe.db.exists("Agent Profile", name):
 		profile = frappe.get_doc("Agent Profile", name)
 		profile.status = status
@@ -78,6 +131,13 @@ def _ensure_profile(name: str, roles: list[str], status: str = "Active"):
 
 
 def _ensure_skill(name: str, status: str, operation: str = "read"):
+	"""Create or reset a Skill that requires (Note, <operation>).
+
+	Idempotent. The skill always points at `Note` because that's the
+	DocType our test Role has permission on — so a skill at status
+	'Active' will be allowed for `PROFILE_WITH_ROLE` and denied for
+	`PROFILE_WITHOUT_ROLE`.
+	"""
 	if frappe.db.exists("Skill", name):
 		skill = frappe.get_doc("Skill", name)
 		skill.status = status
