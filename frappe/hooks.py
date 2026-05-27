@@ -201,6 +201,12 @@ doc_events = {
 	"Page": {
 		"on_update": "frappe.cache_manager.build_domain_restricted_page_cache",
 	},
+	"Agent Profile": {
+		"on_update": "frappe.friday_core.permissions.cache.invalidate_for_profile",
+	},
+	"Role": {
+		"on_update": "frappe.friday_core.permissions.cache.invalidate_all",
+	},
 }
 
 scheduler_events = {
