@@ -25,17 +25,19 @@ That's the project in 6 sentences.
 
 ## Where Friday Is Right Now (Be Honest, Set Expectations)
 
-**The repository has zero code. Only design documents.**
+**Slice 1 is built and verified. The other 8 slices are not.**
 
-That is not a mistake. That is on purpose. The project is at the moment **just before construction starts**. Imagine a building site with detailed blueprints, permits filed, materials list ready — but no foundation poured yet.
+What that means concretely:
 
-This means:
+- The repo is a fork of Frappe v16 with a `friday_core` module added.
+- About 10 empty DocTypes exist (Agent Profile, Agent Task, Chat Message, Execution Log, etc.) — the data structures the rest of Friday will hang off.
+- A `bench` env runs locally against PostgreSQL 17 with `pgvector` and `pg_trgm` enabled.
+- Slice 1 tests pass: `bench --site friday.localhost run-tests --module frappe.friday_core.tests.test_doctypes_exist`.
+- **No agent logic, no permission engine, no chat handling, no skill execution yet.** That's slices 2–9.
 
-- If you want to **build the foundation**, today is the perfect day to join.
-- If you want to **plug into an existing system**, come back in 3–6 months.
-- If you want to **shape the design**, the doors are still open.
+If you want to **build a slice from scratch**, today is the right day. If you want to **plug into a working system**, come back after slice 5 or so.
 
-**Current status:** All Phase 1 decisions are locked. Implementation has not started.
+**Operating mode (v0.1):** one human (`@iamfriday86`) + one AI (`fridaylabs`), trunk-based, small PRs, sponsor-approved merges. The fuller AI contributor governance in `docs/contributing/AI_CONTRIBUTORS.md` is deferred until there's a second contributor.
 
 ---
 

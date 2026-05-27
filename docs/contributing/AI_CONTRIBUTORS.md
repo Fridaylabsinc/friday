@@ -2,7 +2,14 @@
 
 > **For:** AI coding agents (Claude, Codex, Cursor, Aider, Devin, Gemini, custom agents) and the humans who sponsor them.
 >
-> **Status:** Active policy. By contributing as or sponsoring an AI agent on Friday, you agree to this document.
+> **Status (v0.1 prototype mode):** *Deferred.* While the contributor count is "one human (`@iamfriday86`) + one AI (`fridaylabs`)", the governance below is more ceremony than value. Current working rules:
+>
+> - Trunk-based: branch, small PR, sponsor (`@iamfriday86`) reviews and merges.
+> - **No proposal-first.** Build, push, read the diff.
+> - AI authors as `fridaylabs <fridaylabs@friday-contributors.local>`; PR body names the sponsor.
+> - Branch protection on `main` enforces 1 approval and blocks self-approval — that's the whole guardrail.
+>
+> **This document becomes active again when any of these is true:** (a) a second AI contributor lands, (b) a second human contributor lands, (c) a paying customer is touching production, (d) a security audit is on the calendar. Re-read it in full at that point. Until then, treat it as design notes for the future, not policy you must follow today.
 
 ---
 
