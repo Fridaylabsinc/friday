@@ -466,6 +466,24 @@ history, except for correcting factual mistakes.
 - Full product-head rollout narrative: `docs/rollouts/slice-3-skill-loader.md`.
 - Shipped via PR #27.
 
+## 2026-05-27 — Slice 4: Chat flow (CLI + stub agent runner)
+
+- Shipped the first interactive surface specified in `docs/design/10-agent-execution-guide.md` §Slice 4.
+- New packages:
+  - `frappe/friday_core/cli/` — REPL + bench command registration:
+    - `chat.py` — `handle_user_message` (per-turn handler) and `run_repl` (interactive loop).
+    - `commands.py` — click Group `friday` with `chat` subcommand.
+  - `frappe/friday_core/agent_runner/` — the seam where the agent's brain lives:
+    - `runner.py` — `run_turn(profile, session, content) -> str`. Stub returns tool count + echo. Slice 5 replaces the body.
+- `frappe/commands/__init__.py` extended: appends our `friday` click Group to `get_commands()` so `bench --site X friday chat` resolves.
+- Architectural choice: in-process CLI (matches Hermes' `cli.py:11773` pattern), DocType-backed audit rows (matches Frappe), no real-time eventing in Slice 4. Eventing deferred to the slice that introduces multi-platform delivery.
+- 8 tests in `frappe/friday_core/tests/test_chat_flow.py`, all green.
+- Regression: Slice 1 → 2/2, Slice 2 → 10/10, Slice 3 → 8/8.
+- Deliverables verified:
+  - `bench --site friday.localhost friday chat --help` lists the option.
+  - `bench --site friday.localhost execute frappe.friday_core.cli.chat.handle_user_message --args "['FRIDAY-SLICE4-PROFILE-TOOLS', 'demo-session-1', 'hello world']"` → stub reply with tool menu.
+- Full product-head rollout narrative: `docs/rollouts/slice-4-chat-flow.md`.
+
 ## Log Maintenance
 
 - Add a new dated section whenever setup, implementation, validation, or a blocker changes.
