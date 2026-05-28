@@ -466,6 +466,36 @@ history, except for correcting factual mistakes.
 - Full product-head rollout narrative: `docs/rollouts/slice-3-skill-loader.md`.
 - Shipped via PR #27.
 
+## 2026-05-27 — Slice 4 v2: Chat flow under unified gateway (single-tenant lens)
+
+- Shipped the first interactive surface AND laid the unified gateway every future surface plugs into. Replaces the in-process CLI approach from the closed PR #29.
+- Decision contract: `docs/design/47-gateway-design-decisions.md` (new — consolidates every Q1–Q5 decision and the design for deferred subsystems).
+- New packages:
+  - `frappe/friday_core/gateway/` — `service.py` (the chokepoint hook), `batching.py` (Q4-C stub), `recovery.py` (Q5 half-step sweeper).
+  - `frappe/friday_core/routing/` — `resolve.py` (Q3 stub; reads `Chat Platform.default_agent_profile`).
+  - `frappe/friday_core/agent_runner/` — `runner.py` (stub: tool menu + echo; Slice 5 replaces body).
+  - `frappe/friday_core/cli/` — `chat.py` (REPL + `handle_user_message`; direct DB read for outbound per Q2 Option A), `commands.py` (click group `friday`).
+- DocType field additions (single migration, all nullable/defaulted):
+  - `Chat Platform`: `dispatch_mode` (Select sync|async), `default_agent_profile` (Link), `batch_idle_ms` (Int).
+  - `Chat Message`: `retry_count` (Int), `failure_reason` (Small Text).
+  - `Skill`: `idempotent` (Check), `idempotency_strategy` (Select — reserved seam).
+- Wiring:
+  - `frappe/hooks.py`: `doc_events["Chat Message"]["after_insert"]` → gateway chokepoint; `scheduler_events["all"]` → recovery sweeper (no-op on pure-sync deployments).
+  - `frappe/commands/__init__.py`: appended friday click Group to `get_commands()`.
+- Architectural choice (per `feedback-unified-gateway-service` and `feedback-single-tenant-not-saas`): unified gateway for all surfaces (CLI today; Telegram, Slack, Raven, A2A later); sized for one tenant. Subsystems with no v0.1 user (batching, dedup, per-tool idempotency framework) are documented in the design doc and stubbed in code — they activate when the slice that introduces their real user lands.
+- 15 tests in `frappe/friday_core/tests/test_chat_flow.py` (chat flow + routing helper + recovery sweeper), all green.
+- Regression: Slice 1 → 2/2, Slice 2 → 10/10, Slice 3 → 8/8. **Total: 35/35.**
+- Deliverable verified:
+  ```
+  bench --site friday.localhost friday chat --help     # lists --profile
+  bench --site friday.localhost execute \
+      frappe.friday_core.cli.chat.handle_user_message \
+      --args "['FRIDAY-SLICE4V2-PROFILE-TOOLS', 'demo-1', 'hello via unified gateway']"
+  → "You have 1 tool(s) available: slice4v2-skill.\necho: hello via unified gateway"
+  ```
+- Full product-head rollout narrative: `docs/rollouts/slice-4-chat-flow.md`.
+- Supersedes and closes PR #29 (the v1 in-process CLI shape, which special-cased the CLI in a way the unified-gateway rule rules out).
+
 ## Log Maintenance
 
 - Add a new dated section whenever setup, implementation, validation, or a blocker changes.

@@ -216,6 +216,12 @@ doc_events = {
 	"Skill": {
 		"on_update": "frappe.friday_core.skills.loader.invalidate_for_skill",
 	},
+	"Chat Message": {
+		# The Friday gateway chokepoint — every inbound message from any
+		# surface (CLI, Telegram, Slack, Raven, A2A) hits this hook.
+		# See docs/design/47-gateway-design-decisions.md.
+		"after_insert": "frappe.friday_core.gateway.service.handle_inbound",
+	},
 }
 
 scheduler_events = {
@@ -254,6 +260,11 @@ scheduler_events = {
 		"frappe.email.queue.retry_sending_emails",
 		"frappe.monitor.flush",
 		"frappe.integrations.doctype.google_calendar.google_calendar.sync",
+		# Friday: sweep orphaned inbound Chat Messages (async-dispatch
+		# rows whose worker crashed before writing outbound). See
+		# docs/design/47-gateway-design-decisions.md §4 Q5. No-op on
+		# pure-sync deployments (CLI-only v0.1).
+		"frappe.friday_core.gateway.recovery.sweep_orphans",
 	],
 	"hourly": [],
 	# Maintenance queue happen roughly once an hour but don't align with wall-clock time of *:00

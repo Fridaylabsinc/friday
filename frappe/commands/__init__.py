@@ -113,6 +113,10 @@ def get_commands():
 	from .translate import commands as translate_commands
 	from .utils import commands as utils_commands
 
+	# Friday CLI commands (Slice 4+) — registered alongside Frappe's own
+	# bench subcommands. See frappe/friday_core/cli/commands.py.
+	from frappe.friday_core.cli.commands import commands as friday_commands
+
 	clickable_link = "https://frappeframework.com/docs"
 	all_commands = (
 		scheduler_commands
@@ -122,6 +126,7 @@ def get_commands():
 		+ gettext_commands
 		+ utils_commands
 		+ redis_commands
+		+ friday_commands
 	)
 
 	for command in all_commands:

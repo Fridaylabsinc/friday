@@ -4,11 +4,14 @@
  "autoname": "field:platform_name",
  "doctype": "DocType",
  "engine": "InnoDB",
- "field_order": ["platform_name", "adapter_module", "enabled", "config_json"],
+ "field_order": ["platform_name", "adapter_module", "enabled", "dispatch_mode", "default_agent_profile", "batch_idle_ms", "config_json"],
  "fields": [
   {"fieldname": "platform_name", "fieldtype": "Data", "in_list_view": 1, "label": "Platform Name", "reqd": 1, "unique": 1},
   {"fieldname": "adapter_module", "fieldtype": "Data", "in_list_view": 1, "label": "Adapter Module", "reqd": 1},
   {"default": "0", "fieldname": "enabled", "fieldtype": "Check", "label": "Enabled"},
+  {"default": "sync", "description": "How the gateway runs for inbound messages from this platform. 'sync' runs inline with the insert (use for CLI). 'async' enqueues a Frappe RQ job (use for webhooks like Telegram, Slack).", "fieldname": "dispatch_mode", "fieldtype": "Select", "in_list_view": 1, "label": "Dispatch Mode", "options": "sync\nasync"},
+  {"description": "Optional fallback Agent Profile when an adapter doesn't explicitly resolve one for an inbound message.", "fieldname": "default_agent_profile", "fieldtype": "Link", "label": "Default Agent Profile", "options": "Agent Profile"},
+  {"default": "0", "description": "Per-platform batching window (Slice 4: stub only; the batching queue/timer lands when the first bursty surface ships). 0 = flush immediately (CLI). 500 recommended for Telegram/Slack.", "fieldname": "batch_idle_ms", "fieldtype": "Int", "label": "Batch Idle (ms)"},
   {"fieldname": "config_json", "fieldtype": "JSON", "label": "Config (JSON)"}
  ],
  "links": [],
