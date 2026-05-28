@@ -222,6 +222,11 @@ doc_events = {
 		# See docs/design/47-gateway-design-decisions.md.
 		"after_insert": "frappe.friday_core.gateway.service.handle_inbound",
 	},
+	"Agent Task": {
+		# Slice 8 — task workflow state machine.  Derives dispatchable,
+		# records timestamps, emits agent_task.assigned Redis pub/sub.
+		"on_update": "frappe.friday_core.tasks.workflow.on_state_change",
+	},
 }
 
 scheduler_events = {
@@ -253,6 +258,10 @@ scheduler_events = {
 		# Daily at 6:00 AM.
 		"0 6 * * *": [
 			"frappe.core.doctype.security_settings.security_settings_alert.check_security_txt_expiry",
+		],
+		# Every 60 seconds — Slice 8 task dispatcher.
+		"*/1 * * * *": [
+			"frappe.friday_core.tasks.dispatcher.tick",
 		],
 	},
 	"all": [
@@ -330,6 +339,9 @@ after_migrate = [
 	# Creates one row named "Agent Settings" if none exists. Safe to call
 	# repeatedly — Frappe will raise if a second row is created.
 	"frappe.friday_core.llm.after_migrate.ensure_agent_settings",
+	# Friday: register the task runner real-time handler after every migrate
+	# so it can receive agent_task.assigned pub/sub events.
+	"frappe.friday_core.tasks.runner.register_task_runner",
 ]
 
 otp_methods = ["OTP App", "Email", "SMS"]
