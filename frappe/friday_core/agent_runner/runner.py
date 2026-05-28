@@ -5,54 +5,49 @@
 The agent runner — produces a reply for one chat turn.
 
 PLAIN ENGLISH
-=============
+============
 
-Slice 4 ships a STUB version of the agent. Given an Agent Profile and
-an inbound user message, it:
+Given an Agent Profile, a session ID, and the user's message, this
+function returns the agent's reply text. The reply is produced by calling
+the LLM configured for that profile, with:
 
-  1. Loads the tool menu for that profile (via the Slice 3 loader).
-  2. Returns a string saying "you have N tools available: …" followed
-     by "echo: <inbound>".
+  - The agent's system prompt + conversation history (built by prompt_builder)
+  - The list of permitted tools (loaded by the Slice 3 skill loader)
 
-That's the entire intelligence right now. No LLM call. No tool
-execution. Just enough to prove the pipeline from surface → DB →
-gateway → runner → reply → DB → surface is end-to-end wired up.
-
-WHEN DOES THIS BECOME REAL?
-===========================
-
-**Slice 5** (LLM integration, single provider) replaces the body of
-`run_turn` with a real OpenAI / Anthropic call. The function signature
-does not change.
-
-**Slice 6** (first real skill) lets the agent reply by calling a tool
-the LLM picked from the menu.
-
-**Slice 7** wraps the runner in a Docker sandbox per skill invocation.
-
-**Slice 8** moves the runner out of the gateway process and into RQ
-workers so multiple agents can run in parallel.
-
-The signature `run_turn(profile, session, content) -> str` survives
-all of these. That's by design — it's the contract between the
-gateway and the brain.
+Errors are intentionally not handled here — they propagate to the gateway
+which catches them and writes a system-error outbound Chat Message row.
+This keeps the runner a pure function: in → LLM → out.
 
 HERMES MAPPING
-==============
+=============
 
-This stub corresponds to `Hermes/run_agent.py:AIAgent.run_conversation`,
-but radically simplified — Hermes's real version is ~500 lines with
-provider abstraction, tool dispatch, retry logic, streaming callbacks,
-and trajectory compression. We'll inherit that shape over Slices 5–8;
-for now we just need a function that returns a string.
+This corresponds to `Hermes/run_agent.py:AIAgent.run_conversation`.
+Friday's version is radically simpler because Frappe's DocType rows
+(Chat Message for history, Skill for tools, Agent Profile for config)
+replace the Hermes in-memory equivalents.
 
-The "tool menu in the reply" trick is Friday-specific (not in Hermes)
-and only here for v0.1 to prove Slice 3 connects. Drop it in Slice 5
-when the LLM gets the real menu via the OpenAI tools parameter.
+The function signature `run_turn(profile, session, content) -> str`
+is intentionally preserved from the Slice 4 stub — the caller (the
+gateway) does not need to change when this replaces the echo stub.
+
+WHAT THIS MODULE DOES NOT DO
+============================
+
+- Does not write Chat Message rows. The gateway does that.
+- Does not check permissions. The gateway calls `permissions.matrix.check`
+  before calling the runner.
+- Does not execute skills. That's Slice 6's dispatcher.
+- Does not run in a sandbox. That's Slice 7's Docker wrapper.
+- Does not stream tokens. Deferred to when a real-time surface lands.
 """
 
 from __future__ import annotations
 
+import frappe
+
+from frappe.friday_core.llm import get_provider_for_profile
+from frappe.friday_core.llm.prompt_builder import build
+from frappe.friday_core.llm.provider import LLMError
 from frappe.friday_core.skills.loader import load_for_profile
 
 
@@ -61,24 +56,37 @@ def run_turn(profile_name: str, session_id: str, inbound_content: str) -> str:
 
 	Arguments:
 	  - `profile_name`: the Agent Profile name (Frappe primary key).
-	  - `session_id`: the conversation's session UUID. Currently
-	    unused by the stub — kept in the signature because real LLM
-	    integrations (Slice 5+) need it to scope conversation history.
+	  - `session_id`: the conversation's session UUID.
 	  - `inbound_content`: the user's message text.
 
 	Returns the reply text the gateway will write to the outbound
-	Chat Message row and the surface will display.
+	Chat Message row.
 
-	Errors propagate. The gateway (caller) catches them and writes
-	a system-error outbound row. This function does not write any
-	DB rows of its own.
+	Errors propagate to the gateway (caller). The gateway catches them
+	and writes a system-error outbound row. This function does not write
+	any DB rows of its own.
+
+	Raises:
+	  - `frappe.DoesNotExistError` if the profile does not exist.
+	  - `LLMError` (or subclass) if the LLM call fails after retries.
 	"""
-	skills = load_for_profile(profile_name)
+	# 1. Load the tool menu (permitted + active + matrix-allowed).
+	skill_definitions = load_for_profile(profile_name)
 
-	if skills:
-		names = ", ".join(s.name for s in skills)
-		menu_line = f"You have {len(skills)} tool(s) available: {names}."
-	else:
-		menu_line = "You have 0 tool(s) available: (none)."
+	# 2. Build the full prompt (system prompt + history + current message).
+	prompt = build(
+		profile_name=profile_name,
+		session_id=session_id,
+		inbound_content=inbound_content,
+		tools=skill_definitions,
+	)
 
-	return f"{menu_line}\necho: {inbound_content}"
+	# 3. Resolve the provider and call the LLM.
+	provider = get_provider_for_profile(profile_name)
+	response = provider.chat(
+		messages=prompt["messages"],
+		tools=prompt["tools"],
+		model=prompt["model"],
+	)
+
+	return response["content"]

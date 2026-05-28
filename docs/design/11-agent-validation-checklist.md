@@ -131,8 +131,10 @@
 ## Slice 5 — LLM integration
 
 **Configuration**
-- [ ] LLM API key stored as a Frappe `Password` field on the singleton `Agent Settings` DocType (encrypted at rest, never committed).
-- [ ] Provider and model selectable per Agent Profile (`model_provider`, `model_name`).
+- [ ] `LLM Provider` DocType created with fields: `provider_name`, `provider_type`, `api_key` (Password), `base_url`, `default_model`, `default_max_tokens`, `default_temperature`, `is_active`.
+- [ ] `Agent Settings` singleton created with `default_provider` (Link → LLM Provider).
+- [ ] API key stored in `LLM Provider.api_key` (Password field, encrypted at rest, never committed).
+- [ ] `Agent Profile.model_provider` is a Link → `LLM Provider`.
 - [ ] Phase 1 default provider is Minimax per `03-technical-stack.md`.
 
 **Prompt assembly**

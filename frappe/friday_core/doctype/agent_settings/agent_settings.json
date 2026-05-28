@@ -1,0 +1,45 @@
+{
+    "_comment": "Singleton via the autoname-on-hidden-field trick: every doc is named the same value via a hidden field, so only one row can exist (uniqueness on `name` enforces it). The after_migrate hook in frappe.friday_core.llm.after_migrate creates the row on fresh sites. We use this rather than `issingle: 1` because Single doctypes store all fields in tabSingles as key-value rows which is less efficient and harder to reason about; a regular DocType with autoname-on-constant gives us the same admin UX (one row, edit-only) with normal column semantics.",
+    "actions": [],
+    "allow_rename": 0,
+    "autoname": "field:__default",
+    "autoincrement": false,
+    "doctype": "DocType",
+    "engine": "InnoDB",
+    "field_order": [
+        "default_provider"
+    ],
+    "fields": [
+        {
+            "fieldname": "__default",
+            "fieldtype": "Data",
+            "hidden": 1,
+            "label": "Name",
+            "reqd": 1
+        },
+        {
+            "fieldname": "default_provider",
+            "fieldtype": "Link",
+            "label": "Default LLM Provider",
+            "options": "LLM Provider",
+            "description": "Fallback provider used when an Agent Profile has no model_provider set. Leave blank if you always set model_provider explicitly on each profile."
+        }
+    ],
+    "links": [],
+    "module": "Friday Core",
+    "name": "Agent Settings",
+    "naming_rule": "Set by user",
+    "permissions": [
+        {
+            "create": 1,
+            "delete": 0,
+            "read": 1,
+            "role": "System Manager",
+            "write": 1
+        }
+    ],
+    "sort_field": "creation",
+    "sort_order": "DESC",
+    "states": [],
+    "track_changes": 1
+}

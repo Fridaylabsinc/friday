@@ -61,7 +61,7 @@ Phase 2 and later modules (browser, vision, image gen, MCP, multi-platform messa
 | `description` | Text | |
 | `agent_role_profile` | Link → Agent Role Profile | Governance bundle |
 | `assigned_roles` | Table → Role | Resolved from role profile or set explicitly |
-| `model_provider` | Link | Provider adapter (Minimax Phase 1; pluggable) |
+| `model_provider` | Link → LLM Provider | Phase 1: Minimax; pluggable via provider adapter interface |
 | `model_name` | Data | Specific model identifier |
 | `system_prompt` | Long Text | Persona / SOUL |
 | `permitted_skills` | Table → Skill | Explicit whitelist; defaults to role profile grant |

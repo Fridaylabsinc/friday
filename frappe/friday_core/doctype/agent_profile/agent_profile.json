@@ -1,43 +1,104 @@
 {
- "actions": [],
- "allow_rename": 1,
- "autoname": "field:profile_name",
- "doctype": "DocType",
- "engine": "InnoDB",
- "field_order": [
-  "profile_name",
-  "description",
-  "assigned_roles",
-  "model_provider",
-  "model_name",
-  "system_prompt",
-  "permitted_skills",
-  "network_allowlist",
-  "requires_approval_above_risk",
-  "status"
- ],
- "fields": [
-  {"fieldname": "profile_name", "fieldtype": "Data", "in_list_view": 1, "label": "Profile Name", "reqd": 1, "unique": 1},
-  {"fieldname": "description", "fieldtype": "Text", "label": "Description"},
-  {"fieldname": "assigned_roles", "fieldtype": "Table", "label": "Assigned Roles", "options": "Has Role"},
-  {"fieldname": "model_provider", "fieldtype": "Link", "label": "Model Provider", "options": "DocType"},
-  {"fieldname": "model_name", "fieldtype": "Data", "label": "Model Name"},
-  {"fieldname": "system_prompt", "fieldtype": "Long Text", "label": "System Prompt"},
-  {"fieldname": "permitted_skills", "fieldtype": "Table", "label": "Permitted Skills", "options": "Agent Profile Skill"},
-  {"fieldname": "network_allowlist", "fieldtype": "Small Text", "label": "Network Allowlist"},
-  {"fieldname": "requires_approval_above_risk", "fieldtype": "Select", "label": "Requires Approval Above Risk", "options": "low\nmedium\nhigh\nalways"},
-  {"fieldname": "status", "fieldtype": "Select", "in_list_view": 1, "label": "Status", "options": "Active\nSuspended\nRetired", "reqd": 1}
- ],
- "links": [],
- "module": "Friday Core",
- "name": "Agent Profile",
- "naming_rule": "Set by user",
- "permissions": [
-  {"create": 1, "delete": 1, "read": 1, "role": "System Manager", "write": 1},
-  {"create": 1, "read": 1, "role": "Agent Supervisor", "write": 1}
- ],
- "sort_field": "creation",
- "sort_order": "DESC",
- "states": [],
- "track_changes": 1
+    "actions": [],
+    "allow_rename": 1,
+    "autoname": "field:profile_name",
+    "doctype": "DocType",
+    "engine": "InnoDB",
+    "field_order": [
+        "profile_name",
+        "description",
+        "assigned_roles",
+        "model_provider",
+        "model_name",
+        "system_prompt",
+        "permitted_skills",
+        "network_allowlist",
+        "requires_approval_above_risk",
+        "status"
+    ],
+    "fields": [
+        {
+            "fieldname": "profile_name",
+            "fieldtype": "Data",
+            "in_list_view": 1,
+            "label": "Profile Name",
+            "reqd": 1,
+            "unique": 1
+        },
+        {
+            "fieldname": "description",
+            "fieldtype": "Text",
+            "label": "Description"
+        },
+        {
+            "fieldname": "assigned_roles",
+            "fieldtype": "Table",
+            "label": "Assigned Roles",
+            "options": "Has Role"
+        },
+        {
+            "fieldname": "model_provider",
+            "fieldtype": "Link",
+            "label": "Model Provider",
+            "options": "LLM Provider"
+        },
+        {
+            "fieldname": "model_name",
+            "fieldtype": "Data",
+            "label": "Model Name"
+        },
+        {
+            "fieldname": "system_prompt",
+            "fieldtype": "Long Text",
+            "label": "System Prompt"
+        },
+        {
+            "fieldname": "permitted_skills",
+            "fieldtype": "Table",
+            "label": "Permitted Skills",
+            "options": "Agent Profile Skill"
+        },
+        {
+            "fieldname": "network_allowlist",
+            "fieldtype": "Small Text",
+            "label": "Network Allowlist"
+        },
+        {
+            "fieldname": "requires_approval_above_risk",
+            "fieldtype": "Select",
+            "label": "Requires Approval Above Risk",
+            "options": "low\nmedium\nhigh\nalways"
+        },
+        {
+            "fieldname": "status",
+            "fieldtype": "Select",
+            "in_list_view": 1,
+            "label": "Status",
+            "options": "Active\nSuspended\nRetired",
+            "reqd": 1
+        }
+    ],
+    "links": [],
+    "module": "Friday Core",
+    "name": "Agent Profile",
+    "naming_rule": "Set by user",
+    "permissions": [
+        {
+            "create": 1,
+            "delete": 1,
+            "read": 1,
+            "role": "System Manager",
+            "write": 1
+        },
+        {
+            "create": 1,
+            "read": 1,
+            "role": "Agent Supervisor",
+            "write": 1
+        }
+    ],
+    "sort_field": "creation",
+    "sort_order": "DESC",
+    "states": [],
+    "track_changes": 1
 }

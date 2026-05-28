@@ -120,7 +120,7 @@ All logs are submittable DocTypes — immutable once submitted. Queryable via th
 | `profile_name` | Data | Unique identifier |
 | `assigned_roles` | Table → Role | Maps the agent to Frappe roles |
 | `permitted_skills` | Table → Skill | Explicit Skill whitelist (or "all from role") |
-| `model_provider` | Link | LLM provider adapter |
+| `model_provider` | Link → LLM Provider | Provider to use for this profile; falls back to `Agent Settings.default_provider` |
 | `model_name` | Data | Specific model identifier |
 | `resource_quota_*` | Int / Float | CPU, memory, requests-per-hour |
 | `requires_approval_above_risk` | Select | Threshold above which Workflow Request is auto-created |
