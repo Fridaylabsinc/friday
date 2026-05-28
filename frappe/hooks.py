@@ -326,6 +326,10 @@ before_migrate = ["frappe.core.doctype.patch_log.patch_log.before_migrate"]
 after_migrate = [
 	"frappe.website.doctype.website_theme.website_theme.after_migrate",
 	"frappe.search.sqlite_search.build_index_in_background",
+	# Friday: ensure the Agent Settings singleton exists after every migrate.
+	# Creates one row named "Agent Settings" if none exists. Safe to call
+	# repeatedly — Frappe will raise if a second row is created.
+	"frappe.friday_core.llm.after_migrate.ensure_agent_settings",
 ]
 
 otp_methods = ["OTP App", "Email", "SMS"]

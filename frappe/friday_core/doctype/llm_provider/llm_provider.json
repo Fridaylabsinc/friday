@@ -1,0 +1,94 @@
+{
+    "actions": [],
+    "allow_rename": 1,
+    "autoname": "field:provider_name",
+    "doctype": "DocType",
+    "engine": "InnoDB",
+    "field_order": [
+        "provider_name",
+        "provider_type",
+        "is_active",
+        "api_key",
+        "base_url",
+        "default_model",
+        "default_max_tokens",
+        "default_temperature"
+    ],
+    "fields": [
+        {
+            "fieldname": "provider_name",
+            "fieldtype": "Data",
+            "in_list_view": 1,
+            "label": "Provider Name",
+            "reqd": 1,
+            "unique": 1,
+            "description": "Human-readable name, e.g. 'Production Minimax' or 'Dev OpenAI'."
+        },
+        {
+            "fieldname": "provider_type",
+            "fieldtype": "Select",
+            "in_list_view": 1,
+            "label": "Provider Type",
+            "options": "minimax\nopenai\nanthropic\nopenrouter",
+            "reqd": 1,
+            "description": "Which LLM provider API to call. Determines the adapter used."
+        },
+        {
+            "default": "1",
+            "fieldname": "is_active",
+            "fieldtype": "Check",
+            "label": "Active",
+            "description": "Only active providers can be used. Inactive providers are skipped during fallback resolution."
+        },
+        {
+            "fieldname": "api_key",
+            "fieldtype": "Password",
+            "label": "API Key",
+            "reqd": 1,
+            "description": "The API key for this provider. Stored encrypted at rest."
+        },
+        {
+            "fieldname": "base_url",
+            "fieldtype": "Data",
+            "label": "Base URL (optional)",
+            "description": "Override the provider's default API endpoint. Leave blank to use the adapter default. Useful for proxies like OpenRouter."
+        },
+        {
+            "default": "MiniMax-Standard",
+            "fieldname": "default_model",
+            "fieldtype": "Data",
+            "label": "Default Model",
+            "description": "Model to use when the Agent Profile does not specify one. E.g. MiniMax-Standard, gpt-4o, claude-3-sonnet."
+        },
+        {
+            "default": "2048",
+            "fieldname": "default_max_tokens",
+            "fieldtype": "Int",
+            "label": "Default Max Tokens"
+        },
+        {
+            "default": "0.7",
+            "fieldname": "default_temperature",
+            "fieldtype": "Float",
+            "label": "Default Temperature",
+            "description": "Sampling temperature. 0.0 = deterministic, 2.0 = very random. Typical range: 0.0–1.0."
+        }
+    ],
+    "links": [],
+    "module": "Friday Core",
+    "name": "LLM Provider",
+    "naming_rule": "Set by user",
+    "permissions": [
+        {
+            "create": 1,
+            "delete": 1,
+            "read": 1,
+            "role": "System Manager",
+            "write": 1
+        }
+    ],
+    "sort_field": "creation",
+    "sort_order": "DESC",
+    "states": [],
+    "track_changes": 1
+}
