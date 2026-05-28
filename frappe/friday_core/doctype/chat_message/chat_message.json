@@ -10,7 +10,9 @@
   "agent_profile",
   "content",
   "timestamp",
-  "processed"
+  "processed",
+  "retry_count",
+  "failure_reason"
  ],
  "fields": [
   {"fieldname": "session_id", "fieldtype": "Data", "in_list_view": 1, "label": "Session ID", "reqd": 1},
@@ -20,7 +22,9 @@
   {"fieldname": "agent_profile", "fieldtype": "Link", "label": "Agent Profile", "options": "Agent Profile"},
   {"fieldname": "content", "fieldtype": "Long Text", "label": "Content"},
   {"fieldname": "timestamp", "fieldtype": "Datetime", "in_list_view": 1, "label": "Timestamp", "reqd": 1},
-  {"default": "0", "fieldname": "processed", "fieldtype": "Check", "label": "Processed"}
+  {"default": "0", "fieldname": "processed", "fieldtype": "Check", "label": "Processed"},
+  {"default": "0", "description": "Number of times the recovery sweeper has re-enqueued this inbound row. Capped at 3.", "fieldname": "retry_count", "fieldtype": "Int", "label": "Retry Count"},
+  {"description": "Populated by the recovery sweeper after 3 failed retries. Empty means the row either succeeded (processed=1) or has not yet exhausted retries.", "fieldname": "failure_reason", "fieldtype": "Small Text", "label": "Failure Reason"}
  ],
  "links": [],
  "module": "Friday Core",
