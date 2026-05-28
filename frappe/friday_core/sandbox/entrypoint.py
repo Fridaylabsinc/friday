@@ -16,7 +16,6 @@ fallback: read from stdin directly)
 
 Dependencies (installed in Dockerfile):
 - requests==2.32.3  — HTTP calls to Frappe REST API
-- frappe-client==0.1.0.dev0  — Frappe API client (used by skill handlers)
 """
 
 import json
@@ -42,6 +41,9 @@ def _call_skill(skill_name: str, parameters: dict) -> dict:
 
     Phase 1: skills are co-written Python modules registered in handlers.py.
     (Loading skills from Frappe at runtime is Phase 1.5 per DOC 24 §4.3.)
+
+    The handler uses FRIDAY_API_KEY from the container env for authentication
+    against the Frappe REST API.
     """
     # Registry of bundled skill handlers — co-written in same directory
     from handlers import get as _get_handler

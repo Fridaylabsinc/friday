@@ -9,7 +9,6 @@ Authentication: none (the container's env vars contain scoped credentials).
 
 Dependencies (installed in Docker image):
 - requests==2.32.3  — HTTP calls to Frappe REST API
-- frappe-client==0.1.0.dev0  — Frappe API client
 
 Each handler receives:
     parameters: dict  — the LLM-passed arguments
