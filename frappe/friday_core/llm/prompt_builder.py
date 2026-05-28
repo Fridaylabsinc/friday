@@ -158,6 +158,9 @@ def _load_history(session_id: str, max_history_turns: int) -> list[dict[str, str
 
     Returns a flat list of messages in chronological order, ready to
     append to the messages list. Each entry is `{"role": "user"|"assistant", "content": str}`.
+
+    Single DB round-trip via `fields=` on get_all (no per-row get_doc).
+    On a 20-turn conversation this is 1 query instead of 41.
     """
     if max_history_turns <= 0:
         return []
@@ -168,6 +171,7 @@ def _load_history(session_id: str, max_history_turns: int) -> list[dict[str, str
             "session_id": session_id,
             "direction": ("in", ["inbound", "outbound"]),
         },
+        fields=["direction", "content"],
         order_by="creation asc",
         limit=max_history_turns * 2,  # ×2 because each turn has 2 rows
     )
@@ -176,14 +180,14 @@ def _load_history(session_id: str, max_history_turns: int) -> list[dict[str, str
 
     messages: list[dict[str, str]] = []
     for row in rows:
-        doc = frappe.get_doc("Chat Message", row["name"])
-        if doc.direction == "inbound":
+        direction = row.get("direction")
+        if direction == "inbound":
             role = "user"
-        elif doc.direction == "outbound":
+        elif direction == "outbound":
             role = "assistant"
         else:
             continue
-        content = doc.content or ""
+        content = row.get("content") or ""
         if content:
             messages.append({"role": role, "content": content})
 

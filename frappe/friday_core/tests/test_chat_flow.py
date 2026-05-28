@@ -217,9 +217,9 @@ class TestChatFlow(unittest.TestCase):
 		"""run_turn is pure: no DB writes, deterministic reply text.
 		
 		Slice 5 update: run_turn calls the real LLM via get_provider_for_profile.
-		We patch MinimixProvider.chat directly so no HTTP or DB calls are made.
+		We patch MinimaxProvider.chat directly so no HTTP or DB calls are made.
 		"""
-		from frappe.friday_core.llm.provider import MinimixProvider
+		from frappe.friday_core.llm.provider import MinimaxProvider
 
 		reply_content = f"I can help with that using {SKILL_NAME}."
 
@@ -230,7 +230,7 @@ class TestChatFlow(unittest.TestCase):
 				"usage": {"prompt_tokens": 10, "completion_tokens": 5, "total_tokens": 15},
 			}
 
-		with patch.object(MinimixProvider, "chat", fake_chat):
+		with patch.object(MinimaxProvider, "chat", fake_chat):
 			before = frappe.db.count("Chat Message")
 			reply = run_turn(PROFILE_WITH_TOOLS, "session-pure", "hello")
 			after = frappe.db.count("Chat Message")
@@ -258,7 +258,7 @@ class TestChatFlow(unittest.TestCase):
 
 	def test_handle_user_message_gateway_writes_outbound_row(self):
 		"""Gateway writes outbound row with correct sender_id and content from LLM."""
-		from frappe.friday_core.llm.provider import MinimixProvider
+		from frappe.friday_core.llm.provider import MinimaxProvider
 
 		def fake_chat(self, messages, tools=None, model=None):
 			return {
@@ -267,7 +267,7 @@ class TestChatFlow(unittest.TestCase):
 				"usage": {"prompt_tokens": 10, "completion_tokens": 5, "total_tokens": 15},
 			}
 
-		with patch.object(MinimixProvider, "chat", fake_chat):
+		with patch.object(MinimaxProvider, "chat", fake_chat):
 			session_id = str(uuid.uuid4())
 			reply = handle_user_message(PROFILE_WITH_TOOLS, session_id, "beta")
 
@@ -283,7 +283,7 @@ class TestChatFlow(unittest.TestCase):
 
 	def test_handle_user_message_returns_outbound_content(self):
 		"""The string returned by handle_user_message equals the outbound row's content."""
-		from frappe.friday_core.llm.provider import MinimixProvider
+		from frappe.friday_core.llm.provider import MinimaxProvider
 
 		def fake_chat(self, messages, tools=None, model=None):
 			return {
@@ -292,7 +292,7 @@ class TestChatFlow(unittest.TestCase):
 				"usage": {"prompt_tokens": 10, "completion_tokens": 5, "total_tokens": 15},
 			}
 
-		with patch.object(MinimixProvider, "chat", fake_chat):
+		with patch.object(MinimaxProvider, "chat", fake_chat):
 			session_id = str(uuid.uuid4())
 			reply = handle_user_message(PROFILE_WITH_TOOLS, session_id, "gamma")
 			stored = frappe.db.get_value(
@@ -391,7 +391,7 @@ class TestChatFlow(unittest.TestCase):
 
 	def test_round_trip_under_one_second(self):
 		"""Latency budget: <1s on local dev. Mocked LLM call should be ~10ms total."""
-		from frappe.friday_core.llm.provider import MinimixProvider
+		from frappe.friday_core.llm.provider import MinimaxProvider
 
 		def fake_chat(self, messages, tools=None, model=None):
 			return {
@@ -400,7 +400,7 @@ class TestChatFlow(unittest.TestCase):
 				"usage": {"prompt_tokens": 10, "completion_tokens": 5, "total_tokens": 15},
 			}
 
-		with patch.object(MinimixProvider, "chat", fake_chat):
+		with patch.object(MinimaxProvider, "chat", fake_chat):
 			session_id = str(uuid.uuid4())
 			start = time.perf_counter()
 			handle_user_message(PROFILE_WITH_TOOLS, session_id, "perf check")

@@ -31,7 +31,7 @@
             "label": "Provider Type",
             "options": "minimax\nopenai\nanthropic\nopenrouter",
             "reqd": 1,
-            "description": "Which LLM provider API to call. Determines the adapter used."
+            "description": "Which LLM provider API to call. Determines the adapter used. NOTE: only 'minimax' is implemented in Slice 5 — the other options are reserved for future slices and will raise LLMError if selected until their adapter classes land. Adding a new option here requires both extending this Select AND adding a subclass + branch in frappe/friday_core/llm/provider.py."
         },
         {
             "default": "1",
@@ -51,7 +51,7 @@
             "fieldname": "base_url",
             "fieldtype": "Data",
             "label": "Base URL (optional)",
-            "description": "Override the provider's default API endpoint. Leave blank to use the adapter default. Useful for proxies like OpenRouter."
+            "description": "Override the provider's default API endpoint. Leave blank to use the adapter default. For Minimax the adapter default is https://api.minimax.io (international OpenAI-compat endpoint); override with https://api.minimaxi.com for the China endpoint. Also useful for proxies like OpenRouter."
         },
         {
             "default": "MiniMax-Standard",

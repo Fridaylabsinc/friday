@@ -496,6 +496,33 @@ history, except for correcting factual mistakes.
 - Full product-head rollout narrative: `docs/rollouts/slice-4-chat-flow.md`.
 - Supersedes and closes PR #29 (the v1 in-process CLI shape, which special-cased the CLI in a way the unified-gateway rule rules out).
 
+## 2026-05-27 — Slice 5: LLM integration (Minimax M2, single-tenant)
+
+- Shipped real LLM integration. Replaces the Slice 4 echo stub. End-to-end loop: CLI → gateway → prompt builder → provider adapter → Minimax M2 → outbound Chat Message row → CLI prints. Same gateway path for every surface (Slice 4 contract unchanged).
+- Decision contract appended: `docs/design/47-gateway-design-decisions.md` §11 (10 dated decisions Q11.1–Q11.10).
+- New packages and DocTypes:
+  - `frappe/friday_core/llm/` — `provider.py` (LLMProvider ABC + MinimaxProvider), `prompt_builder.py` (system prompt + history + tools), `__init__.py` (public exports), `after_migrate.py` (ensures Agent Settings singleton row exists on fresh sites).
+  - `frappe/friday_core/doctype/llm_provider/` — per-row provider config (provider_name, provider_type, api_key (Password), base_url, default_model, default_max_tokens, default_temperature, is_active).
+  - `frappe/friday_core/doctype/agent_settings/` — singleton holding default_provider Link.
+- Schema change: `Agent Profile.model_provider` is now `Link → LLM Provider` (was incorrectly `Link → DocType`).
+- Wiring in Frappe core: `frappe/hooks.py` `after_migrate` list now includes `frappe.friday_core.llm.after_migrate.ensure_agent_settings`.
+- Audit findings (all fixed in commit on slice-5/llm-integration before merge):
+  - Class name typo `MinimixProvider` → `MinimaxProvider` (bulk rename across 4 files).
+  - Inactive linked provider silently fell through to defaults; now raises `LLMError` (Q11.3).
+  - Error logs no longer leak API response data or raw exception messages (Q11.6).
+  - `_get_api_key` no longer swallows exceptions (propagates so operators see the real cause).
+  - N+1 query in `_load_history` replaced with single `fields=` query.
+  - `default_max_tokens` / `default_temperature` now wired through to the Minimax payload.
+  - Canonical Minimax base URL set to `https://api.minimax.io` (matches Hermes; override via DocType field for regional endpoints).
+- Tests:
+  - `test_llm_provider.py` — 25 tests (ABC, MinimaxProvider construction, HTTP mocking incl. 401/429/500/timeout/connection error, provider resolution chain incl. strict-on-inactive).
+  - `test_prompt_builder.py` — 20 tests (system prompt assembly, history loading, role alternation, truncation, model resolution).
+  - `test_chat_flow.py` — 15 tests, updated to mock `MinimaxProvider.chat` instead of using the echo stub.
+- Regression: Slice 1 → 2/2, Slice 2 → 10/10, Slice 3 → 8/8, Slice 4 → 15/15.
+- **Total: 80/80 tests green.**
+- Spec deviation: API key location moved from singleton-with-Password-per-kind to per-row-Password on `LLM Provider`. Rationale in Q11.2 (multi-account flexibility, rotation property preserved).
+- Full product-head rollout narrative: `docs/rollouts/slice-5-llm-integration.md`.
+
 ## Log Maintenance
 
 - Add a new dated section whenever setup, implementation, validation, or a blocker changes.

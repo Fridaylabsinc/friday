@@ -1,4 +1,5 @@
 {
+    "_comment": "Singleton via the autoname-on-hidden-field trick: every doc is named the same value via a hidden field, so only one row can exist (uniqueness on `name` enforces it). The after_migrate hook in frappe.friday_core.llm.after_migrate creates the row on fresh sites. We use this rather than `issingle: 1` because Single doctypes store all fields in tabSingles as key-value rows which is less efficient and harder to reason about; a regular DocType with autoname-on-constant gives us the same admin UX (one row, edit-only) with normal column semantics.",
     "actions": [],
     "allow_rename": 0,
     "autoname": "field:__default",

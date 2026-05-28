@@ -17,13 +17,13 @@ The provider is determined by:
   3. Falls back to the first active `LLM Provider` row if neither is set.
 
 The actual LLM call is made by the provider adapter. In Phase 1 the only
-adapter is `MinimixProvider` (Minimax M2). The `LLMProvider` ABC makes it
+adapter is `MinimaxProvider` (Minimax M2). The `LLMProvider` ABC makes it
 trivial to add OpenAI, Claude, OpenRouter, or any other provider later
 without changing the runner or prompt builder.
 
 One module:
 
-  - **provider.py** — `LLMProvider` ABC and the `MinimixProvider`
+  - **provider.py** — `LLMProvider` ABC and the `MinimaxProvider`
     implementation. The runner calls `get_provider_for_profile()` which
     returns the right provider instance for the given agent.
 
@@ -41,14 +41,14 @@ from __future__ import annotations
 
 from frappe.friday_core.llm.provider import (
     LLMProvider,
-    MinimixProvider,
+    MinimaxProvider,
     get_provider_for_profile,
 )
 from frappe.friday_core.llm.prompt_builder import build
 
 __all__ = [
     "LLMProvider",
-    "MinimixProvider",
+    "MinimaxProvider",
     "get_provider_for_profile",
     "build",
 ]

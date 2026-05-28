@@ -127,7 +127,7 @@ class LLMProvider(ABC):
 # ---------------------------------------------------------------------------
 
 
-class MinimixProvider(LLMProvider):
+class MinimaxProvider(LLMProvider):
     """Minimax M2 chat completions adapter.
 
     API reference:
@@ -135,18 +135,45 @@ class MinimixProvider(LLMProvider):
 
     The API is OpenAI-compatible with minor differences:
       - Auth: Bearer token in Authorization header.
-      - Endpoint: https://api.minimax.chat/v1/text/chatcompletion_v2
+      - Endpoint: https://api.minimax.io/v1/text/chatcompletion_v2
+        (international OpenAI-compat endpoint; matches Hermes' choice.
+        Override via `LLM Provider.base_url` for region-specific endpoints
+        e.g. https://api.minimaxi.com for China.)
       - Tool calling: supported via the `tools` parameter.
       - Response: similar shape to OpenAI but model_name in response differs.
+
+    RETRY BUDGET CAVEAT (per design doc §11):
+      With MAX_RETRIES=3 and exponential sleeps (1+2+4s = 7s) plus 30s per
+      request, total wall-clock can reach ~97s before giving up. **This is
+      safe for sync dispatch (CLI) but exceeds the 10s webhook deadline of
+      Telegram/Slack.** When async surfaces land, either the retry policy
+      needs to be dispatch-mode-aware OR the gateway needs to fire the
+      webhook 200 OK before this retry loop begins (the current async-via-RQ
+      design does the latter — the gateway already returns to the webhook
+      before queueing the job — so this is documented but not blocking).
     """
 
     TIMEOUT_SECONDS = 30
     MAX_RETRIES = 3
+    # International OpenAI-compatible endpoint. Hermes uses the same.
+    # Override per row via `LLM Provider.base_url` for region-specific endpoints.
+    DEFAULT_BASE_URL = "https://api.minimax.io"
 
-    def __init__(self, api_key: str, default_model: str, base_url: str | None = None):
+    def __init__(
+        self,
+        api_key: str,
+        default_model: str,
+        base_url: str | None = None,
+        default_max_tokens: int | None = None,
+        default_temperature: float | None = None,
+    ):
         self.api_key = api_key
         self.default_model = default_model
-        self.base_url = (base_url or "https://api.minimax.chat").rstrip("/")
+        self.base_url = (base_url or self.DEFAULT_BASE_URL).rstrip("/")
+        # Sampling defaults. None means "let the provider decide" — we
+        # omit the field from the payload rather than send 0 or null.
+        self.default_max_tokens = default_max_tokens
+        self.default_temperature = default_temperature
 
     def chat(
         self,
@@ -166,6 +193,13 @@ class MinimixProvider(LLMProvider):
         }
         if tools:
             payload["tools"] = tools
+        # Sampling params: only include when set on the provider row, so we
+        # don't accidentally send 0 (which means deterministic) or 0 max_tokens
+        # (which would reject the response). None = use the API default.
+        if self.default_max_tokens is not None:
+            payload["max_tokens"] = self.default_max_tokens
+        if self.default_temperature is not None:
+            payload["temperature"] = self.default_temperature
 
         last_exc: Exception | None = None
         for attempt in range(self.MAX_RETRIES):
@@ -178,8 +212,8 @@ class MinimixProvider(LLMProvider):
                 )
                 if response.status_code == 401:
                     raise LLMAuthError(
-                        f"Minimax auth failed (401). Check the API key in "
-                        f"the LLM Provider DocType."
+                        "Minimax auth failed (401). Check the API key in "
+                        "the LLM Provider DocType."
                     )
                 if response.status_code == 429:
                     # Rate limited — back off and retry.
@@ -204,10 +238,14 @@ class MinimixProvider(LLMProvider):
                 sleep_time = 2**attempt
                 time.sleep(sleep_time)
 
-        # All retries exhausted.
+        # All retries exhausted. Include the exception TYPE in the message
+        # so operators can grep, but NOT the str(exc) — Connection/Timeout
+        # exceptions can include URL with the query string, and we don't
+        # want secrets sneaking into the audit log via the URL.
+        last_exc_type = type(last_exc).__name__ if last_exc else "Unknown"
         raise LLMError(
             f"Minimax call failed after {self.MAX_RETRIES} retries. "
-            f"Last error: {last_exc}"
+            f"Last error type: {last_exc_type}"
         )
 
     def get_default_model(self) -> str:
@@ -221,7 +259,12 @@ class MinimixProvider(LLMProvider):
         """Extract the assistant's text from a Minimax V2 response dict."""
         choices = data.get("choices", [])
         if not choices:
-            raise LLMError("Minimax response has no choices: " + str(data))
+            # Redact: include structural keys only, not values. The response
+            # body can carry partial content / tokens / user PII which we
+            # never want in the Frappe Error Log.
+            raise LLMError(
+                f"Minimax response has no choices. response_keys={sorted(data.keys())}"
+            )
 
         choice = choices[0]
         finish_reason = choice.get("finish_reason", "stop")
@@ -272,28 +315,56 @@ def get_provider_for_profile(profile_name: str) -> LLMProvider:
     provider_type = provider_row.get("provider_type") or "minimax"
     default_model = provider_row.get("default_model") or "MiniMax-Standard"
     base_url = provider_row.get("base_url") or None
+    default_max_tokens = provider_row.get("default_max_tokens")
+    default_temperature = provider_row.get("default_temperature")
 
     if provider_type == "minimax":
-        return MinimixProvider(
+        return MinimaxProvider(
             api_key=api_key,
             default_model=default_model,
             base_url=base_url,
+            default_max_tokens=default_max_tokens,
+            default_temperature=default_temperature,
         )
 
-    # Future: openai → OpenAIProvider(...), etc.
+    # Future: openai → OpenAIProvider(...), anthropic → AnthropicProvider(...),
+    # openrouter → OpenRouterProvider(...). Each adds one branch here and one
+    # subclass file. The DocType's `provider_type` Select field must be
+    # extended in lockstep (frappe/friday_core/doctype/llm_provider/llm_provider.json).
     raise LLMError(f"Unsupported provider_type {provider_type!r}")
 
 
 def _resolve_provider_row(profile_name: str) -> dict | None:
-    """Find the LLM Provider DocType row to use for a profile."""
-    # Step 1: Agent Profile.model_provider link.
+    """Find the LLM Provider DocType row to use for a profile.
+
+    Resolution rules — IMPORTANT:
+
+      - Step 1 (explicit profile link) is **strict**. If the Agent Profile
+        names a model_provider AND that provider exists but is inactive,
+        we RAISE rather than fall through. Rationale: an operator who
+        deactivated the provider almost certainly meant "stop this profile
+        from working until I fix this," not "silently route to a different
+        provider." Silent fallback would be a governance bug.
+      - We only fall through to step 2/3 if the link is empty OR the
+        named provider row doesn't exist (genuine misconfiguration).
+    """
+    # Step 1: Agent Profile.model_provider link — strict.
     profile_model = frappe.db.get_value(
         "Agent Profile", profile_name, "model_provider", as_dict=True
     )
     if profile_model and profile_model.get("model_provider"):
-        row = frappe.get_doc("LLM Provider", profile_model["model_provider"])
-        if row and row.is_active:
+        target = profile_model["model_provider"]
+        if frappe.db.exists("LLM Provider", target):
+            row = frappe.get_doc("LLM Provider", target)
+            if not row.is_active:
+                raise LLMError(
+                    f"Agent Profile {profile_name!r} is linked to LLM Provider "
+                    f"{target!r} which is currently inactive. Either reactivate "
+                    f"it or change the profile's model_provider field."
+                )
             return row.as_dict()
+        # If the row doesn't exist, that's a stale link — fall through
+        # to the defaults rather than raising.
 
     # Step 2: Agent Settings singleton.
     if frappe.db.exists("Agent Settings", {"name": "Agent Settings"}):
@@ -304,12 +375,11 @@ def _resolve_provider_row(profile_name: str) -> dict | None:
             as_dict=True,
         )
         if default and default.get("default_provider"):
-            try:
-                row = frappe.get_doc("LLM Provider", default["default_provider"])
-                if row and row.is_active:
+            target = default["default_provider"]
+            if frappe.db.exists("LLM Provider", target):
+                row = frappe.get_doc("LLM Provider", target)
+                if row.is_active:
                     return row.as_dict()
-            except Exception:
-                pass
 
     # Step 3: First active LLM Provider row (last resort).
     rows = frappe.get_all(
@@ -329,11 +399,11 @@ def _get_api_key(provider_row: dict) -> str:
 
     The key is stored in a Frappe Password field, which is encrypted at rest.
     Frappe provides `get_password()` to decrypt it at runtime.
+
+    Errors from `get_password` (e.g. missing key, corrupted ciphertext,
+    encryption-key rotation in progress) are deliberately NOT swallowed —
+    they bubble up as the original exception so operators see the real
+    cause in the Error Log instead of a misleading "Minimax 401" downstream.
     """
-    # `get_password()` on a DocType field returns the decrypted value.
-    # We reconstruct enough of a doc-like object for get_password to work.
-    try:
-        doc = frappe.get_doc("LLM Provider", provider_row["name"])
-        return doc.get_password("api_key") or ""
-    except Exception:
-        return ""
+    doc = frappe.get_doc("LLM Provider", provider_row["name"])
+    return doc.get_password("api_key") or ""

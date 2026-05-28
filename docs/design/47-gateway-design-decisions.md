@@ -281,3 +281,88 @@ This document is the **authoritative contract** for gateway behavior as of Slice
 3. Honor §9 (the chokepoint principle).
 
 Single-tenant scope (`feedback_single-tenant-not-saas`) governs every reading of this doc. Re-examine if/when Friday explicitly becomes multi-tenant.
+
+---
+
+## 11. Slice 5 decisions (2026-05-27 — LLM Integration)
+
+Decisions made while implementing Slice 5 (`docs/rollouts/slice-5-llm-integration.md`).
+
+### Q11.1 — Provider list: DocType vs file?
+
+**Decision: DocType** (`LLM Provider`), populated via fixture or admin. The actual HTTP call code stays in `.py` files (forced by Frappe's RestrictedPython sandbox blocking `import requests`).
+
+- **Alternatives rejected:** Hardcoded `KNOWN_PROVIDERS = [...]` in Python (Hermes pattern); Frappe Server Script code in a DocType field (can't import SDKs).
+- **Rationale:** Admin-editable list, no deploy to enable a provider, audit-friendly. Per project memory `feedback-unified-gateway-service` and the user's correction during Slice 5 design discussion.
+
+### Q11.2 — API key location: per-row vs singleton?
+
+**Decision: per-row Password field on `LLM Provider`.** `Agent Settings` singleton only holds a `default_provider` Link.
+
+- **Deviation from earlier lock:** The earlier AskUserQuestion locked "singleton with one Password field per kind." Implementation went per-row instead, which is more flexible (two Minimax accounts = two rows with different keys) without losing the rotation property (single-key deployments still rotate by editing one row).
+- **Trade:** Slightly more places to manage keys if you have many providers. Net win for the multi-account case which we WILL hit at customer scale.
+
+### Q11.3 — Provider resolution order
+
+**Decision: three-level resolution, STRICT at level 1.**
+
+1. `Agent Profile.model_provider` — if linked row exists AND is active → use it. If linked row exists but is **inactive** → raise `LLMError` (do NOT fall through). If link is empty or target missing → fall through.
+2. `Agent Settings.default_provider` — if set and active → use it. Otherwise fall through.
+3. First active `LLM Provider` row by creation date — last resort.
+
+- **Why strict at level 1:** an admin who deactivated a provider almost certainly meant "stop this profile from working until I fix this," not "silently route to a different provider." The strict-on-inactive rule prevents a governance bug.
+- **Test caught it:** `test_raises_for_inactive_provider_link` in `test_llm_provider.py` was the failing test that surfaced the original (silent-fallback) bug during audit.
+
+### Q11.4 — System prompt assembly
+
+**Decision: minimal frame + operator content.**
+
+```
+"You are a Friday AI Agent. Respond conversationally or use a tool when
+appropriate. Think step by step. When you use a tool, output only the
+tool call — do not describe it.\n\n"
++ Agent Profile.system_prompt (verbatim)
+```
+
+- Operator controls the content; we don't inject framework internals.
+- Frame is constant across all agents; only the operator's text varies.
+
+### Q11.5 — History scope
+
+**Decision: hard truncate at last 10 turns** (20 Chat Message rows: 10 inbound + 10 outbound).
+
+- **Alternative rejected:** Token-budget capped — requires provider-specific tokenizers; deferred.
+- **Future:** Hermes-style summarization (`trajectory_compressor.py` pattern) will land in a later slice when long conversations become a real product concern.
+
+### Q11.6 — Error redaction
+
+**Decision: error messages report TYPE only, never raw exception body.**
+
+- `requests.exceptions.Timeout("Connection timed out to api.minimax.io?key=…")` → `LLMError("Last error type: Timeout")`
+- Response body parse errors include `response_keys=[...]` (structural), never values.
+- **Why:** the audit log is queryable in Desk by anyone with audit permission. Exception messages can carry URLs with query strings (auth tokens), API response excerpts (user PII), and provider-side error details. None of that belongs in audit.
+
+### Q11.7 — Retry budget caveat
+
+**Decision: 3 retries, exponential backoff (1+2+4s = 7s) + 30s timeout per attempt = up to ~97s.**
+
+- **Safe for sync dispatch** (CLI).
+- **Exceeds 10s webhook deadline** of Telegram/Slack — but the gateway already returns 200 to the webhook BEFORE queueing the async job, so the retry budget runs inside the RQ worker, not blocking the webhook. Verified by Slice 4 v2 architecture.
+- **Future:** dispatch-mode-aware retry policy may be added if customers hit cases where 97s is too long for a single conversation turn.
+
+### Q11.8 — Streaming
+
+**Deferred** (as in Slice 4's Q-deferred list). Same justification as Slice 4: streaming requires the Hermes-style "send placeholder, progressively edit" pattern; needs a streaming-capable surface first. Until then, one outbound row per turn.
+
+### Q11.9 — Tool calling
+
+**Tool DEFINITIONS** (the menu) are passed to the LLM via the `tools` parameter — so the LLM can describe a tool call in its response.
+
+**Tool INVOCATION** (actually executing the tool when the LLM picks one) is **deferred to Slice 6**. The provider returns the assistant's `content`; if it contains a `tool_calls` array, Slice 5 ignores it. Slice 6 will add the dispatcher that reads `tool_calls`, runs the permission check per skill, executes, and feeds the result back.
+
+### Q11.10 — Singleton via autoname trick
+
+**Decision: `autoname: "field:__default"` on a hidden field.**
+
+- **Alternative:** Frappe's `"issingle": 1` flag.
+- **Why this over issingle:** Single DocTypes store all fields in `tabSingles` as key-value rows. Less efficient and harder to reason about than a regular DocType with autoname-on-constant. Same admin UX (one row, edit-only).

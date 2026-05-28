@@ -8,7 +8,7 @@ SCOPE
 =====
 These tests verify:
   1. The LLMProvider ABC interface is correctly defined.
-  2. MinimixProvider makes well-formed HTTP requests.
+  2. MinimaxProvider makes well-formed HTTP requests.
   3. Error handling (401, 429, 500, timeout) behaves correctly.
   4. Provider resolution from profile → settings → first-active works.
   5. Missing provider raises a descriptive LLMError.
@@ -39,7 +39,7 @@ from frappe.friday_core.llm.provider import (
     LLMResponse,
     LLMError,
     LLMAuthError,
-    MinimixProvider,
+    MinimaxProvider,
     get_provider_for_profile,
 )
 
@@ -93,40 +93,42 @@ class TestLLMProviderInterface(unittest.TestCase):
             IncompleteProvider()  # type: ignore
 
 
-class TestMinimixProviderConstruction(unittest.TestCase):
-    """Verify MinimixProvider can be constructed with valid params."""
+class TestMinimaxProviderConstruction(unittest.TestCase):
+    """Verify MinimaxProvider can be constructed with valid params."""
 
     def test_construction_with_all_args(self):
         """All arguments are accepted and stored."""
-        p = MinimixProvider(
+        p = MinimaxProvider(
             api_key="sk-test-key",
             default_model="MiniMax-Standard",
-            base_url="https://api.minimax.chat",
+            base_url="https://api.minimaxi.com",  # custom override (China endpoint)
         )
         self.assertEqual(p.api_key, "sk-test-key")
         self.assertEqual(p.default_model, "MiniMax-Standard")
-        self.assertEqual(p.base_url, "https://api.minimax.chat")
+        self.assertEqual(p.base_url, "https://api.minimaxi.com")
 
     def test_construction_without_base_url_uses_default(self):
-        """base_url defaults to https://api.minimax.chat."""
-        p = MinimixProvider(api_key="sk-test", default_model="MiniMax-Standard")
-        self.assertEqual(p.base_url, "https://api.minimax.chat")
+        """base_url defaults to MinimaxProvider.DEFAULT_BASE_URL (international endpoint)."""
+        p = MinimaxProvider(api_key="sk-test", default_model="MiniMax-Standard")
+        self.assertEqual(p.base_url, MinimaxProvider.DEFAULT_BASE_URL)
+        # Sanity: the default is the OpenAI-compat international endpoint.
+        self.assertEqual(MinimaxProvider.DEFAULT_BASE_URL, "https://api.minimax.io")
 
     def test_get_default_model_returns_constructor_model(self):
         """get_default_model returns the model passed at construction."""
-        p = MinimixProvider(api_key="sk-test", default_model="MiniMax-Plus")
+        p = MinimaxProvider(api_key="sk-test", default_model="MiniMax-Plus")
         self.assertEqual(p.get_default_model(), "MiniMax-Plus")
 
 
 # ---------------------------------------------------------------------------
-# MinimixProvider.chat() — HTTP mocking tests
+# MinimaxProvider.chat() — HTTP mocking tests
 # ---------------------------------------------------------------------------
 
-class TestMinimixProviderChat(unittest.TestCase):
-    """Test MinimixProvider.chat() with mocked HTTP responses."""
+class TestMinimaxProviderChat(unittest.TestCase):
+    """Test MinimaxProvider.chat() with mocked HTTP responses."""
 
     def _make_provider(self, api_key: str = "sk-test", model: str = "MiniMax-Standard"):
-        return MinimixProvider(api_key=api_key, default_model=model)
+        return MinimaxProvider(api_key=api_key, default_model=model)
 
     @patch("frappe.friday_core.llm.provider.requests.post")
     def test_chat_sends_correct_headers(self, mock_post: MagicMock):
@@ -281,7 +283,13 @@ class TestMinimixProviderChat(unittest.TestCase):
 
     @patch("frappe.friday_core.llm.provider.requests.post")
     def test_chat_timeout_raises_llm_error(self, mock_post: MagicMock):
-        """requests.exceptions.Timeout is caught and retried, then raises LLMError."""
+        """requests.exceptions.Timeout is caught and retried, then raises LLMError.
+
+        Per the redaction policy (audit fix H1): the raised LLMError reports
+        the exception TYPE only, not the original message — Timeout/Connection
+        errors can include URLs with query strings, which we never want in
+        the Frappe Error Log.
+        """
         import requests
 
         mock_post.side_effect = requests.exceptions.Timeout("Connection timed out")
@@ -290,12 +298,18 @@ class TestMinimixProviderChat(unittest.TestCase):
         with self.assertRaises(LLMError) as ctx:
             p.chat(messages=[{"role": "user", "content": "hi"}])
 
-        self.assertIn("timed out", str(ctx.exception))
+        # Assert the type name appears, NOT the underlying message text.
+        self.assertIn("Timeout", str(ctx.exception))
+        # And explicitly verify the underlying message text does NOT leak.
+        self.assertNotIn("timed out", str(ctx.exception))
         self.assertEqual(mock_post.call_count, 3)
 
     @patch("frappe.friday_core.llm.provider.requests.post")
     def test_chat_connection_error_raises_llm_error(self, mock_post: MagicMock):
-        """Connection errors are caught and retried, then raise LLMError."""
+        """Connection errors are caught and retried, then raise LLMError.
+
+        Same redaction policy — type only, never the underlying message.
+        """
         import requests
 
         mock_post.side_effect = requests.exceptions.ConnectionError("Connection refused")
@@ -304,7 +318,8 @@ class TestMinimixProviderChat(unittest.TestCase):
         with self.assertRaises(LLMError) as ctx:
             p.chat(messages=[{"role": "user", "content": "hi"}])
 
-        self.assertIn("refused", str(ctx.exception))
+        self.assertIn("ConnectionError", str(ctx.exception))
+        self.assertNotIn("refused", str(ctx.exception))
         self.assertEqual(mock_post.call_count, 3)
 
     @patch("frappe.friday_core.llm.provider.requests.post")
@@ -407,7 +422,7 @@ class TestGetProviderForProfile(unittest.TestCase):
         frappe.db.commit()
 
         provider = get_provider_for_profile(self.TEST_PROFILE)
-        self.assertIsInstance(provider, MinimixProvider)
+        self.assertIsInstance(provider, MinimaxProvider)
         self.assertEqual(provider.api_key, f"test-api-key-{self.TEST_PROVIDER}")
 
     def test_resolves_from_settings_default_provider(self):
@@ -423,12 +438,12 @@ class TestGetProviderForProfile(unittest.TestCase):
         frappe.db.commit()
 
         provider = get_provider_for_profile(self.TEST_PROFILE)
-        self.assertIsInstance(provider, MinimixProvider)
+        self.assertIsInstance(provider, MinimaxProvider)
 
     def test_resolves_to_first_active_when_no_links_set(self):
         """No profile link and no settings default → first active LLM Provider row."""
         provider = get_provider_for_profile(self.TEST_PROFILE)
-        self.assertIsInstance(provider, MinimixProvider)
+        self.assertIsInstance(provider, MinimaxProvider)
 
     def test_raises_for_inactive_provider_link(self):
         """Profile links to an inactive LLM Provider → raises LLMError."""
