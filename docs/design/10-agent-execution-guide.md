@@ -107,7 +107,7 @@ Each slice corresponds roughly to a week in `06-phase-one-scope.md`. Slices buil
 
 1. `friday/gateway/prompt_builder.py` — system prompt = `Agent Profile.system_prompt` + recent session history.
 2. `friday/agents/runner.py` v1 — calls the provider directly (no aggregator dependency). **Minimax M2 is the Phase 1 provider** per glossary and `03-technical-stack.md`; the adapter interface is wide enough to add Claude / OpenAI / OpenRouter later.
-3. Provider API key stored as a Frappe `Password` field on a singleton `Agent Settings` DocType (decision: singleton, not per-profile — rotating once propagates everywhere).
+3. Provider API key stored as a Frappe `Password` field on the `LLM Provider` DocType (one row per provider, selectable per Agent Profile via `model_provider` link).
 4. Tests: mock provider API; prompt assembly deterministic given inputs; reply Chat Message has correct `agent_profile` and `direction=outbound`.
 
 **Deliverable:** `friday chat` produces a real LLM reply.
