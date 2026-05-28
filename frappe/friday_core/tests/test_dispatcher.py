@@ -521,6 +521,16 @@ class TestRegisterSkillHandler(unittest.TestCase):
 class TestDispatchNoToolCallName(unittest.TestCase):
     """Tool call dict has no 'name' field."""
 
+    @classmethod
+    def setUpClass(cls):
+        frappe.db.rollback()
+        _ensure_role(ROLE_CAN_CREATE, create_perm=True)
+        _ensure_llm_provider()
+        _ensure_skill()
+        _ensure_profile(PROFILE_ALLOWED, ROLE_CAN_CREATE, SKILL_NAME)
+        _link_provider_to_profile(PROFILE_ALLOWED)
+        frappe.db.commit()
+
     def test_empty_name_returns_error_result(self):
         tool_call = {
             "id": "call_slice6_n001",
