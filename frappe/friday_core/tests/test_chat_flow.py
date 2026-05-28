@@ -48,6 +48,7 @@ from __future__ import annotations
 import time
 import unittest
 import uuid
+from unittest.mock import MagicMock, patch
 
 import frappe
 
@@ -64,6 +65,7 @@ TEST_ROLE = "Friday Test Reader"
 PROFILE_WITH_TOOLS = "FRIDAY-SLICE4V2-PROFILE-TOOLS"
 PROFILE_NO_TOOLS = "FRIDAY-SLICE4V2-PROFILE-NO-TOOLS"
 SKILL_NAME = "slice4v2-skill"
+TEST_LLM_PROVIDER = "friday-chatflow-test-provider"
 
 # Async-platform test fixtures (for recovery sweeper tests)
 ASYNC_PLATFORM_NAME = "test-async-platform"
@@ -150,6 +152,41 @@ def _ensure_async_platform():
 	).insert(ignore_permissions=True)
 
 
+def _ensure_llm_provider():
+	"""Create a test LLM Provider row."""
+	if frappe.db.exists("LLM Provider", TEST_LLM_PROVIDER):
+		doc = frappe.get_doc("LLM Provider", TEST_LLM_PROVIDER)
+		doc.is_active = 1
+		doc.provider_type = "minimax"
+		doc.api_key = "test-key-for-chatflow"
+		doc.default_model = "MiniMax-Standard"
+		doc.save(ignore_permissions=True)
+		return
+	frappe.get_doc(
+		{
+			"doctype": "LLM Provider",
+			"provider_name": TEST_LLM_PROVIDER,
+			"provider_type": "minimax",
+			"is_active": 1,
+			"api_key": "test-key-for-chatflow",
+			"default_model": "MiniMax-Standard",
+			"default_max_tokens": 2048,
+			"default_temperature": 0.7,
+		}
+	).insert(ignore_permissions=True)
+
+
+def _link_provider_to_profile(profile_name: str):
+	"""Link the test LLM Provider to the given profile's model_provider field."""
+	frappe.db.set_value(
+		"Agent Profile",
+		profile_name,
+		"model_provider",
+		TEST_LLM_PROVIDER,
+		update_modified=False,
+	)
+
+
 # =============================================================================
 # Chat flow tests — the meat of Slice 4 v2
 # =============================================================================
@@ -160,8 +197,10 @@ class TestChatFlow(unittest.TestCase):
 	def setUpClass(cls):
 		_ensure_role()
 		_ensure_skill()
+		_ensure_llm_provider()
 		_ensure_profile(PROFILE_WITH_TOOLS, with_skill=True)
 		_ensure_profile(PROFILE_NO_TOOLS, with_skill=False)
+		_link_provider_to_profile(PROFILE_WITH_TOOLS)
 		frappe.db.commit()
 
 	def setUp(self):
@@ -175,15 +214,29 @@ class TestChatFlow(unittest.TestCase):
 	# ------- the stub agent runner -------
 
 	def test_run_turn_pure_function_returns_reply_with_tool_count(self):
-		"""run_turn is pure: no DB writes, deterministic reply text."""
-		before = frappe.db.count("Chat Message")
-		reply = run_turn(PROFILE_WITH_TOOLS, "session-pure", "hello")
-		after = frappe.db.count("Chat Message")
+		"""run_turn is pure: no DB writes, deterministic reply text.
+		
+		Slice 5 update: run_turn calls the real LLM via get_provider_for_profile.
+		We patch MinimixProvider.chat directly so no HTTP or DB calls are made.
+		"""
+		from frappe.friday_core.llm.provider import MinimixProvider
+
+		reply_content = f"I can help with that using {SKILL_NAME}."
+
+		def fake_chat(self, messages, tools=None, model=None):
+			return {
+				"content": reply_content,
+				"finish_reason": "stop",
+				"usage": {"prompt_tokens": 10, "completion_tokens": 5, "total_tokens": 15},
+			}
+
+		with patch.object(MinimixProvider, "chat", fake_chat):
+			before = frappe.db.count("Chat Message")
+			reply = run_turn(PROFILE_WITH_TOOLS, "session-pure", "hello")
+			after = frappe.db.count("Chat Message")
 
 		self.assertEqual(before, after, "run_turn must NOT write Chat Message rows")
-		self.assertIn("tool(s) available", reply)
 		self.assertIn(SKILL_NAME, reply)
-		self.assertIn("echo: hello", reply)
 
 	# ------- end-to-end CLI -> gateway -> back -------
 
@@ -204,8 +257,19 @@ class TestChatFlow(unittest.TestCase):
 		self.assertEqual(rows[0]["processed"], 1, "gateway should mark inbound processed")
 
 	def test_handle_user_message_gateway_writes_outbound_row(self):
-		session_id = str(uuid.uuid4())
-		reply = handle_user_message(PROFILE_WITH_TOOLS, session_id, "beta")
+		"""Gateway writes outbound row with correct sender_id and content from LLM."""
+		from frappe.friday_core.llm.provider import MinimixProvider
+
+		def fake_chat(self, messages, tools=None, model=None):
+			return {
+				"content": "Got your message beta",
+				"finish_reason": "stop",
+				"usage": {"prompt_tokens": 10, "completion_tokens": 5, "total_tokens": 15},
+			}
+
+		with patch.object(MinimixProvider, "chat", fake_chat):
+			session_id = str(uuid.uuid4())
+			reply = handle_user_message(PROFILE_WITH_TOOLS, session_id, "beta")
 
 		rows = frappe.get_all(
 			"Chat Message",
@@ -215,17 +279,28 @@ class TestChatFlow(unittest.TestCase):
 		self.assertEqual(len(rows), 1, "gateway should write exactly one outbound row per inbound")
 		self.assertEqual(rows[0]["content"], reply)
 		self.assertEqual(rows[0]["sender_id"], PROFILE_WITH_TOOLS)
-		self.assertIn("echo: beta", reply)
+		self.assertEqual(rows[0]["content"], "Got your message beta")
 
 	def test_handle_user_message_returns_outbound_content(self):
 		"""The string returned by handle_user_message equals the outbound row's content."""
-		session_id = str(uuid.uuid4())
-		reply = handle_user_message(PROFILE_WITH_TOOLS, session_id, "gamma")
-		stored = frappe.db.get_value(
-			"Chat Message",
-			{"session_id": session_id, "direction": "outbound"},
-			"content",
-		)
+		from frappe.friday_core.llm.provider import MinimixProvider
+
+		def fake_chat(self, messages, tools=None, model=None):
+			return {
+				"content": "gamma response",
+				"finish_reason": "stop",
+				"usage": {"prompt_tokens": 10, "completion_tokens": 5, "total_tokens": 15},
+			}
+
+		with patch.object(MinimixProvider, "chat", fake_chat):
+			session_id = str(uuid.uuid4())
+			reply = handle_user_message(PROFILE_WITH_TOOLS, session_id, "gamma")
+			stored = frappe.db.get_value(
+				"Chat Message",
+				{"session_id": session_id, "direction": "outbound"},
+				"content",
+			)
+
 		self.assertEqual(reply, stored)
 
 	def test_session_id_shared_across_both_directions(self):
@@ -315,11 +390,22 @@ class TestChatFlow(unittest.TestCase):
 		self.assertIn("agent_profile", outbound[0]["content"])
 
 	def test_round_trip_under_one_second(self):
-		"""Latency budget: <1s on local dev. Stub runner should be ~10ms total."""
-		session_id = str(uuid.uuid4())
-		start = time.perf_counter()
-		handle_user_message(PROFILE_WITH_TOOLS, session_id, "perf check")
-		elapsed = time.perf_counter() - start
+		"""Latency budget: <1s on local dev. Mocked LLM call should be ~10ms total."""
+		from frappe.friday_core.llm.provider import MinimixProvider
+
+		def fake_chat(self, messages, tools=None, model=None):
+			return {
+				"content": "perf response",
+				"finish_reason": "stop",
+				"usage": {"prompt_tokens": 10, "completion_tokens": 5, "total_tokens": 15},
+			}
+
+		with patch.object(MinimixProvider, "chat", fake_chat):
+			session_id = str(uuid.uuid4())
+			start = time.perf_counter()
+			handle_user_message(PROFILE_WITH_TOOLS, session_id, "perf check")
+			elapsed = time.perf_counter() - start
+
 		self.assertLess(elapsed, 1.0, f"round-trip should be <1s, got {elapsed:.3f}s")
 
 
