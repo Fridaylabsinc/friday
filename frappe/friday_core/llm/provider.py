@@ -74,6 +74,7 @@ class LLMResponse(TypedDict):
     content: str
     finish_reason: str
     usage: dict  # {prompt_tokens, completion_tokens, total_tokens}
+    tool_calls: list[dict] | None  # Minimax/OpenAI tool call list, or None
 
 
 class LLMError(Exception):
@@ -273,6 +274,9 @@ class MinimaxProvider(LLMProvider):
         message = choice.get("message", {})
         content = message.get("content", "")
 
+        # Tool calls (Minimax uses the same OpenAI-style tool_calls field).
+        tool_calls = message.get("tool_calls") or None
+
         # Usage block.
         usage = data.get("usage", {})
         return LLMResponse(
@@ -283,6 +287,7 @@ class MinimaxProvider(LLMProvider):
                 "completion_tokens": usage.get("completion_tokens", 0),
                 "total_tokens": usage.get("total_tokens", 0),
             },
+            tool_calls=tool_calls,
         )
 
 
