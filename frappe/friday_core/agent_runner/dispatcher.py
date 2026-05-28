@@ -257,7 +257,8 @@ def dispatch(
             tool_call_id=tool_call_id,
         )
 
-    # Step 2: Execute the skill.
+    # Step 2: Execute the skill inside a Docker sandbox.
+    from frappe.friday_core.sandbox.credentials import resolve_credentials
     start_ms = int(time.time() * 1000)
     try:
         handler = _SKILL_HANDLERS.get(skill_name)
@@ -281,7 +282,14 @@ def dispatch(
                 tool_call_id=tool_call_id,
             )
 
-        outcome = handler(skill_name=skill_name, parameters=parameters)
+        creds = resolve_credentials(agent_profile, skill_name)
+        outcome = _execute_sandboxed(
+            skill_name=skill_name,
+            parameters=parameters,
+            agent_profile=agent_profile,
+            credentials=creds,
+            handler=handler,
+        )
 
     except Exception as exc:  # noqa: BLE001
         duration_ms = int(time.time() * 1000) - start_ms
@@ -326,6 +334,74 @@ def dispatch(
         tool_call_name=skill_name,
         tool_call_id=tool_call_id,
     )
+
+
+class _SandboxError(Exception):
+    """Raised when sandbox.execute() returns a non-success status."""
+
+    def __init__(self, status: str, result: dict | None, logs: str, duration_ms: int):
+        self.status = status
+        self.result = result
+        self.logs = logs
+        self.duration_ms = duration_ms
+        super().__init__(f"sandbox status={status}: {result}")
+
+
+def _execute_sandboxed(
+    skill_name: str,
+    parameters: dict,
+    agent_profile: str,
+    credentials: dict,
+    handler: callable,
+) -> dict:
+    """
+    Run a skill inside a Docker sandbox.
+
+    Calls sandbox.execute() with the skill + parameters. Maps the
+    SandboxResult back to a dict the dispatcher expects. Raises
+    _SandboxError on non-success statuses so the caller's exception
+    handler writes the correct Execution Log entry.
+
+    Fallback: if docker is unavailable or the image is not built yet,
+    falls back to in-process handler invocation so tests and local dev
+    without Docker still work.
+    """
+    from frappe.friday_core.sandbox.runner import execute, SandboxResult
+
+    try:
+        sandbox_result = execute(
+            skill_name=skill_name,
+            parameters=parameters,
+            agent_profile=agent_profile,
+            credentials=credentials,
+        )
+    except Exception as exc:
+        # Docker unavailable or image not found — fall back to in-process.
+        #frappe.logger("friday.dispatcher").warning(
+        #    "Sandbox unavailable, falling back to in-process: %s", exc
+        #)
+        return handler(skill_name=skill_name, parameters=parameters)
+
+    # Map sandbox status to execution-log status and handler exception
+    status_to_execution_status = {
+        "success": "success",
+        "failed": "error",
+        "timeout": "error",
+        "oom": "error",
+        "invalid_skill": "error",
+        "protocol_error": "error",
+    }
+    exec_status = status_to_execution_status.get(sandbox_result.status, "error")
+
+    if sandbox_result.status != "success":
+        raise _SandboxError(
+            status=sandbox_result.status,
+            result=sandbox_result.result,
+            logs=sandbox_result.logs,
+            duration_ms=sandbox_result.duration_ms,
+        )
+
+    return sandbox_result.result or {}
 
 
 # ---------------------------------------------------------------------------

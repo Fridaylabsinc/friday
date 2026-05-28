@@ -51,7 +51,7 @@
             "fieldtype": "Select",
             "in_list_view": 1,
             "label": "Status",
-            "options": "success\nfailed\nrejected\ntimeout\nerror",
+            "options": "success\nfailed\nrejected\ntimeout\noom\nerror",
             "reqd": 1
         },
         {
