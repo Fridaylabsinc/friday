@@ -9,7 +9,7 @@ FROM python:3.14-slim AS runtime
 RUN pip install --no-cache-dir \
     requests==2.32.3 \
     pydantic==2.7.1 \
-    frappe-client==1.0.0
+    frappe-client==0.1.0.dev0
 
 # ---------------------------------------------------------------
 # Nonroot user (matches UID 65532 used by runner.py)

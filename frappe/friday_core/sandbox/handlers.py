@@ -7,10 +7,12 @@ Bundled skill handlers — shipped inside the Docker runtime image.
 Phase 1: all Phase 1 skills are Python modules registered here.
 Authentication: none (the container's env vars contain scoped credentials).
 
+Dependencies (installed in Docker image):
+- requests==2.32.3  — HTTP calls to Frappe REST API
+- frappe-client==0.1.0.dev0  — Frappe API client
+
 Each handler receives:
     parameters: dict  — the LLM-passed arguments
-    frappe_base_url: str
-    api_token: str
 
 Each handler returns:
     dict — the skill's structured output (serialised into the result JSON)

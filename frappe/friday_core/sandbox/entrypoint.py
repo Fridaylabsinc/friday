@@ -13,6 +13,10 @@ Usage inside container:
 
 (task.json is piped by the orchestrator via attach_socket;
 fallback: read from stdin directly)
+
+Dependencies (installed in Dockerfile):
+- requests==2.32.3  — HTTP calls to Frappe REST API
+- frappe-client==0.1.0.dev0  — Frappe API client (used by skill handlers)
 """
 
 import json
