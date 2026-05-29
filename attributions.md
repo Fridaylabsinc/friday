@@ -25,4 +25,20 @@ The following 3rd-party software packages may be used by or distributed with <ht
 
 ---
 
-Last updated: 4th July 2022
+## Hermes Attribution
+
+Friday adapts design concepts from [Hermes](https://github.com/Friday-Labs-Inc/hermes), a prior experiment in governed agentic workflows. The following modules contain adapted logic:
+
+| Module | Adaptation Type | Notes |
+|--------|----------------|-------|
+| `frappe.friday_core.gateway` | REWRITE | Full rewrite adapted from Hermes gateway |
+| `frappe.friday_core.cli` | ADAPT | Adapted CLI patterns, reimplemented for Frappe v16 |
+| `frappe.friday_core.agent_runner` | ADAPT | Adapted runner patterns, reimplemented for Frappe DocTypes |
+
+For questions about the Hermes relationship, see:
+- [Design: Porting Strategy](docs/design/41-porting-strategy-hermes-erpnext-raven.md)
+- [Design: Gap Analysis](docs/design/40-gap-analysis-and-resolution-plan.md)
+
+---
+
+Last updated: 29th May 2026

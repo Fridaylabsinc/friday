@@ -23,7 +23,7 @@ Usage:
     # result.status in ("success", "failed", "timeout", "oom")
 """
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 import json
 import time
 import uuid
@@ -97,6 +97,10 @@ def _get_client() -> "docker.DockerClient":
     return _client
 
 
+def _logger() -> "Any":
+    return frappe.logger("friday.sandbox")
+
+
 # ---------------------------------------------------------------------------
 # Network setup helpers
 # ---------------------------------------------------------------------------
@@ -125,6 +129,52 @@ def get_frappe_host_network_info() -> tuple[str, int]:
     site = getattr(frappe.local, "site", "friday.localhost")
     # Frappe serves on port 8000 by default
     return site, 8000
+
+
+# ---------------------------------------------------------------------------
+# Egress allowlist
+# ---------------------------------------------------------------------------
+
+def _get_egress_config(agent_profile: str) -> tuple[str, list[str]]:
+    """
+    Returns (frappe_host, extra_allowlist_hosts) for a given agent profile.
+
+    The sandbox network restricts egress to explicitly allowlisted hosts only.
+    Always allowed: Frappe API host (so skills can call back).
+    Additional hosts: comma/newline-separated in Agent Profile network_allowlist.
+    """
+    frappe_host, _ = get_frappe_host_network_info()
+    extra_hosts: list[str] = []
+
+    try:
+        profile = frappe.get_doc("Agent Profile", agent_profile)
+        raw = profile.get("network_allowlist") or ""
+        if raw:
+            # Comma or newline separated host list
+            extra_hosts = [
+                h.strip()
+                for h in raw.replace("\n", ",").split(",")
+                if h.strip()
+            ]
+    except Exception:  # noqa: BLE001
+        pass
+
+    return frappe_host, extra_hosts
+
+
+def _build_etc_hosts(frappe_host: str, extra_hosts: list[str]) -> str:
+    """
+    Build /etc/hosts content for a container.
+    Resolves all allowlisted hosts to 127.0.0.1 so containers cannot
+    reach external addresses for allowlisted hostnames.
+    Unknown hosts will fail DNS resolution (egress blocked).
+    """
+    lines = ["127.0.0.1 localhost", f"127.0.0.1 {frappe_host}"]
+    for h in extra_hosts:
+        h = h.strip()
+        if h and h not in lines:
+            lines.append(f"127.0.0.1 {h}")
+    return "\n".join(lines) + "\n"
 
 
 # ---------------------------------------------------------------------------
@@ -245,6 +295,10 @@ def execute(
     )
     timeout_seconds = min(timeout_seconds, resolved_timeout)
 
+    # Resolve egress allowlist
+    frappe_host, extra_allowlist = _get_egress_config(agent_profile)
+    etc_hosts_content = _build_etc_hosts(frappe_host, extra_allowlist)
+
     # Generate scoped credential token
     api_token = _generate_scoped_token(agent_profile, execution_id)
 
@@ -269,6 +323,8 @@ def execute(
         f"FRIDAY_FRAPPE_BASE={frappe_base_url}",
         f"FRIDAY_API_KEY={api_token}",  # used by Frappe client inside container
     ]
+    # Inject allowlist hosts into container's /etc/hosts
+    env.append(f"FRIDAY_EGRESS_ALLOWLIST={','.join(extra_allowlist)}")
 
     started_at = time.monotonic()
 
@@ -288,6 +344,15 @@ def execute(
         "environment": env,
         "labels": {"friday": "true"},
     }
+
+    # Wire /etc/hosts for allowlisted destinations
+    import tempfile, os
+    tmpdir = tempfile.mkdtemp(prefix="friday-egress-")
+    hosts_path = os.path.join(tmpdir, "hosts")
+    with open(hosts_path, "w") as f:
+        f.write(etc_hosts_content)
+    container_kwargs["volumes"] = {hosts_path: {"bind": "/etc/hosts", "mode": "ro"}}
+
     # Only attach to sandbox network when Docker is available
     if network is not None:
         container_kwargs["network"] = NETWORK_NAME
@@ -297,7 +362,6 @@ def execute(
         try:
             client.images.get(DOCKER_IMAGE)
         except Exception:  # noqa: BLE001
-            # Image not found or Docker unavailable — try pull anyway
             try:
                 client.images.pull(DOCKER_IMAGE)
             except Exception:  # noqa: BLE001
@@ -312,13 +376,12 @@ def execute(
             streams.write(payload_bytes)
             streams.close()
         except Exception:
-            pass  # some images may not support attach_socket; entrypoint reads from stdin directly
+            pass  # some images may not support attach_socket
 
         # Wait for result or timeout
         result_lines = []
         timeout_reached = False
 
-        # Poll until we have the result marker or timeout / container dies
         while True:
             elapsed_s = time.monotonic() - started_at
             if elapsed_s > timeout_seconds:
@@ -409,7 +472,6 @@ def janitor_cleanup():
         for container in client.containers.list(all=True, filters={"label": "friday=true"}):
             created_at = container.attrs.get("Created", 0)
             if isinstance(created_at, str):
-                # ISO timestamp
                 try:
                     import time as _time
 
@@ -422,7 +484,7 @@ def janitor_cleanup():
                 continue
 
             if created_ts < cutoff_ts:
-                frappe.logger("friday.sandbox").warning(
+                _logger().warning(
                     "Janitor removing stale container: %s (created %s)",
                     container.short_id,
                     created_at,
@@ -436,6 +498,4 @@ def janitor_cleanup():
                 except Exception:
                     pass
     except Exception as e:
-        frappe.logger("friday.sandbox").error(
-            "Janitor failed: %s", e
-        )
+        _logger().error("Janitor failed: %s", e)

@@ -1,0 +1,220 @@
+# Copyright (c) 2026, Friday Labs and contributors
+# License: MIT. See license.txt
+
+"""
+Unit tests for the task workflow state-machine hook.
+
+Covers: dispatchable derivation, started_at/completed_at timestamps,
+assigned_to_profile clearing on cancel, and Redis pub/sub emission.
+"""
+
+import unittest
+from unittest.mock import MagicMock, patch
+
+
+def _mock_doc(**attrs):
+	"""
+	Return a MagicMock doc with has_value_changed pre-wired as a side-effect
+	function so tests can control the return for each call independently.
+	"""
+	doc = MagicMock(**attrs)
+	# has_value_changed must be a callable that returns the expected bool.
+	# Using a real MagicMock so chained calls like
+	#   doc.has_value_changed("workflow_state").return_value = X
+	# work correctly.
+	doc.has_value_changed = MagicMock()
+	return doc
+
+
+class TestDispatchableStates(unittest.TestCase):
+	"""DISPATCHABLE_STATES is a frozen frozenset with Pending and Assigned."""
+
+	def test_dispatchable_states_is_frozenset(self):
+		from frappe.friday_core.tasks.workflow import DISPATCHABLE_STATES
+		self.assertIsInstance(DISPATCHABLE_STATES, frozenset)
+
+	def test_dispatchable_states_contains_pending_and_assigned(self):
+		from frappe.friday_core.tasks.workflow import DISPATCHABLE_STATES
+		self.assertIn("Pending", DISPATCHABLE_STATES)
+		self.assertIn("Assigned", DISPATCHABLE_STATES)
+
+	def test_dispatchable_states_does_not_contain_other_states(self):
+		from frappe.friday_core.tasks.workflow import DISPATCHABLE_STATES
+		for state in ("Executing", "Blocked", "Review", "Completed", "Cancelled"):
+			self.assertNotIn(state, DISPATCHABLE_STATES)
+
+
+class TestOnStateChangeDispatchable(unittest.TestCase):
+	"""on_state_change sets dispatchable from workflow_state."""
+
+	@patch("frappe.friday_core.tasks.workflow.frappe")
+	def test_pending_sets_dispatchable_true(self, mock_frappe):
+		from frappe.friday_core.tasks.workflow import on_state_change
+
+		doc = _mock_doc(workflow_state="Pending", dispatchable=False)
+
+		on_state_change(doc, "on_update")
+
+		self.assertTrue(doc.dispatchable)
+
+	@patch("frappe.friday_core.tasks.workflow.frappe")
+	def test_assigned_sets_dispatchable_true(self, mock_frappe):
+		from frappe.friday_core.tasks.workflow import on_state_change
+
+		doc = _mock_doc(workflow_state="Assigned", dispatchable=False)
+
+		on_state_change(doc, "on_update")
+
+		self.assertTrue(doc.dispatchable)
+
+	@patch("frappe.friday_core.tasks.workflow.frappe")
+	def test_executing_sets_dispatchable_false(self, mock_frappe):
+		from frappe.friday_core.tasks.workflow import on_state_change
+
+		doc = _mock_doc(workflow_state="Executing", dispatchable=True)
+
+		on_state_change(doc, "on_update")
+
+		self.assertFalse(doc.dispatchable)
+
+
+class TestStartedAt(unittest.TestCase):
+	"""started_at is recorded when entering the Executing state."""
+
+	@patch("frappe.friday_core.tasks.workflow.frappe")
+	def test_transitioning_to_executing_sets_started_at(self, mock_frappe):
+		from frappe.friday_core.tasks.workflow import on_state_change
+
+		mock_frappe.utils.now_datetime.return_value = "2026-01-01 12:00:00"
+
+		doc = _mock_doc(workflow_state="Executing", started_at=None)
+		doc.has_value_changed.return_value = True
+
+		on_state_change(doc, "on_update")
+
+		self.assertEqual(doc.started_at, "2026-01-01 12:00:00")
+
+	@patch("frappe.friday_core.tasks.workflow.frappe")
+	def test_started_at_not_overwritten_if_already_set(self, mock_frappe):
+		from frappe.friday_core.tasks.workflow import on_state_change
+
+		existing = "2025-12-01 09:00:00"
+		mock_frappe.utils.now_datetime.return_value = "2026-01-01 12:00:00"
+
+		doc = _mock_doc(workflow_state="Executing", started_at=existing)
+		doc.has_value_changed.return_value = True
+
+		on_state_change(doc, "on_update")
+
+		# Should remain the pre-existing value.
+		self.assertEqual(doc.started_at, existing)
+
+
+class TestCompletedAt(unittest.TestCase):
+	"""completed_at is recorded when entering Completed or Cancelled."""
+
+	@patch("frappe.friday_core.tasks.workflow.frappe")
+	def test_completing_sets_completed_at(self, mock_frappe):
+		from frappe.friday_core.tasks.workflow import on_state_change
+
+		mock_frappe.utils.now_datetime.return_value = "2026-01-01 18:00:00"
+
+		doc = _mock_doc(workflow_state="Completed", completed_at=None)
+		doc.has_value_changed.return_value = True
+
+		on_state_change(doc, "on_update")
+
+		self.assertEqual(doc.completed_at, "2026-01-01 18:00:00")
+
+	@patch("frappe.friday_core.tasks.workflow.frappe")
+	def test_cancelling_sets_completed_at(self, mock_frappe):
+		from frappe.friday_core.tasks.workflow import on_state_change
+
+		mock_frappe.utils.now_datetime.return_value = "2026-01-01 18:00:00"
+
+		doc = _mock_doc(workflow_state="Cancelled", completed_at=None)
+		doc.has_value_changed.return_value = True
+
+		on_state_change(doc, "on_update")
+
+		self.assertEqual(doc.completed_at, "2026-01-01 18:00:00")
+
+
+class TestAssignedToProfileClearing(unittest.TestCase):
+	"""assigned_to_profile is cleared when transitioning to Cancelled."""
+
+	@patch("frappe.friday_core.tasks.workflow.frappe")
+	def test_cancelling_clears_assigned_to_profile(self, mock_frappe):
+		from frappe.friday_core.tasks.workflow import on_state_change
+
+		doc = _mock_doc(workflow_state="Cancelled", assigned_to_profile="note_taker", completed_at=None)
+		doc.has_value_changed.return_value = True
+
+		on_state_change(doc, "on_update")
+
+		self.assertIsNone(doc.assigned_to_profile)
+
+
+class TestPublishRealtime(unittest.TestCase):
+	"""Redis pub/sub is emitted when transitioning to Assigned with profile change."""
+
+	@patch("frappe.friday_core.tasks.workflow.frappe")
+	def test_emits_realtime_on_pending_to_assigned(self, mock_frappe):
+		from frappe.friday_core.tasks.workflow import on_state_change
+
+		doc = _mock_doc(
+			workflow_state="Assigned",
+			assigned_to_profile="note_taker",
+			completed_at=None,
+		)
+		# MagicMock(name="AT-000042") sets the mock's debug name, not doc.name.
+		# Set it explicitly so doc.name returns the real string.
+		type(doc).name = property(lambda self: "AT-000042")
+		# First call: workflow_state changed → True
+		# Second call: assigned_to_profile changed → True
+		doc.has_value_changed.side_effect = lambda key: True
+
+		on_state_change(doc, "on_update")
+
+		# Extract the actual task_name string from the call args
+		call_args = mock_frappe.publish_realtime.call_args
+		actual_message = call_args.kwargs["message"]
+		self.assertEqual(actual_message["task_name"], "AT-000042")
+		self.assertEqual(actual_message["assigned_to_profile"], "note_taker")
+		self.assertEqual(actual_message["workflow_state"], "Assigned")
+
+	@patch("frappe.friday_core.tasks.workflow.frappe")
+	def test_no_emit_when_assigned_but_profile_unchanged(self, mock_frappe):
+		from frappe.friday_core.tasks.workflow import on_state_change
+
+		doc = _mock_doc(
+			workflow_state="Assigned",
+			assigned_to_profile="note_taker",
+			completed_at=None,
+			name="AT-000042",
+		)
+		# workflow_state changed → True, but assigned_to_profile unchanged → False
+		doc.has_value_changed.side_effect = lambda key: key != "assigned_to_profile"
+
+		on_state_change(doc, "on_update")
+
+		mock_frappe.publish_realtime.assert_not_called()
+
+
+class TestSaveCalled(unittest.TestCase):
+	"""doc.save(ignore_permissions=True) is always called."""
+
+	@patch("frappe.friday_core.tasks.workflow.frappe")
+	def test_save_called_even_when_no_state_change(self, mock_frappe):
+		from frappe.friday_core.tasks.workflow import on_state_change
+
+		doc = _mock_doc(workflow_state="Executing", dispatchable=False)
+		doc.has_value_changed.return_value = False
+
+		on_state_change(doc, "on_update")
+
+		doc.save.assert_called_once_with(ignore_permissions=True)
+
+
+if __name__ == "__main__":
+	unittest.main()
