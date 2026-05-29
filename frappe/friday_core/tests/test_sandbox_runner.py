@@ -41,6 +41,8 @@ from frappe.friday_core.sandbox.runner import (
     execute,
     _parse_result,
     _resolve_limits,
+    _get_egress_config,
+    _build_etc_hosts,
     RESULT_BEGIN,
     RESULT_END,
 )
@@ -135,8 +137,9 @@ class TestExecuteHappyPath(unittest.TestCase):
         frappe.db.rollback()
 
     @patch("frappe.friday_core.sandbox.runner._get_client")
+    @patch("frappe.friday_core.sandbox.runner.frappe")
     @patch("frappe.friday_core.sandbox.runner.time.monotonic")
-    def test_execute_returns_success_with_result(self, mock_monotonic, mock_get_client):
+    def test_execute_returns_success_with_result(self, mock_monotonic, mock_frappe, mock_get_client):
         logs = _make_result_envelope("success", {"name": "Note-001", "title": "Test"})
         container = _mock_container(exit_code=0, logs_bytes=logs)
         container.status = "exited"
@@ -146,8 +149,12 @@ class TestExecuteHappyPath(unittest.TestCase):
         mock_client.networks.get.return_value = MagicMock()
         mock_get_client.return_value = mock_client
 
-        # Mock monotonic to return values that simulate elapsed time.
-        # started_at=1, subsequent checks show elapsed > 0 → duration_ms > 0
+        mock_frappe.local.site = "testsite.local"
+        mock_profile = MagicMock()
+        mock_profile.get.side_effect = lambda k: {"network_allowlist": ""}.get(k)
+        mock_frappe.get_doc.return_value = mock_profile
+
+        # Mock monotonic: started_at, iter1, iter2 (exits), duration_ms
         mock_monotonic.side_effect = [1.0, 1.001, 1.5, 1.6, 1.7]
 
         result = execute(
@@ -204,7 +211,8 @@ class TestExecuteExceptionHandling(unittest.TestCase):
         frappe.db.rollback()
 
     @patch("frappe.friday_core.sandbox.runner._get_client")
-    def test_handler_exception_returns_failed_status(self, mock_get_client):
+    @patch("frappe.friday_core.sandbox.runner.frappe")
+    def test_handler_exception_returns_failed_status(self, mock_frappe, mock_get_client):
         logs = _make_result_envelope(
             "failed",
             result=None,
@@ -217,6 +225,11 @@ class TestExecuteExceptionHandling(unittest.TestCase):
         mock_client.containers.run.return_value = container
         mock_client.networks.get.return_value = MagicMock()
         mock_get_client.return_value = mock_client
+
+        mock_frappe.local.site = "testsite.local"
+        mock_profile = MagicMock()
+        mock_profile.get.side_effect = lambda k: {"network_allowlist": ""}.get(k)
+        mock_frappe.get_doc.return_value = mock_profile
 
         result = execute(
             skill_name="create_note",
@@ -236,7 +249,8 @@ class TestExecuteOOM(unittest.TestCase):
         frappe.db.rollback()
 
     @patch("frappe.friday_core.sandbox.runner._get_client")
-    def test_exit_code_137_maps_to_oom(self, mock_get_client):
+    @patch("frappe.friday_core.sandbox.runner.frappe")
+    def test_exit_code_137_maps_to_oom(self, mock_frappe, mock_get_client):
         logs = _make_result_envelope("success", {"data": "partial"})
         container = _mock_container(exit_code=137, logs_bytes=logs)
         container.status = "exited"
@@ -245,6 +259,11 @@ class TestExecuteOOM(unittest.TestCase):
         mock_client.containers.run.return_value = container
         mock_client.networks.get.return_value = MagicMock()
         mock_get_client.return_value = mock_client
+
+        mock_frappe.local.site = "testsite.local"
+        mock_profile = MagicMock()
+        mock_profile.get.side_effect = lambda k: {"network_allowlist": ""}.get(k)
+        mock_frappe.get_doc.return_value = mock_profile
 
         result = execute(
             skill_name="create_note",
@@ -264,8 +283,9 @@ class TestExecuteTimeout(unittest.TestCase):
         frappe.db.rollback()
 
     @patch("frappe.friday_core.sandbox.runner._get_client")
+    @patch("frappe.friday_core.sandbox.runner.frappe")
     @patch("frappe.friday_core.sandbox.runner.time.monotonic")
-    def test_timeout_reaches_kills_container(self, mock_monotonic, mock_get_client):
+    def test_timeout_reaches_kills_container(self, mock_monotonic, mock_frappe, mock_get_client):
         # Container never exits — simulate timeout at T=2s
         container = _mock_container(exit_code=0, logs_bytes=b"")
         container.status = "created"  # still running
@@ -275,22 +295,13 @@ class TestExecuteTimeout(unittest.TestCase):
         mock_client.networks.get.return_value = MagicMock()
         mock_get_client.return_value = mock_client
 
-        # Monotonic call sequence for a 2-second timeout (container.status="created" every iteration):
-        # call 1: started_at = time.monotonic() → 0.0
-        # call 2: iter1 elapsed = 0.5 < 2 → continue; container.reload() → status still "created"
-        # call 3: time.monotonic() for iter2 elapsed = 1.5 < 2 → continue; container.reload()
-        # call 4: time.monotonic() for iter3 elapsed = 2.5 > 2 → timeout_reached=True, kill(), break
-        # call 5: duration_ms = time.monotonic() - started_at → 3.0
-        # call 6: finally block's container.stop() may call monotonic
-        mock_monotonic.side_effect = lambda: mock_monotonic.return_value if hasattr(mock_monotonic, 'return_value') else 0.0
-        mock_monotonic.return_value = 0.0
-        # Make the mock return incrementing values each call
-        call_count = [0]
-        def monotonic_incrementer():
-            val = call_count[0] * 0.5
-            call_count[0] += 1
-            return val
-        mock_monotonic.side_effect = monotonic_incrementer
+        mock_frappe.local.site = "testsite.local"
+        mock_profile = MagicMock()
+        mock_profile.get.side_effect = lambda k: {"network_allowlist": ""}.get(k)
+        mock_frappe.get_doc.return_value = mock_profile
+
+        # Monotonic: started_at, iter1, iter2, iter3 (timeout), duration
+        mock_monotonic.side_effect = [0.0, 0.5, 1.5, 2.5, 3.0]
 
         result = execute(
             skill_name="create_note",
@@ -301,8 +312,6 @@ class TestExecuteTimeout(unittest.TestCase):
         )
 
         self.assertEqual(result.status, "timeout")
-        # kill() may be called once (while loop) or twice (while loop + finally block).
-        # The status check is the primary assertion; multiple kill calls are acceptable.
         self.assertTrue(container.kill.called)
 
 
@@ -313,7 +322,8 @@ class TestExecuteInvalidSkill(unittest.TestCase):
         frappe.db.rollback()
 
     @patch("frappe.friday_core.sandbox.runner._get_client")
-    def test_invalid_skill_name_returns_failed(self, mock_get_client):
+    @patch("frappe.friday_core.sandbox.runner.frappe")
+    def test_invalid_skill_name_returns_failed(self, mock_frappe, mock_get_client):
         logs = _make_result_envelope(
             "failed",
             result=None,
@@ -326,6 +336,11 @@ class TestExecuteInvalidSkill(unittest.TestCase):
         mock_client.containers.run.return_value = container
         mock_client.networks.get.return_value = MagicMock()
         mock_get_client.return_value = mock_client
+
+        mock_frappe.local.site = "testsite.local"
+        mock_profile = MagicMock()
+        mock_profile.get.side_effect = lambda k: {"network_allowlist": ""}.get(k)
+        mock_frappe.get_doc.return_value = mock_profile
 
         result = execute(
             skill_name="i_do_not_exist",
@@ -406,6 +421,89 @@ class TestSandboxResultDataclass(unittest.TestCase):
         self.assertEqual(result.logs, "")
         self.assertEqual(result.duration_ms, 0)
         self.assertIsNone(result.container_id)
+
+
+# ---------------------------------------------------------------------------
+# Egress allowlist tests (Phase 1.5)
+# ---------------------------------------------------------------------------
+
+class TestBuildEtcHosts(unittest.TestCase):
+    """Unit tests for /etc/hosts-based egress allowlist."""
+
+    def test_localhost_always_included(self):
+        content = _build_etc_hosts("friday.localhost", [])
+        self.assertIn("127.0.0.1 localhost", content)
+
+    def test_frappe_host_included(self):
+        content = _build_etc_hosts("friday.localhost", [])
+        self.assertIn("127.0.0.1 friday.localhost", content)
+
+    def test_extra_hosts_appended(self):
+        content = _build_etc_hosts("friday.localhost", ["api.stripe.com", "maps.google.com"])
+        self.assertIn("127.0.0.1 api.stripe.com", content)
+        self.assertIn("127.0.0.1 maps.google.com", content)
+
+    def test_duplicates_filtered(self):
+        content = _build_etc_hosts("friday.localhost", ["api.stripe.com"])
+        lines = content.splitlines()
+        # Should appear once, not twice
+        addr_lines = [l for l in lines if "api.stripe.com" in l]
+        self.assertEqual(len(addr_lines), 1)
+
+
+class TestGetEgressConfig(unittest.TestCase):
+    """Unit tests for _get_egress_config()."""
+
+    @patch("frappe.friday_core.sandbox.runner.frappe")
+    def test_default_returns_frappe_host_no_extras(self, mock_frappe):
+        mock_profile = MagicMock()
+        mock_profile.get.return_value = None
+        mock_frappe.get_doc.return_value = mock_profile
+        mock_frappe.local.site = "testsite.local"
+        mock_profile.get.side_effect = lambda k: {"network_allowlist": ""}.get(k)
+
+        frappe_host, extra = _get_egress_config("Test Profile")
+        self.assertEqual(frappe_host, "testsite.local")
+        self.assertEqual(extra, [])
+
+    @patch("frappe.friday_core.sandbox.runner.frappe")
+    def test_comma_separated_extra_hosts(self, mock_frappe):
+        mock_profile = MagicMock()
+        mock_profile.get.side_effect = lambda k: {"network_allowlist": "api.stripe.com,smtp.mailgun.org"}.get(k)
+        mock_frappe.get_doc.return_value = mock_profile
+        mock_frappe.local.site = "testsite.local"
+
+        _, extra = _get_egress_config("Test Profile")
+        self.assertEqual(extra, ["api.stripe.com", "smtp.mailgun.org"])
+
+    @patch("frappe.friday_core.sandbox.runner.frappe")
+    def test_newline_separated_extra_hosts(self, mock_frappe):
+        mock_profile = MagicMock()
+        mock_profile.get.side_effect = lambda k: {"network_allowlist": "api.stripe.com\nsmtp.mailgun.org"}.get(k)
+        mock_frappe.get_doc.return_value = mock_profile
+        mock_frappe.local.site = "testsite.local"
+
+        _, extra = _get_egress_config("Test Profile")
+        self.assertEqual(extra, ["api.stripe.com", "smtp.mailgun.org"])
+
+    @patch("frappe.friday_core.sandbox.runner.frappe")
+    def test_empty_allowlist_returns_empty_list(self, mock_frappe):
+        mock_profile = MagicMock()
+        mock_profile.get.side_effect = lambda k: {"network_allowlist": ""}.get(k)
+        mock_frappe.get_doc.return_value = mock_profile
+        mock_frappe.local.site = "testsite.local"
+
+        _, extra = _get_egress_config("Test Profile")
+        self.assertEqual(extra, [])
+
+    @patch("frappe.friday_core.sandbox.runner.frappe")
+    def test_profile_not_found_returns_defaults(self, mock_frappe):
+        mock_frappe.get_doc.side_effect = Exception("Not found")
+        mock_frappe.local.site = "testsite.local"
+
+        frappe_host, extra = _get_egress_config("NonExistent Profile")
+        self.assertEqual(frappe_host, "testsite.local")
+        self.assertEqual(extra, [])
 
 
 if __name__ == "__main__":
