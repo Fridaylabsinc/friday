@@ -68,7 +68,18 @@ def post_task_update(
 		return
 
 	_payload = _build_payload(task_name, event, details)
-	_post_to_raven(channel_id, _payload)
+	# Graceful degradation: network/HTTP failures publishing to Raven must
+	# never propagate up — a War Room outage shouldn't crash the agent.
+	# Log at ERROR so ops dashboards can alert on it.
+	try:
+		_post_to_raven(channel_id, _payload)
+	except Exception as exc:
+		_logger.error(
+			"War Room post failed for task %s event %s: %s",
+			task_name,
+			event,
+			exc,
+		)
 
 
 # ---------------------------------------------------------------------------

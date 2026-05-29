@@ -377,9 +377,13 @@ def _execute_sandboxed(
         )
     except Exception as exc:
         # Docker unavailable or image not found — fall back to in-process.
-        #frappe.logger("friday.dispatcher").warning(
-        #    "Sandbox unavailable, falling back to in-process: %s", exc
-        #)
+        # Restored: we MUST log when this happens so a silent regression
+        # (Docker dies in prod, skills suddenly bypass the sandbox) is
+        # auditable. Log level WARNING so ops dashboards can alert on it.
+        frappe.logger("friday.dispatcher").warning(
+            f"Sandbox unavailable for skill {skill_name!r}, "
+            f"falling back to in-process: {type(exc).__name__}: {exc}"
+        )
         return handler(skill_name=skill_name, parameters=parameters)
 
     # Map sandbox status to execution-log status and handler exception

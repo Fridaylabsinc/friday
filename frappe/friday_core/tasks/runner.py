@@ -52,11 +52,27 @@ def register_task_runner() -> None:
 	"""
 	Subscribe to ``agent_task.assigned`` real-time events.
 
-	Call this once from a Frappe startup hook (``after_migrate`` or a
-	custom ``on_worker_init`` hook) to register the handler.  Safe to
-	call multiple times — Frappe's realtime layer deduplicates handlers.
+	**Currently a no-op.** ``frappe.realtime.on(...)`` does not exist —
+	Frappe's realtime layer is publish-only on the server side (via
+	``frappe.publish_realtime``); subscriptions live in browser clients
+	over socket.io. Trying to call it crashes ``after_migrate`` and
+	breaks every site migrate. This stub exists so the ``after_migrate``
+	hook entry in ``hooks.py`` doesn't fail.
+
+	The real handler ``on_agent_task_assigned()`` remains usable — it
+	just needs a different trigger. Options for the actual subscription:
+
+	  - A ``doc_events["Agent Task"]["on_update"]`` hook that calls it
+	    when the workflow_state transitions to "Assigned".
+	  - An RQ job enqueued by ``tasks.workflow.on_state_change`` when
+	    the assignment happens.
+	  - A scheduled ``tasks.dispatcher.tick`` poll (already wired in
+	    ``hooks.scheduler_events``).
+
+	Pick one in a follow-up Slice 8.x; until then the runner is dormant.
 	"""
-	frappe.realtime.on("agent_task.assigned", on_agent_task_assigned)
+	# Intentional no-op. See docstring above for the real fix.
+	pass
 
 
 def on_agent_task_assigned(message: dict) -> None:
