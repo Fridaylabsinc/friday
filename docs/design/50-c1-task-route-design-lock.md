@@ -317,13 +317,17 @@ loop, H2 approvals, H3 credential token. Routing through `dispatch` (Q7) means t
 
 ---
 
-## 6. The one decision to confirm before coding
+## 6. The one decision to confirm before coding — **CONFIRMED**
 
 **Q7 (route through the shared dispatcher) is the load-bearing choice.** It is the
 foundation-correct fix — it gives tasks real permission enforcement and a unified audit
-trail, and it dissolves M3/M4. The cheaper alternative (keep the direct `sandbox.execute`
-call, just fix the `api_key` kwarg and add enqueue) would turn the route on but leave task
-skills *unenforced and unlogged* — re-creating a quieter version of the drift we're fixing.
+trail, it dissolves **M4** (the latent `api_key` kwarg `TypeError`) and **M5**, and it
+depends on **M3** landing first (converge the handler to `"create_note"` + a single
+registry). The cheaper alternative (keep the direct `sandbox.execute` call, just fix the
+`api_key` kwarg and add enqueue) would turn the route on but leave task skills *unenforced
+and unlogged* — re-creating a quieter version of the drift we're fixing.
 
-This design locks **Q7 = route through `dispatch`**. If the architect prefers the minimal
-enqueue-only fix for v0.1, flip Q7 and Q8 before Roo Code starts.
+**Decision (architect-confirmed 2026-05-30): Q7 = route through `dispatch`.** This is final
+for the C1 slice. Roo Code implements Q7/Q8 as written and treats **M3 as a hard prerequisite
+sub-task** of this slice (do M3 first, or in the same change). Do not fall back to the
+minimal enqueue-only variant.
