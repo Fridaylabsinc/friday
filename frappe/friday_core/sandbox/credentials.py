@@ -84,6 +84,15 @@ def resolve_credentials(agent_profile: str, skill_name: str) -> dict[str, str]:
             as_dict=True,
         )
     except Exception:
+        # Roll back so the caller's transaction isn't poisoned by a
+        # Postgres `InFailedSqlTransaction` for the rest of this request
+        # (e.g. when the Skill Credential table is missing on a stale
+        # site that hasn't migrated yet). Returning {} treats it as
+        # "no credentials configured" — same as a clean empty result.
+        try:
+            frappe.db.rollback()
+        except Exception:
+            pass
         return {}
 
     env: dict[str, str] = {}
