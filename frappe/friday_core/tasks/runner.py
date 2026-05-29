@@ -27,6 +27,19 @@ runner (``friday_core.sandbox.runner``) but differ in lifecycle:
 import frappe
 from frappe.utils import now_datetime
 
+# Lazy import to avoid circular dependency with the warroom module.
+_warroom = None
+
+def _get_warroom():
+	global _warroom
+	if _warroom is None:
+		try:
+			from frappe.friday_core import warroom
+			_warroom = warroom
+		except Exception:
+			_warroom = None
+	return _warroom
+
 
 _logger = frappe.logger("friday.tasks.runner")
 
@@ -69,17 +82,45 @@ def on_agent_task_assigned(message: dict) -> None:
 
 	try:
 		_run_task(task_name, profile_name)
+	except frappe.friday_core.sandbox.runner.SandboxOutOfMemory:
+		_logger.exception("Task runner OOM for task %s on profile %s", task_name, profile_name)
+		_post_warroom(task_name, "oom", {"profile": profile_name})
+	except frappe.friday_core.sandbox.runner.SandboxTimeout:
+		_logger.exception("Task runner timed out for task %s on profile %s", task_name, profile_name)
+		_post_warroom(task_name, "timeout", {"profile": profile_name})
 	except Exception:
 		_logger.exception(
 			"Task runner failed for task %s on profile %s",
 			task_name,
 			profile_name,
 		)
+		_post_warroom(task_name, "error", {"profile": profile_name})
 
 
 # ---------------------------------------------------------------------------
 # Internal helpers
 # ---------------------------------------------------------------------------
+
+def _post_warroom(task_name: str, event: str, details: dict = None) -> None:
+	"""
+	Post a status update to the Raven War Room channel.
+
+	Never raises — degrades gracefully on any error.
+
+	Args:
+		task_name: Agent Task document name.
+		event: One of ``executing``, ``completed``, ``blocked``,
+		       ``error``, ``oom``, ``timeout``.
+		details: Optional extra data.
+	"""
+	warroom = _get_warroom()
+	if warroom is None:
+		return
+	try:
+		warroom.post_task_update(task_name, event, details)
+	except Exception:
+		pass
+
 
 def _run_task(task_name: str, profile_name: str) -> None:
 	"""
@@ -91,15 +132,21 @@ def _run_task(task_name: str, profile_name: str) -> None:
 	"""
 	task = frappe.get_doc("Agent Task", task_name)
 
+	# Record start time for duration calculation.
+	started_at = now_datetime()
+
 	# Transition to Executing (workflow action).
 	_task_transition(task, "Executing")
-	task.started_at = now_datetime()
+	task.started_at = started_at
 	task.save(ignore_permissions=True)
 	frappe.db.commit()
 
+	# Post "executing" to War Room.
+	skills = [row.skill for row in task.required_skills if row.skill]
+	_post_warroom(task_name, "executing", {"profile": profile_name, "skills": skills})
+
 	# Execute each required skill in sequence.
 	results = []
-	skills = [row.skill for row in task.required_skills if row.skill]
 
 	for skill_name in skills:
 		result = _execute_skill_in_sandbox(skill_name, task, profile_name)
@@ -114,6 +161,17 @@ def _run_task(task_name: str, profile_name: str) -> None:
 	_task_transition(task, "Review")
 	task.save(ignore_permissions=True)
 	frappe.db.commit()
+
+	# Post "completed" to War Room.
+	import datetime
+	duration_ms = int(
+		(datetime.datetime.utcnow() - started_at).total_seconds() * 1000
+	)
+	_post_warroom(
+		task_name,
+		"completed",
+		{"duration_ms": duration_ms, "profile": profile_name},
+	)
 
 
 def _execute_skill_in_sandbox(
@@ -183,6 +241,14 @@ def _block_task(task: "AgentTask", results: list) -> None:
 	_task_transition(task, "Blocked")
 	task.save(ignore_permissions=True)
 	frappe.db.commit()
+
+	# Post "blocked" to War Room.
+	failed_skill = results[-1].skill if results else None
+	_post_warroom(
+		task.name,
+		"blocked",
+		{"error_message": results[-1].result if results else None, "profile": None},
+	)
 
 
 def _build_result_envelope(results: list, status: str) -> dict:

@@ -19,4 +19,4 @@ if TYPE_CHECKING:
 	from frappe.friday_core.doctype.agent_task.agent_task import AgentTask
 	from frappe.friday_core.doctype.agent_profile.agent_profile import AgentProfile
 
-__all__ = ["workflow", "dispatcher", "runner"]
+__all__ = ["workflow", "dispatcher", "runner", "warroom"]

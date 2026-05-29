@@ -17,9 +17,24 @@ Responsibilities
    transitioning Pending → Assigned so the task runner can pick it up
    outside the save transaction (avoids holding a DB lock while the
    worker runs).
+6. Post a War Room update to the Raven FRIDAY_WAR_ROOM channel on
+   every state transition (graceful degradation if Raven is not installed).
 """
 
 import frappe
+
+# Lazy import to avoid circular imports — warroom itself doesn't import tasks.
+_warroom = None
+
+def _get_warroom():
+	global _warroom
+	if _warroom is None:
+		try:
+			from frappe.friday_core import warroom
+			_warroom = warroom
+		except Exception:
+			_warroom = None
+	return _warroom
 
 
 # States that make a task available for the dispatcher to claim.
@@ -70,11 +85,34 @@ def _watch_transition(doc: "AgentTask") -> None:
 	if state == "Cancelled" and doc.assigned_to_profile:
 		doc.assigned_to_profile = None
 
+	# --- War Room post ----------------------------------------------------
+	_post_warroom_update(doc, state)
+
 	# --- emit Redis pub/sub for task runner -------------------------------
 	# Only emit when we are moving INTO Assigned AND the profile actually
 	# changed (avoids duplicate events on re-save without assignment change).
 	if state == "Assigned" and doc.has_value_changed("assigned_to_profile"):
 		_emit_assigned_event(doc.name, doc.assigned_to_profile)
+
+
+def _post_warroom_update(doc: "AgentTask", state: str) -> None:
+	"""
+	Post a status update to the Raven War Room channel.
+
+	Args:
+		doc: The Agent Task document.
+		state: The new workflow_state.
+	"""
+	warroom = _get_warroom()
+	if warroom is None:
+		return
+
+	try:
+		details = {"profile": doc.assigned_to_profile} if doc.assigned_to_profile else None
+		warroom.post_task_update(doc.name, state.lower(), details)
+	except Exception:
+		# Never block the task pipeline — degrade gracefully.
+		pass
 
 
 def _emit_assigned_event(task_name: str, assigned_to_profile: str) -> None:
